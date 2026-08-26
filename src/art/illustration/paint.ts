@@ -249,3 +249,113 @@ export function inked(
   ctx.lineCap = 'round';
   ctx.stroke();
 }
+
+// ── Живая линия ───────────────────────────────────────────────
+
+/** Гладкая кривая Кэтмулла–Рома через опорные точки */
+export function spline(pts: P[], samples = 12, closed = false): P[] {
+  if (pts.length < 2) return pts.slice();
+  const out: P[] = [];
+  const n = pts.length;
+  const at = (i: number): P => {
+    if (closed) return pts[(i + n) % n];
+    return pts[Math.max(0, Math.min(n - 1, i))];
+  };
+  const last = closed ? n : n - 1;
+  for (let i = 0; i < last; i++) {
+    const p0 = at(i - 1);
+    const p1 = at(i);
+    const p2 = at(i + 1);
+    const p3 = at(i + 2);
+    for (let s = 0; s < samples; s++) {
+      const t = s / samples;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      out.push([
+        0.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+        0.5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3),
+      ]);
+    }
+  }
+  if (!closed) out.push(pts[n - 1]);
+  return out;
+}
+
+/**
+ * Линия переменной толщины: центральная линия обрастает перпендикулярами,
+ * и получается залитая форма — как след кисти, а не ровный stroke.
+ */
+export function taper(
+  ctx: CanvasRenderingContext2D,
+  ctrl: P[],
+  widths: number[],
+  color: string,
+  samples = 12,
+): void {
+  const line = spline(ctrl, samples);
+  if (line.length < 2) return;
+  const n = line.length;
+  const hw = (i: number): number => {
+    const t = (i / (n - 1)) * (widths.length - 1);
+    const a = Math.floor(t);
+    const b = Math.min(widths.length - 1, a + 1);
+    return (widths[a] + (widths[b] - widths[a]) * (t - a)) / 2;
+  };
+  const left: P[] = [];
+  const right: P[] = [];
+  for (let i = 0; i < n; i++) {
+    const p = line[i];
+    const prev = line[Math.max(0, i - 1)];
+    const next = line[Math.min(n - 1, i + 1)];
+    let dx = next[0] - prev[0];
+    let dy = next[1] - prev[1];
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len;
+    dy /= len;
+    const w = hw(i);
+    left.push([p[0] - dy * w, p[1] + dx * w]);
+    right.push([p[0] + dy * w, p[1] - dx * w]);
+  }
+  ctx.beginPath();
+  ctx.moveTo(left[0][0], left[0][1]);
+  for (let i = 1; i < left.length; i++) ctx.lineTo(left[i][0], left[i][1]);
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i][0], right[i][1]);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+/** Замкнутая форма по опорным точкам через сплайн — мягче, чем blob */
+export function shape(ctx: CanvasRenderingContext2D, pts: P[], samples = 14): void {
+  const line = spline(pts, samples, true);
+  ctx.beginPath();
+  ctx.moveTo(line[0][0], line[0][1]);
+  for (let i = 1; i < line.length; i++) ctx.lineTo(line[i][0], line[i][1]);
+  ctx.closePath();
+}
+
+/** Контур замкнутой формы живой линией: толще снизу-справа, тоньше сверху-слева */
+export function shapeInk(
+  ctx: CanvasRenderingContext2D,
+  pts: P[],
+  color: string,
+  wMin: number,
+  wMax: number,
+): void {
+  const line = spline(pts, 10, true);
+  const n = line.length;
+  // толщина зависит от направления нормали: свет сверху-слева
+  const widths: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const prev = line[(i - 1 + n) % n];
+    const next = line[(i + 1) % n];
+    const dx = next[0] - prev[0];
+    const dy = next[1] - prev[1];
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+    const k = (nx * 0.6 + ny * 0.8 + 1) / 2;
+    widths.push(wMin + (wMax - wMin) * k);
+  }
+  taper(ctx, [...line, line[0]], [...widths, widths[0]], color, 1);
+}
