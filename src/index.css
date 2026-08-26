@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -20,8 +20,8 @@ body,
 
 body {
   margin: 0;
-  background: #050409;
-  color: #e9e6f5;
+  background: #eae6f6;
+  color: #2a2247;
   font-family: 'Manrope', 'Segoe UI', system-ui, sans-serif;
   overscroll-behavior: none;
   user-select: none;
@@ -35,33 +35,37 @@ textarea {
 
 @layer components {
   .glass {
-    @apply bg-ink-700/70 backdrop-blur-md border border-white/10;
+    @apply border border-ink-900/[0.07] bg-white/80 backdrop-blur-md;
   }
   .panel {
     @apply glass rounded-2xl shadow-card;
   }
   .btn {
-    @apply relative inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 font-display font-semibold tracking-wide
-           transition-transform active:scale-[0.96] select-none;
+    @apply relative inline-flex select-none items-center justify-center gap-1.5 rounded-xl px-4 py-2.5
+           font-display font-semibold tracking-wide transition-transform active:scale-[0.96];
   }
   .btn-primary {
     @apply btn text-white;
-    background: linear-gradient(135deg, #ff5ea8, #a06bff 55%, #6a4bff);
-    box-shadow: 0 8px 24px -10px rgba(160, 107, 255, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    background: linear-gradient(135deg, #f0459c, #7b46e0 55%, #5b3fd6);
+    box-shadow:
+      0 10px 22px -12px rgba(123, 70, 224, 0.95),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
   }
   .btn-ghost {
-    @apply btn bg-white/5 border border-white/10 text-white/85;
+    @apply btn border border-ink-900/10 bg-white text-ink-700 shadow-soft;
   }
   .btn-gold {
     @apply btn text-ink-900;
-    background: linear-gradient(135deg, #ffe9a8, #ffc857 55%, #f59e0b);
-    box-shadow: 0 8px 22px -10px rgba(255, 200, 87, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    background: linear-gradient(135deg, #ffe9a8, #ffc857 55%, #f0a018);
+    box-shadow:
+      0 10px 22px -12px rgba(240, 160, 24, 0.9),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
   .chip {
     @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider;
   }
   .stat-row {
-    @apply flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm bg-white/[0.04];
+    @apply flex items-center justify-between rounded-lg bg-ink-900/[0.04] px-2.5 py-1.5 text-sm;
   }
   .scroll-y {
     @apply overflow-y-auto;
@@ -73,22 +77,18 @@ textarea {
   }
 }
 
+/* лёгкая «пыльца» вместо звёздного неба тёмной темы */
 .bg-stars {
   background-image:
-    radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.55), transparent 60%),
-    radial-gradient(1px 1px at 70% 20%, rgba(255, 255, 255, 0.4), transparent 60%),
-    radial-gradient(1.5px 1.5px at 40% 70%, rgba(255, 255, 255, 0.35), transparent 60%),
-    radial-gradient(1px 1px at 85% 60%, rgba(255, 255, 255, 0.45), transparent 60%),
-    radial-gradient(1px 1px at 10% 80%, rgba(255, 255, 255, 0.3), transparent 60%);
+    radial-gradient(1.5px 1.5px at 20% 30%, rgba(123, 70, 224, 0.16), transparent 60%),
+    radial-gradient(1.5px 1.5px at 70% 20%, rgba(232, 54, 143, 0.14), transparent 60%),
+    radial-gradient(2px 2px at 40% 70%, rgba(8, 145, 178, 0.12), transparent 60%),
+    radial-gradient(1.5px 1.5px at 85% 60%, rgba(123, 70, 224, 0.14), transparent 60%),
+    radial-gradient(1.5px 1.5px at 10% 80%, rgba(232, 54, 143, 0.1), transparent 60%);
 }
 
 .sheen {
-  background-image: linear-gradient(
-    100deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.22) 45%,
-    transparent 60%
-  );
+  background-image: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 45%, transparent 60%);
   background-size: 240% 100%;
 }
 

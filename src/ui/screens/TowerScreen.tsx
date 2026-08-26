@@ -28,18 +28,18 @@ export default function TowerScreen() {
   return (
     <div className="pb-2">
       <div className="panel relative mb-3 overflow-hidden rounded-2xl p-3">
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, #2a1b5e, #0b0720)' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, #ece7ff, #f8f6fd 65%)' }} />
         <div className="absolute inset-0 bg-stars opacity-50" />
         <div className="relative">
           <div className="flex items-start justify-between">
             <div>
-              <div className="font-display text-[11px] uppercase tracking-[0.26em] text-white/50">Бесконечный режим</div>
-              <h1 className="font-display text-xl font-bold text-white">Башня Эха</h1>
-              <p className="text-[12px] text-white/50">Каждый этаж — новый бой и новый бафф</p>
+              <div className="font-display text-[11px] uppercase tracking-[0.26em] text-ink-500">Бесконечный режим</div>
+              <h1 className="font-display text-xl font-bold text-ink-900">Башня Эха</h1>
+              <p className="text-[12px] text-ink-500">Каждый этаж — новый бой и новый бафф</p>
             </div>
             <div className="text-right">
               <Pill tone="gold">{`🔮 ${echo}`}</Pill>
-              <div className="mt-1 text-[10px] uppercase tracking-wider text-white/40">Рекорд</div>
+              <div className="mt-1 text-[10px] uppercase tracking-wider text-ink-400">Рекорд</div>
               <div className="font-display text-lg font-bold text-neon-cyan">{tower.best}</div>
             </div>
           </div>
@@ -48,13 +48,13 @@ export default function TowerScreen() {
             <>
               <div className="mt-3 flex items-end justify-between">
                 <div>
-                  <div className="text-[10px] uppercase tracking-wider text-white/40">Текущий этаж</div>
-                  <div className="font-display text-3xl font-bold text-white">{tower.floor}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-ink-400">Текущий этаж</div>
+                  <div className="font-display text-3xl font-bold text-ink-900">{tower.floor}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] uppercase tracking-wider text-white/40">Сила стража</div>
-                  <div className="font-display text-sm font-bold text-white/85">{formatPower(foePower)}</div>
-                  <div className="mt-0.5 text-[10px] text-white/40">
+                  <div className="text-[10px] uppercase tracking-wider text-ink-400">Сила стража</div>
+                  <div className="font-display text-sm font-bold text-ink-800">{formatPower(foePower)}</div>
+                  <div className="mt-0.5 text-[10px] text-ink-400">
                     награда: 🔮{reward.echo} · 🪙{reward.gold} · 📘{reward.exp}
                   </div>
                 </div>
@@ -62,8 +62,8 @@ export default function TowerScreen() {
 
               <div className="mt-2 flex -space-x-2">
                 {foes.map((f, i) => (
-                  <div key={i} className="rounded-xl ring-1 ring-black/40">
-                    <Avatar heroId={f.def.id} size={36} hideFrame fierce />
+                  <div key={i} className="rounded-xl ring-1 ring-ink-900/10">
+                    <Avatar heroId={f.def.id} size={36} hideFrame framing="bust" />
                   </div>
                 ))}
               </div>
@@ -81,7 +81,7 @@ export default function TowerScreen() {
             </>
           ) : (
             <div className="mt-3">
-              <p className="mb-2 text-[12px] leading-snug text-white/55">
+              <p className="mb-2 text-[12px] leading-snug text-ink-500">
                 Отряд идёт вверх без лечения между этажами. После каждой победы вы выбираете один бафф из трёх —
                 и он действует до конца забега. Поражение завершает забег, но рекорд и добыча остаются.
               </p>
@@ -108,14 +108,14 @@ export default function TowerScreen() {
                   className="w-full rounded-2xl border p-3 text-left transition-transform active:scale-[0.98]"
                   style={{
                     borderColor: `${TIER_COLOR[b.tier]}88`,
-                    background: `linear-gradient(150deg, ${TIER_COLOR[b.tier]}22, rgba(10,8,20,0.92))`,
+                    background: `linear-gradient(150deg, ${TIER_COLOR[b.tier]}1f, #ffffff 62%)`,
                   }}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{b.icon}</span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-display text-[13px] font-bold text-white">{b.name}</div>
-                      <div className="text-[12px] text-white/60">{b.text}</div>
+                      <div className="font-display text-[13px] font-bold text-ink-900">{b.name}</div>
+                      <div className="text-[12px] text-ink-500">{b.text}</div>
                     </div>
                     <span className="chip" style={{ color: TIER_COLOR[b.tier], background: `${TIER_COLOR[b.tier]}22` }}>
                       {b.tier === 'epic' ? 'эпик' : b.tier === 'rare' ? 'редк' : 'обыч'}
@@ -152,8 +152,8 @@ export default function TowerScreen() {
               </div>
               <div className="mt-2 grid grid-cols-3 gap-1.5">
                 {Object.entries(mods).map(([k, v]) => (
-                  <div key={k} className="rounded-lg bg-white/[0.05] px-1.5 py-1 text-center">
-                    <div className="text-[9px] uppercase tracking-wider text-white/40">{k}</div>
+                  <div key={k} className="rounded-lg bg-ink-900/[0.05] px-1.5 py-1 text-center">
+                    <div className="text-[9px] uppercase tracking-wider text-ink-400">{k}</div>
                     <div className="font-display text-[12px] font-bold text-neon-lime">
                       {v > 0 ? '+' : ''}
                       {v}%
@@ -175,11 +175,11 @@ export default function TowerScreen() {
               if (!heroes[id]) return null;
               return (
                 <div key={id} className="flex items-center gap-2">
-                  <Avatar heroId={id} size={30} hideFrame dim={frac <= 0.001} />
+                  <Avatar heroId={id} size={30} hideFrame framing="bust" dim={frac <= 0.001} />
                   <div className="min-w-0 flex-1">
                     <div className="flex justify-between text-[11px]">
-                      <span className="text-white/70">{heroDef(id).name}</span>
-                      <span className="text-white/45">{Math.round(frac * 100)}%</span>
+                      <span className="text-ink-600">{heroDef(id).name}</span>
+                      <span className="text-ink-500">{Math.round(frac * 100)}%</span>
                     </div>
                     <Bar value={frac * 100} max={100} color={frac > 0.5 ? '#7dff9c' : frac > 0.2 ? '#ffc857' : '#ff6f8f'} height={4} />
                   </div>
@@ -235,11 +235,11 @@ export default function TowerScreen() {
       <Section title="Все усиления">
         <div className="panel grid grid-cols-2 gap-1.5 rounded-2xl p-2.5">
           {TOWER_BUFFS.map((b) => (
-            <div key={b.id} className="flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-1.5 py-1">
+            <div key={b.id} className="flex items-center gap-1.5 rounded-lg bg-ink-900/[0.045] px-1.5 py-1">
               <span>{b.icon}</span>
               <div className="min-w-0">
-                <div className="truncate text-[11px] font-semibold text-white/80">{b.name}</div>
-                <div className="truncate text-[10px] text-white/40">{b.text}</div>
+                <div className="truncate text-[11px] font-semibold text-ink-700">{b.name}</div>
+                <div className="truncate text-[10px] text-ink-400">{b.text}</div>
               </div>
             </div>
           ))}
@@ -274,9 +274,9 @@ export function ShopItem({
       className="panel flex flex-col items-center gap-0.5 rounded-xl p-2.5 transition-transform active:scale-95 disabled:opacity-40"
     >
       <span className="text-xl">{icon}</span>
-      <span className="font-display text-[11px] font-bold text-white">{title}</span>
-      <span className="text-[10px] text-white/45">{sub}</span>
-      <span className="mt-1 rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] font-semibold text-white/80">
+      <span className="font-display text-[11px] font-bold text-ink-900">{title}</span>
+      <span className="text-[10px] text-ink-500">{sub}</span>
+      <span className="mt-1 rounded-full bg-ink-900/[0.07] px-2 py-0.5 text-[10px] font-semibold text-ink-700">
         {currency} {price}
       </span>
     </button>

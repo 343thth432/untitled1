@@ -21,7 +21,7 @@ export function GearCard({
       onClick={onClick}
       className="relative w-full overflow-hidden rounded-xl p-2 text-left transition-transform active:scale-[0.97]"
       style={{
-        background: `linear-gradient(150deg, ${r.color}22, rgba(10,8,20,0.9))`,
+        background: `linear-gradient(150deg, ${r.color}1f, #ffffff 65%)`,
         border: `1px solid ${selected ? '#fff' : `${r.color}66`}`,
       }}
     >
@@ -37,12 +37,12 @@ export function GearCard({
             <span className="font-display text-[12px] font-bold" style={{ color: r.color }}>
               +{item.level}
             </span>
-            <span className="truncate text-[11px] font-semibold text-white/85">{set?.name}</span>
+            <span className="truncate text-[11px] font-semibold text-ink-800">{set?.name}</span>
             {item.locked && <span className="text-[10px]">🔒</span>}
           </div>
-          <div className="text-[11px] text-white/70">{formatStat(item.mainStat, item.mainValue, item.mainPct)}</div>
+          <div className="text-[11px] text-ink-600">{formatStat(item.mainStat, item.mainValue, item.mainPct)}</div>
           {!compactMode && (
-            <div className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-white/40">
+            <div className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-ink-400">
               {item.subs.map((s, i) => (
                 <span key={i}>{formatStat(s.stat, s.value, s.pct)}</span>
               ))}
@@ -50,8 +50,8 @@ export function GearCard({
           )}
         </div>
         <div className="shrink-0 text-right">
-          <div className="text-[9px] uppercase tracking-wider text-white/35">оценка</div>
-          <div className="font-display text-[12px] font-bold text-white/80">{gearScore(item)}</div>
+          <div className="text-[9px] uppercase tracking-wider text-ink-400">оценка</div>
+          <div className="font-display text-[12px] font-bold text-ink-700">{gearScore(item)}</div>
         </div>
       </div>
       {item.equippedBy && (

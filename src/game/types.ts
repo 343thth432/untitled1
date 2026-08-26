@@ -92,9 +92,45 @@ export interface SkillDef {
   cd?: number;
 }
 
-// ── Внешность (процедурный SVG-портрет) ───────────────────────
+// ── Внешность (процедурная 3D-модель) ─────────────────────────
+export type HairStyle = 'long' | 'twin' | 'bob' | 'ponytail' | 'braid' | 'short' | 'wavy' | 'buns';
+
+export type OutfitStyle =
+  /** боди с высоким вырезом на бёдрах + чулки */
+  | 'leotard'
+  /** латный бюстгальтер и набедренные пластины */
+  | 'plate'
+  /** платье с глубокими разрезами */
+  | 'slit'
+  /** распахнутый плащ поверх топа и шорт */
+  | 'coat'
+  /** бинты сараси и хакама с разрезом */
+  | 'sarashi'
+  /** полупрозрачная мантия жрицы */
+  | 'robe'
+  /** ремни-портупея и мини */
+  | 'harness'
+  /** ципао с разрезом до бедра */
+  | 'qipao';
+
+export type WeaponId =
+  | 'katana'
+  | 'greatsword'
+  | 'bow'
+  | 'staff'
+  | 'scythe'
+  | 'daggers'
+  | 'hammer'
+  | 'spear'
+  | 'grimoire'
+  | 'chakram'
+  | 'crossbow'
+  | 'glaive'
+  | 'wand'
+  | 'claws';
+
 export interface Appearance {
-  hair: 'long' | 'twin' | 'bob' | 'ponytail' | 'braid' | 'short' | 'wavy' | 'buns';
+  hair: HairStyle;
   hairColor: string;
   hairColor2: string;
   eyeColor: string;
@@ -103,8 +139,18 @@ export interface Appearance {
   outfitTrim: string;
   accessory: 'horns' | 'halo' | 'ears' | 'crown' | 'visor' | 'hairpin' | 'veil' | 'none';
   aura: string;
-  /** 0..1 — «настроение» портрета, влияет на форму глаз/брови */
+  /** 0..1 — «настроение», влияет на брови, разрез глаз и линию рта */
   mood: number;
+  /** крой костюма */
+  outfitStyle: OutfitStyle;
+  /** цвет чулок/поножей, null — без них */
+  stockings: string | null;
+  /** плащ за спиной */
+  cape: boolean;
+  /** личное оружие */
+  weapon: WeaponId;
+  /** 0..1 — фигура: рост и пропорции */
+  figure: number;
 }
 
 export interface HeroDef {

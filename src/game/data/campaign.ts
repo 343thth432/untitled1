@@ -9,18 +9,18 @@ export interface ChapterDef {
 export const STAGES_PER_CHAPTER = 12;
 
 export const CHAPTERS: ChapterDef[] = [
-  { id: 1, name: 'Пепельные Врата', subtitle: 'Там, где всё началось', bg: ['#3a1220', '#0a0710'], accent: '#ff6b4a' },
-  { id: 2, name: 'Тихая Гавань', subtitle: 'Вода помнит имена', bg: ['#0f2a3d', '#070a14'], accent: '#4fb8ff' },
-  { id: 3, name: 'Роща Шёпотов', subtitle: 'Не отвечай деревьям', bg: ['#12301f', '#060d0a'], accent: '#68e08a' },
-  { id: 4, name: 'Стеклянная Пустошь', subtitle: 'Песок под ногами звенит', bg: ['#33291a', '#0d0a08'], accent: '#ffc857' },
-  { id: 5, name: 'Лунный Разлом', subtitle: 'Небо треснуло здесь', bg: ['#241a3d', '#0a0714'], accent: '#a06bff' },
-  { id: 6, name: 'Хребет Затмения', subtitle: 'Выше только тьма', bg: ['#2b1b2e', '#0b0710'], accent: '#ff5ea8' },
-  { id: 7, name: 'Затопленный Храм', subtitle: 'Молитвы всплывают', bg: ['#0d2c33', '#050d10'], accent: '#4fe3ff' },
-  { id: 8, name: 'Сад Костяных Лоз', subtitle: 'Цветёт круглый год', bg: ['#1f2c18', '#080d06'], accent: '#9ae66e' },
-  { id: 9, name: 'Цитадель Зари', subtitle: 'Последний свет', bg: ['#38300f', '#100d05'], accent: '#ffe07a' },
-  { id: 10, name: 'Полночный Двор', subtitle: 'Здесь танцуют тени', bg: ['#1d1435', '#080614'], accent: '#b57cff' },
-  { id: 11, name: 'Обсерватория Пустоты', subtitle: 'Звёзды смотрят в ответ', bg: ['#151a3a', '#060814'], accent: '#7f8fff' },
-  { id: 12, name: 'Око Затмения', subtitle: 'Оно моргнуло', bg: ['#2f0d1c', '#0c050a'], accent: '#ff2e63' },
+  { id: 1, name: 'Пепельные Врата', subtitle: 'Там, где всё началось', bg: ['#ffe4e0', '#fdf2f6'], accent: '#ff6b4a' },
+  { id: 2, name: 'Тихая Гавань', subtitle: 'Вода помнит имена', bg: ['#dff0ff', '#eef6fd'], accent: '#4fb8ff' },
+  { id: 3, name: 'Роща Шёпотов', subtitle: 'Не отвечай деревьям', bg: ['#e0f7e6', '#f0fbf2'], accent: '#68e08a' },
+  { id: 4, name: 'Стеклянная Пустошь', subtitle: 'Песок под ногами звенит', bg: ['#fff0d6', '#fdf7ec'], accent: '#ffc857' },
+  { id: 5, name: 'Лунный Разлом', subtitle: 'Небо треснуло здесь', bg: ['#ece4ff', '#f4f0fd'], accent: '#a06bff' },
+  { id: 6, name: 'Хребет Затмения', subtitle: 'Выше только тьма', bg: ['#ffe2f0', '#fdf0f7'], accent: '#ff5ea8' },
+  { id: 7, name: 'Затопленный Храм', subtitle: 'Молитвы всплывают', bg: ['#dbf5f8', '#eefafc'], accent: '#4fe3ff' },
+  { id: 8, name: 'Сад Костяных Лоз', subtitle: 'Цветёт круглый год', bg: ['#e8f6d9', '#f4fbee'], accent: '#9ae66e' },
+  { id: 9, name: 'Цитадель Зари', subtitle: 'Последний свет', bg: ['#fff6d8', '#fdfaee'], accent: '#ffe07a' },
+  { id: 10, name: 'Полночный Двор', subtitle: 'Здесь танцуют тени', bg: ['#efe4ff', '#f6f1fd'], accent: '#b57cff' },
+  { id: 11, name: 'Обсерватория Пустоты', subtitle: 'Звёзды смотрят в ответ', bg: ['#e2e6ff', '#f1f3fd'], accent: '#7f8fff' },
+  { id: 12, name: 'Око Затмения', subtitle: 'Оно моргнуло', bg: ['#ffe0e6', '#fdf0f3'], accent: '#ff2e63' },
 ];
 
 export const TOTAL_STAGES = CHAPTERS.length * STAGES_PER_CHAPTER;

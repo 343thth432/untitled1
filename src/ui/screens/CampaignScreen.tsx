@@ -47,11 +47,11 @@ export default function CampaignScreen() {
         <div className="relative">
           <div className="flex items-start justify-between">
             <div>
-              <div className="font-display text-[11px] uppercase tracking-[0.24em] text-white/50">
+              <div className="font-display text-[11px] uppercase tracking-[0.24em] text-ink-500">
                 Глава {info.chapter.id} · {info.label}
               </div>
-              <h1 className="mt-0.5 font-display text-xl font-bold text-white">{info.chapter.name}</h1>
-              <p className="text-[12px] text-white/50">{done ? 'Кампания пройдена' : info.chapter.subtitle}</p>
+              <h1 className="mt-0.5 font-display text-xl font-bold text-ink-900">{info.chapter.name}</h1>
+              <p className="text-[12px] text-ink-500">{done ? 'Кампания пройдена' : info.chapter.subtitle}</p>
             </div>
             <div className="flex flex-col items-end gap-1">
               {info.boss && <Pill tone="bad">Босс</Pill>}
@@ -62,7 +62,7 @@ export default function CampaignScreen() {
 
           <div className="mt-3">
             <Bar value={chapterProgress * 100} max={100} color={info.chapter.accent} height={5} glow />
-            <div className="mt-1 flex justify-between text-[10px] uppercase tracking-wider text-white/40">
+            <div className="mt-1 flex justify-between text-[10px] uppercase tracking-wider text-ink-400">
               <span>Этап {info.stage} / {STAGES_PER_CHAPTER}</span>
               <span>Предел уровня: {cap}</span>
             </div>
@@ -72,13 +72,13 @@ export default function CampaignScreen() {
           <div className="mt-3 flex items-end justify-between gap-2">
             <div className="flex -space-x-2">
               {foes.slice(0, 5).map((f, i) => (
-                <div key={i} className="rounded-xl ring-1 ring-black/40">
-                  <Avatar heroId={f.def.id} size={38} hideFrame fierce dim={done} />
+                <div key={i} className="rounded-xl ring-1 ring-ink-900/10">
+                  <Avatar heroId={f.def.id} size={38} hideFrame framing="bust" dim={done} />
                 </div>
               ))}
             </div>
             <div className="text-right">
-              <div className="text-[10px] uppercase tracking-wider text-white/40">Сила врага</div>
+              <div className="text-[10px] uppercase tracking-wider text-ink-400">Сила врага</div>
               <div
                 className="font-display text-sm font-bold"
                 style={{ color: advantage >= 1.15 ? '#7dff9c' : advantage >= 0.85 ? '#ffc857' : '#ff6f8f' }}
@@ -96,7 +96,7 @@ export default function CampaignScreen() {
           >
             {done ? 'Все главы пройдены' : `В бой · ${info.label}`}
           </button>
-          <div className="mt-1.5 text-center text-[10px] text-white/35">
+          <div className="mt-1.5 text-center text-[10px] text-ink-400">
             {advantage >= 1.15
               ? 'Перевес на вашей стороне'
               : advantage >= 0.85
@@ -117,7 +117,7 @@ export default function CampaignScreen() {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="font-display text-sm font-semibold text-white">
+              <div className="font-display text-sm font-semibold text-ink-900">
                 Накоплено за {formatDuration(seconds)}
               </div>
               <div className="mt-1 grid grid-cols-4 gap-1 text-[11px]">
@@ -163,7 +163,7 @@ export default function CampaignScreen() {
                 <button
                   type="button"
                   onClick={() => go('heroes')}
-                  className="flex aspect-[1/1.18] w-full items-center justify-center rounded-2xl border border-dashed border-white/15 text-white/25"
+                  className="flex aspect-[1/1.18] w-full items-center justify-center rounded-2xl border border-dashed border-ink-900/10 text-ink-300"
                 >
                   +
                 </button>
@@ -190,12 +190,12 @@ export default function CampaignScreen() {
                   style={{ background: `linear-gradient(150deg, ${c.bg[0]}, ${c.bg[1]})`, opacity: 0.85 }}
                 />
                 <div className="relative">
-                  <div className="font-display text-[10px] uppercase tracking-widest text-white/40">Глава {c.id}</div>
-                  <div className="truncate font-display text-[13px] font-semibold text-white">{c.name}</div>
+                  <div className="font-display text-[10px] uppercase tracking-widest text-ink-400">Глава {c.id}</div>
+                  <div className="truncate font-display text-[13px] font-semibold text-ink-900">{c.name}</div>
                   <div className="mt-1.5">
                     <Bar value={clearedInCh} max={STAGES_PER_CHAPTER} color={c.accent} height={4} />
                   </div>
-                  <div className="mt-1 text-[10px] text-white/40">
+                  <div className="mt-1 text-[10px] text-ink-400">
                     {locked ? 'Закрыто' : `${clearedInCh}/${STAGES_PER_CHAPTER}`}
                   </div>
                 </div>
@@ -210,9 +210,9 @@ export default function CampaignScreen() {
 
 function Res({ icon, v }: { icon: string; v: number }) {
   return (
-    <div className="flex items-center gap-1 rounded-md bg-white/[0.05] px-1 py-0.5">
+    <div className="flex items-center gap-1 rounded-md bg-ink-900/[0.05] px-1 py-0.5">
       <span>{icon}</span>
-      <span className="font-display font-semibold text-white/80">{compact(v)}</span>
+      <span className="font-display font-semibold text-ink-700">{compact(v)}</span>
     </div>
   );
 }

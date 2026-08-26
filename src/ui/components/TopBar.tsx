@@ -4,9 +4,9 @@ import { commanderLevel, heroLevelCap } from '../../game/engine/progression';
 import Sheet from './Sheet';
 
 const RES = [
-  { key: 'gold', icon: '🪙', color: '#ffc857' },
-  { key: 'gems', icon: '💎', color: '#7ef9ff' },
-  { key: 'scrolls', icon: '📜', color: '#ffb3c6' },
+  { key: 'gold', icon: '🪙', color: '#c2760a' },
+  { key: 'gems', icon: '💎', color: '#0e7490' },
+  { key: 'scrolls', icon: '📜', color: '#be185d' },
 ] as const;
 
 export function TopBar() {
@@ -24,12 +24,12 @@ export function TopBar() {
     >
       <div className="flex items-center gap-2">
         <button type="button" onClick={() => setMenu(true)} className="panel flex items-center gap-2 rounded-xl px-2.5 py-1.5 active:scale-95">
-          <div className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-neon-violet to-neon-pink text-[13px] font-bold text-white shadow-glow-sm">
+          <div className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-neon-violet to-neon-pink text-[13px] font-bold text-ink-900 shadow-glow-sm">
             {cmd}
           </div>
           <div className="leading-none">
-            <div className="font-display text-[11px] font-semibold uppercase tracking-wider text-white/50">Мощь</div>
-            <div className="font-display text-sm font-bold text-white">{formatPower(power)}</div>
+            <div className="font-display text-[11px] font-semibold uppercase tracking-wider text-ink-500">Мощь</div>
+            <div className="font-display text-sm font-bold text-ink-900">{formatPower(power)}</div>
           </div>
         </button>
 
@@ -73,9 +73,9 @@ function SettingsSheet({ open, onClose, commander }: { open: boolean; onClose: (
         </div>
 
         <div className="panel rounded-xl p-3">
-          <div className="mb-2 font-display text-[12px] uppercase tracking-wider text-white/45">Бой</div>
+          <div className="mb-2 font-display text-[12px] uppercase tracking-wider text-ink-500">Бой</div>
           <div className="flex items-center justify-between py-1.5">
-            <span className="text-[13px] text-white/80">Ручные ультимейты</span>
+            <span className="text-[13px] text-ink-700">Ручные ультимейты</span>
             <button
               type="button"
               onClick={() => setSetting('manual', !settings.manual)}
@@ -89,7 +89,7 @@ function SettingsSheet({ open, onClose, commander }: { open: boolean; onClose: (
             </button>
           </div>
           <div className="flex items-center justify-between py-1.5">
-            <span className="text-[13px] text-white/80">Скорость по умолчанию</span>
+            <span className="text-[13px] text-ink-700">Скорость по умолчанию</span>
             <div className="flex gap-1">
               {([1, 2, 4] as const).map((v) => (
                 <button
@@ -97,7 +97,7 @@ function SettingsSheet({ open, onClose, commander }: { open: boolean; onClose: (
                   type="button"
                   onClick={() => setSetting('speed', v)}
                   className={`rounded-lg px-2.5 py-1 font-display text-[12px] font-bold ${
-                    settings.speed === v ? 'bg-neon-violet/40 text-white' : 'bg-white/[0.07] text-white/50'
+                    settings.speed === v ? 'bg-neon-violet/40 text-ink-900' : 'bg-ink-900/[0.06] text-ink-500'
                   }`}
                 >
                   ×{v}
@@ -107,7 +107,7 @@ function SettingsSheet({ open, onClose, commander }: { open: boolean; onClose: (
           </div>
         </div>
 
-        <p className="px-1 text-[11px] leading-snug text-white/35">
+        <p className="px-1 text-[11px] leading-snug text-ink-400">
           Прогресс хранится только на этом устройстве (IndexedDB). Очистка данных сайта удалит сохранение.
         </p>
 
@@ -123,7 +123,7 @@ function SettingsSheet({ open, onClose, commander }: { open: boolean; onClose: (
                 setConfirm(false);
                 onClose();
               }}
-              className="btn flex-1 bg-rose-600/80 py-2 text-[12px] text-white"
+              className="btn flex-1 bg-rose-600/80 py-2 text-[12px] text-ink-900"
             >
               Да, стереть всё
             </button>
@@ -140,9 +140,9 @@ function SettingsSheet({ open, onClose, commander }: { open: boolean; onClose: (
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-white/[0.05] px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wider text-white/40">{label}</div>
-      <div className="font-display text-[15px] font-bold text-white">{value}</div>
+    <div className="rounded-xl bg-ink-900/[0.05] px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wider text-ink-400">{label}</div>
+      <div className="font-display text-[15px] font-bold text-ink-900">{value}</div>
     </div>
   );
 }

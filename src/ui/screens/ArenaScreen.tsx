@@ -35,13 +35,13 @@ export default function ArenaScreen() {
   return (
     <div className="pb-2">
       <div className="panel relative mb-3 overflow-hidden rounded-2xl p-3">
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, #4a1233, #150818)' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, #ffe0ea, #f8f1fb 68%)' }} />
         <div className="absolute inset-0 bg-stars opacity-50" />
         <div className="relative">
           <div className="flex items-start justify-between">
             <div>
-              <div className="font-display text-[11px] uppercase tracking-[0.26em] text-white/50">Сезон {arena.season}</div>
-              <h1 className="font-display text-xl font-bold text-white">Арена Затмения</h1>
+              <div className="font-display text-[11px] uppercase tracking-[0.26em] text-ink-500">Сезон {arena.season}</div>
+              <h1 className="font-display text-xl font-bold text-ink-900">Арена Затмения</h1>
               <div className="mt-1 flex items-center gap-1.5">
                 <span className="chip border" style={{ color: tier.color, borderColor: `${tier.color}66`, background: `${tier.color}1a` }}>
                   🏆 {tier.name}
@@ -50,10 +50,10 @@ export default function ArenaScreen() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] uppercase tracking-wider text-white/40">Билеты</div>
+              <div className="text-[10px] uppercase tracking-wider text-ink-400">Билеты</div>
               <div className="font-display text-xl font-bold text-neon-cyan">{tickets.count}/5</div>
               {tickets.nextIn > 0 && (
-                <div className="text-[10px] text-white/40">+1 через {formatDuration(tickets.nextIn / 1000)}</div>
+                <div className="text-[10px] text-ink-400">+1 через {formatDuration(tickets.nextIn / 1000)}</div>
               )}
             </div>
           </div>
@@ -64,9 +64,9 @@ export default function ArenaScreen() {
             <Stat label="Винрейт" value={`${winrate}%`} color="#ffc857" />
           </div>
 
-          <div className="mt-2 flex items-center justify-between rounded-xl bg-black/25 px-2.5 py-1.5">
-            <span className="text-[11px] text-white/50">Сила вашего отряда</span>
-            <span className="font-display text-sm font-bold text-white">{formatPower(power)}</span>
+          <div className="mt-2 flex items-center justify-between rounded-xl bg-ink-900/[0.05] px-2.5 py-1.5">
+            <span className="text-[11px] text-ink-500">Сила вашего отряда</span>
+            <span className="font-display text-sm font-bold text-ink-900">{formatPower(power)}</span>
           </div>
         </div>
       </div>
@@ -135,8 +135,8 @@ export default function ArenaScreen() {
 
 function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="rounded-lg bg-white/[0.05] py-1.5">
-      <div className="text-[9px] uppercase tracking-wider text-white/40">{label}</div>
+    <div className="rounded-lg bg-ink-900/[0.05] py-1.5">
+      <div className="text-[9px] uppercase tracking-wider text-ink-400">{label}</div>
       <div className="font-display text-[15px] font-bold" style={{ color }}>
         {value}
       </div>
@@ -163,16 +163,16 @@ function OpponentRow({
     <div className="panel flex items-center gap-2.5 rounded-2xl p-2.5">
       <div className="flex -space-x-2">
         {team.slice(0, 3).map((t, i) => (
-          <div key={i} className="rounded-xl ring-1 ring-black/50">
-            <Avatar heroId={t.def.id} size={34} hideFrame fierce />
+          <div key={i} className="rounded-xl ring-1 ring-ink-900/10">
+            <Avatar heroId={t.def.id} size={34} hideFrame framing="bust" />
           </div>
         ))}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate font-display text-[13px] font-semibold text-white">{op.name}</div>
+        <div className="truncate font-display text-[13px] font-semibold text-ink-900">{op.name}</div>
         <div className="flex items-center gap-2 text-[11px]">
           <span style={{ color: tone }}>{formatPower(op.power)}</span>
-          <span className="text-white/35">+{op.points} очков</span>
+          <span className="text-ink-400">+{op.points} очков</span>
         </div>
       </div>
       <button

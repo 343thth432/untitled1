@@ -18,7 +18,7 @@ export function FactionDot({ faction, size = 18 }: { faction: Faction; size?: nu
   const f = FACTIONS[faction];
   return (
     <span
-      className="inline-flex items-center justify-center rounded-full border border-white/25"
+      className="inline-flex items-center justify-center rounded-full border border-ink-900/15"
       style={{
         width: size,
         height: size,
@@ -35,7 +35,7 @@ export function FactionDot({ faction, size = 18 }: { faction: Faction; size?: nu
 export function RoleChip({ role }: { role: Role }) {
   const r = ROLES[role];
   return (
-    <span className="chip bg-white/[0.07] border border-white/10" style={{ color: r.color }}>
+    <span className="chip bg-ink-900/[0.06] border border-ink-900/[0.08]" style={{ color: r.color }}>
       <span>{r.icon}</span>
       {r.name}
     </span>
@@ -83,7 +83,7 @@ export function Section({ title, right, children }: { title: string; right?: Rea
   return (
     <section className="mb-4">
       <header className="mb-2 flex items-end justify-between px-1">
-        <h2 className="font-display text-[13px] font-semibold uppercase tracking-[0.18em] text-white/55">{title}</h2>
+        <h2 className="font-display text-[13px] font-semibold uppercase tracking-[0.18em] text-ink-500">{title}</h2>
         {right}
       </header>
       {children}
@@ -95,14 +95,14 @@ export function Empty({ icon, text }: { icon: string; text: string }) {
   return (
     <div className="panel flex flex-col items-center gap-2 px-6 py-10 text-center">
       <span className="text-3xl opacity-70">{icon}</span>
-      <p className="text-sm text-white/55">{text}</p>
+      <p className="text-sm text-ink-500">{text}</p>
     </div>
   );
 }
 
 export function Pill({ children, tone = 'default' }: { children: ReactNode; tone?: 'default' | 'good' | 'bad' | 'gold' }) {
   const tones = {
-    default: 'bg-white/[0.07] text-white/75 border-white/10',
+    default: 'bg-ink-900/[0.06] text-ink-600 border-ink-900/[0.08]',
     good: 'bg-emerald-400/15 text-emerald-200 border-emerald-300/25',
     bad: 'bg-rose-500/15 text-rose-200 border-rose-400/25',
     gold: 'bg-amber-400/15 text-amber-200 border-amber-300/25',

@@ -15,7 +15,7 @@ export function Toasts() {
           }}
         >
           {t.icon && <span>{t.icon}</span>}
-          <span className="text-white/85">{t.text}</span>
+          <span className="text-ink-800">{t.text}</span>
         </div>
       ))}
     </div>

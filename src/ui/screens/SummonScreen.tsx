@@ -3,7 +3,7 @@ import { useGame } from '../../game/state/store';
 import { HEROES } from '../../game/data/heroes';
 import { RARITY, RARITY_ORDER, FACTIONS } from '../../game/data/factions';
 import { PITY_LEGEND, PITY_MYTHIC, SUMMON_GEM_COST, SUMMON_RATES } from '../../game/engine/progression';
-import Portrait from '../../art/Portrait';
+import { usePortrait } from '../../art/usePortrait';
 import { Bar, Pill, Section } from '../components/Bits';
 import Avatar from '../components/Avatar';
 
@@ -25,29 +25,16 @@ export default function SummonScreen() {
       <div className="panel relative mb-3 overflow-hidden rounded-2xl">
         <div
           className="absolute inset-0"
-          style={{ background: 'linear-gradient(160deg, #46165c, #1a0b2e 55%, #08050f)' }}
+          style={{ background: 'linear-gradient(160deg, #ffe3f4, #f3e9ff 52%, #f8f6fd)' }}
         />
         <div className="absolute inset-0 bg-stars opacity-60" />
         <div className="absolute inset-x-0 top-0 h-40 sheen animate-sheen opacity-40" />
         <div className="relative p-3">
-          <div className="font-display text-[11px] uppercase tracking-[0.28em] text-white/50">Врата затмения</div>
-          <h1 className="font-display text-xl font-bold text-white">Призыв героинь</h1>
-          <div className="mt-2 flex justify-center gap-1">
+          <div className="font-display text-[11px] uppercase tracking-[0.28em] text-ink-500">Врата затмения</div>
+          <h1 className="font-display text-xl font-bold text-ink-900">Призыв героинь</h1>
+          <div className="mt-2 flex justify-center gap-1.5">
             {featured.map((h, i) => (
-              <div
-                key={h.id}
-                className="relative h-28 w-20 overflow-hidden rounded-2xl"
-                style={{
-                  border: `1.5px solid ${RARITY.mythic.color}`,
-                  boxShadow: `0 8px 24px -10px ${FACTIONS[h.faction].glow}`,
-                  transform: `translateY(${i % 2 === 0 ? 0 : 6}px)`,
-                }}
-              >
-                <Portrait look={h.look} className="h-full w-full" />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent px-1 pb-1 pt-4 text-center">
-                  <div className="truncate font-display text-[10px] font-bold text-white">{h.name}</div>
-                </div>
-              </div>
+              <FeaturedCard key={h.id} id={h.id} offset={i % 2 === 0 ? 0 : 6} />
             ))}
           </div>
 
@@ -58,18 +45,18 @@ export default function SummonScreen() {
           </div>
 
           {/* Переключатель валюты */}
-          <div className="mt-3 flex rounded-xl bg-black/30 p-1">
+          <div className="mt-3 flex rounded-xl bg-ink-900/[0.06] p-1">
             <button
               type="button"
               onClick={() => setUseScrolls(false)}
-              className={`flex-1 rounded-lg py-1.5 text-[12px] font-semibold ${!useScrolls ? 'bg-white/12 text-white' : 'text-white/45'}`}
+              className={`flex-1 rounded-lg py-1.5 text-[12px] font-semibold ${!useScrolls ? 'bg-ink-900/[0.08] text-ink-900' : 'text-ink-500'}`}
             >
               💎 {res.gems}
             </button>
             <button
               type="button"
               onClick={() => setUseScrolls(true)}
-              className={`flex-1 rounded-lg py-1.5 text-[12px] font-semibold ${useScrolls ? 'bg-white/12 text-white' : 'text-white/45'}`}
+              className={`flex-1 rounded-lg py-1.5 text-[12px] font-semibold ${useScrolls ? 'bg-ink-900/[0.08] text-ink-900' : 'text-ink-500'}`}
             >
               📜 {res.scrolls}
             </button>
@@ -102,11 +89,11 @@ export default function SummonScreen() {
       <Section title="Шансы">
         <div className="panel grid grid-cols-4 gap-1.5 rounded-2xl p-2.5">
           {SUMMON_RATES.map(([r, w]) => (
-            <div key={r} className="rounded-lg bg-white/[0.05] p-1.5 text-center">
+            <div key={r} className="rounded-lg bg-ink-900/[0.05] p-1.5 text-center">
               <div className="font-display text-[11px] font-bold" style={{ color: RARITY[r].color }}>
                 {RARITY[r].name}
               </div>
-              <div className="text-[13px] font-bold text-white/85">{(w * 100).toFixed(0)}%</div>
+              <div className="text-[13px] font-bold text-ink-800">{(w * 100).toFixed(0)}%</div>
             </div>
           ))}
         </div>
@@ -139,10 +126,30 @@ export default function SummonScreen() {
   );
 }
 
+function FeaturedCard({ id, offset }: { id: string; offset: number }) {
+  const def = HEROES.find((h) => h.id === id)!;
+  const url = usePortrait(def.look, def.id, 'half', 260);
+  return (
+    <div
+      className="relative h-32 w-[22%] overflow-hidden rounded-2xl bg-white"
+      style={{
+        border: `1.5px solid ${RARITY.mythic.color}`,
+        boxShadow: `0 10px 24px -14px ${FACTIONS[def.faction].glow}`,
+        transform: `translateY(${offset}px)`,
+      }}
+    >
+      {url && <img src={url} alt={def.name} className="h-full w-full object-cover" draggable={false} />}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-white via-white/85 to-transparent px-1 pb-1 pt-4 text-center">
+        <div className="truncate font-display text-[10px] font-bold text-ink-900">{def.name}</div>
+      </div>
+    </div>
+  );
+}
+
 function PityBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
   return (
     <div>
-      <div className="mb-0.5 flex justify-between text-[10px] text-white/45">
+      <div className="mb-0.5 flex justify-between text-[10px] text-ink-500">
         <span>{label}</span>
         <span>
           {Math.min(value, max)} / {max}

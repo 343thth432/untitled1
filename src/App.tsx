@@ -13,12 +13,12 @@ import BattleScreen from './ui/screens/BattleScreen';
 import SummonResults from './ui/components/SummonResults';
 
 const BG: Record<string, [string, string]> = {
-  campaign: ['#1b1030', '#06040d'],
-  heroes: ['#131a33', '#06040d'],
-  summon: ['#2a1038', '#06040d'],
-  tower: ['#161038', '#06040d'],
-  arena: ['#2a1024', '#06040d'],
-  hero: ['#141230', '#06040d'],
+  campaign: ['#fbe9ff', '#f1edfa'],
+  heroes: ['#e8f2ff', '#f1edfa'],
+  summon: ['#ffe9f6', '#f1edfa'],
+  tower: ['#ece7ff', '#f1edfa'],
+  arena: ['#ffe9ec', '#f1edfa'],
+  hero: ['#efeaff', '#f1edfa'],
 };
 
 export default function App() {
@@ -45,17 +45,17 @@ export default function App() {
   const bg = BG[screen] ?? BG.campaign;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#e6e1f3]">
       <div
         className="relative flex h-full w-full max-w-[480px] flex-col overflow-hidden sm:h-[100dvh] sm:rounded-none"
         style={{
-          background: `radial-gradient(120% 70% at 50% 0%, ${bg[0]} 0%, ${bg[1]} 62%, #04030a 100%)`,
+          background: `radial-gradient(120% 70% at 50% 0%, ${bg[0]} 0%, ${bg[1]} 58%, #f7f5fc 100%)`,
         }}
       >
-        <div className="pointer-events-none absolute inset-0 bg-stars opacity-70" />
+        <div className="pointer-events-none absolute inset-0 bg-stars opacity-80" />
         <div
           className="pointer-events-none absolute -top-24 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full opacity-40 blur-3xl"
-          style={{ background: 'radial-gradient(circle, rgba(160,107,255,0.55), transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, rgba(123,70,224,0.28), transparent 70%)' }}
         />
 
         {!ready ? (
@@ -87,13 +87,13 @@ function Splash() {
   return (
     <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-4">
       <div className="relative h-24 w-24">
-        <div className="absolute inset-0 animate-spinSlow rounded-full border-2 border-dashed border-neon-violet/60" />
-        <div className="absolute inset-3 rounded-full bg-gradient-to-br from-neon-pink via-neon-violet to-neon-cyan opacity-80 blur-[2px]" />
-        <div className="absolute inset-5 rounded-full bg-ink-900" />
+        <div className="absolute inset-0 animate-spinSlow rounded-full border-2 border-dashed border-neon-violet/50" />
+        <div className="absolute inset-3 rounded-full bg-gradient-to-br from-neon-pink via-neon-violet to-neon-cyan opacity-70 blur-[2px]" />
+        <div className="absolute inset-5 rounded-full bg-paper" />
       </div>
       <div className="text-center">
-        <h1 className="font-display text-xl font-bold tracking-[0.22em] text-white">ЭКЛИПС</h1>
-        <p className="mt-1 text-xs uppercase tracking-[0.3em] text-white/40">Дочери Затмения</p>
+        <h1 className="font-display text-xl font-extrabold tracking-[0.22em] text-ink-900">ЭКЛИПС</h1>
+        <p className="mt-1 text-xs uppercase tracking-[0.3em] text-ink-400">Дочери Затмения</p>
       </div>
     </div>
   );

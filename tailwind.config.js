@@ -4,20 +4,27 @@ export default {
   theme: {
     extend: {
       colors: {
+        // «ink» — тёмная шкала для текста и контуров на светлом фоне
         ink: {
-          900: '#080711',
-          800: '#0d0b1a',
-          700: '#141127',
-          600: '#1c1836',
-          500: '#272147',
-          400: '#382f61',
+          900: '#1b1533',
+          800: '#2a2247',
+          700: '#3d3560',
+          600: '#564e79',
+          500: '#635b85',
+          400: '#857daa',
+          300: '#b3acc9',
+          200: '#ded9eb',
+          100: '#efecf7',
+          50: '#f8f6fd',
         },
+        paper: '#ffffff',
+        canvas: '#f3f0fa',
         neon: {
-          pink: '#ff5ea8',
-          violet: '#a06bff',
-          cyan: '#4fe3ff',
-          gold: '#ffc857',
-          lime: '#7dff9c',
+          pink: '#e8368f',
+          violet: '#7b46e0',
+          cyan: '#0891b2',
+          gold: '#dc8a0c',
+          lime: '#16a34a',
         },
         flame: '#ff6b4a',
         tide: '#4fb8ff',
@@ -30,9 +37,10 @@ export default {
         body: ['"Manrope"', '"Segoe UI"', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        glow: '0 0 24px -4px rgba(160,107,255,0.55)',
-        'glow-sm': '0 0 12px -2px rgba(160,107,255,0.5)',
-        card: '0 12px 32px -12px rgba(0,0,0,0.9)',
+        glow: '0 10px 30px -12px rgba(123,70,224,0.55)',
+        'glow-sm': '0 6px 16px -8px rgba(123,70,224,0.5)',
+        card: '0 10px 30px -18px rgba(27,21,51,0.45), 0 2px 6px -3px rgba(27,21,51,0.12)',
+        soft: '0 2px 10px -6px rgba(27,21,51,0.3)',
       },
       keyframes: {
         floaty: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-5px)' } },

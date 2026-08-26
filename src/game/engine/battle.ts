@@ -38,13 +38,15 @@ export interface UnitSpec {
 export interface TickEvents {
   floats: { uid: string; text: string; kind: FloatKind }[];
   hits: string[];
+  /** кто именно замахнулся в этом тике — для анимации */
+  attacks: string[];
   ults: { uid: string; name: string }[];
   log: BattleLogEntry[];
   deaths: string[];
 }
 
 function emptyEvents(): TickEvents {
-  return { floats: [], hits: [], ults: [], log: [], deaths: [] };
+  return { floats: [], hits: [], attacks: [], ults: [], log: [], deaths: [] };
 }
 
 export function makeCombatant(spec: UnitSpec, side: 'ally' | 'foe', slot: number): Unit {
@@ -217,6 +219,7 @@ export class Battle {
 
   // ── Атаки ──────────────────────────────────────────────────
   private basicAttack(u: Unit, ev: TickEvents): void {
+    ev.attacks.push(u.uid);
     const skill = u.skills[0];
     this.runEffects(u, skill, u.skillLevels[0], ev);
     this.gainEnergy(u, 22, ev);

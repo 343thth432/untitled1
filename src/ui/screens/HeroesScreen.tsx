@@ -29,7 +29,7 @@ export default function HeroesScreen() {
             type="button"
             onClick={() => setTab(id)}
             className={`flex-1 rounded-lg py-2 font-display text-[12px] font-semibold uppercase tracking-wider transition-colors ${
-              tab === id ? 'bg-white/10 text-white' : 'text-white/45'
+              tab === id ? 'bg-ink-900/[0.07] text-ink-900' : 'text-ink-500'
             }`}
           >
             {label}
@@ -87,9 +87,9 @@ function TeamTab() {
         }
       >
         <div className="panel rounded-2xl p-3">
-          <div className="mb-2 flex items-center justify-between text-[11px] text-white/45">
+          <div className="mb-2 flex items-center justify-between text-[11px] text-ink-500">
             <span>Слева — первая линия, справа — тыл</span>
-            <span className="font-display font-bold text-white/80">{formatPower(power)}</span>
+            <span className="font-display font-bold text-ink-700">{formatPower(power)}</span>
           </div>
           <div className="flex gap-1.5">
             {team.map((id, i) => (
@@ -108,20 +108,20 @@ function TeamTab() {
                     type="button"
                     onClick={() => setSlotSel(slot === i ? null : i)}
                     className={`flex aspect-[1/1.18] w-full items-center justify-center rounded-2xl border border-dashed text-2xl ${
-                      slot === i ? 'border-white text-white' : 'border-white/15 text-white/20'
+                      slot === i ? 'border-neon-violet text-neon-violet' : 'border-ink-900/10 text-ink-300'
                     }`}
                   >
                     +
                   </button>
                 )}
-                <div className="mt-1 text-center text-[9px] uppercase tracking-wider text-white/30">
+                <div className="mt-1 text-center text-[9px] uppercase tracking-wider text-ink-300">
                   {i === 0 ? 'фронт' : i === 4 ? 'тыл' : i + 1}
                 </div>
               </div>
             ))}
           </div>
           {slot !== null && (
-            <p className="mt-2 rounded-lg bg-neon-violet/15 px-2 py-1.5 text-center text-[11px] text-white/70">
+            <p className="mt-2 rounded-lg bg-neon-violet/15 px-2 py-1.5 text-center text-[11px] text-ink-600">
               Выбран слот {slot + 1}. Нажмите на героиню ниже, чтобы поставить её сюда.
             </p>
           )}
@@ -140,7 +140,7 @@ function TeamTab() {
                 selected={team.includes(h.id)}
                 onClick={() => place(h.id)}
               />
-              <div className="mt-0.5 text-center text-[9px] text-white/40">{formatPower(d.power)}</div>
+              <div className="mt-0.5 text-center text-[9px] text-ink-400">{formatPower(d.power)}</div>
             </div>
           ))}
         </div>
@@ -186,12 +186,12 @@ function RosterTab() {
             <div key={h.id} className="panel overflow-hidden rounded-2xl p-1.5">
               <Avatar heroId={h.id} fluid stars={h.stars} level={h.level} onClick={() => open(h.id)} />
               <div className="mt-1 px-0.5">
-                <div className="truncate text-[10px] text-white/45">{def.title}</div>
+                <div className="truncate text-[10px] text-ink-500">{def.title}</div>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px]" style={{ color: ROLES[def.role].color }}>
                     {ROLES[def.role].icon}
                   </span>
-                  <span className="font-display text-[11px] font-bold text-white/80">{formatPower(d.power)}</span>
+                  <span className="font-display text-[11px] font-bold text-ink-700">{formatPower(d.power)}</span>
                 </div>
               </div>
             </div>
@@ -231,7 +231,7 @@ function FilterBtn({
       type="button"
       onClick={onClick}
       className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
-        active ? 'bg-white/15 text-white' : 'bg-white/[0.05] text-white/45'
+        active ? 'bg-ink-900/[0.09] text-ink-900' : 'bg-ink-900/[0.05] text-ink-500'
       }`}
       style={active && color ? { boxShadow: `inset 0 0 0 1px ${color}88` } : undefined}
     >
@@ -326,30 +326,30 @@ export function GearSheet({
         </div>
 
         <div className="stat-row">
-          <span className="text-white/55">Главный стат</span>
-          <span className="font-display font-bold text-white">
+          <span className="text-ink-500">Главный стат</span>
+          <span className="font-display font-bold text-ink-900">
             {formatStat(live.mainStat, live.mainValue, live.mainPct)}
           </span>
         </div>
         {live.subs.map((s, i) => (
           <div key={i} className="stat-row">
-            <span className="text-white/45">Доп. стат</span>
-            <span className="text-white/80">{formatStat(s.stat, s.value, s.pct)}</span>
+            <span className="text-ink-500">Доп. стат</span>
+            <span className="text-ink-700">{formatStat(s.stat, s.value, s.pct)}</span>
           </div>
         ))}
 
         {set && (
-          <div className="rounded-xl border border-white/10 p-2.5" style={{ background: `${set.color}12` }}>
+          <div className="rounded-xl border border-ink-900/[0.08] p-2.5" style={{ background: `${set.color}12` }}>
             <div className="font-display text-[12px] font-bold" style={{ color: set.color }}>
               Комплект «{set.name}»
             </div>
-            <div className="mt-1 text-[11px] text-white/60">2 части: {set.bonus2.text}</div>
-            <div className="text-[11px] text-white/60">4 части: {set.bonus4.text}</div>
+            <div className="mt-1 text-[11px] text-ink-500">2 части: {set.bonus2.text}</div>
+            <div className="text-[11px] text-ink-500">4 части: {set.bonus4.text}</div>
           </div>
         )}
 
         <div>
-          <div className="mb-1.5 font-display text-[11px] uppercase tracking-wider text-white/45">Надеть на</div>
+          <div className="mb-1.5 font-display text-[11px] uppercase tracking-wider text-ink-500">Надеть на</div>
           <div className="grid grid-cols-5 gap-1.5">
             {heroesIds.map((id) => (
               <Avatar

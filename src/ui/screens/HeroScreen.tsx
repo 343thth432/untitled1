@@ -8,7 +8,7 @@ import { deriveHero, MAX_STARS } from '../../game/engine/stats';
 import { ascendCost, commanderLevel, expToNext, goldToNext, heroLevelCap } from '../../game/engine/progression';
 import { skillText, SKILL_KIND_LABEL } from '../../game/engine/skillText';
 import type { GearItem, GearSlot, StatKey } from '../../game/types';
-import Portrait from '../../art/Portrait';
+import HeroStage from '../../art/HeroStage';
 import Sheet from '../components/Sheet';
 import GearCard from '../components/GearCard';
 import { Bar, Pill, StarRow } from '../components/Bits';
@@ -37,7 +37,7 @@ export default function HeroScreen() {
 
   if (!id || !save || !def || !derived) {
     return (
-      <div className="pt-10 text-center text-white/50">
+      <div className="pt-10 text-center text-ink-500">
         Героиня не выбрана.
         <button type="button" onClick={() => go('heroes')} className="btn-ghost mt-3 block w-full">
           К списку
@@ -56,57 +56,61 @@ export default function HeroScreen() {
 
   return (
     <div className="pb-3">
-      <button type="button" onClick={() => go('heroes')} className="mb-2 text-[12px] font-semibold text-white/50">
+      <button type="button" onClick={() => go('heroes')} className="mb-2 text-[12px] font-semibold text-ink-500">
         ← Назад
       </button>
 
       {/* Карточка */}
       <div
         className="panel relative mb-3 overflow-hidden rounded-2xl"
-        style={{ background: `linear-gradient(160deg, ${f.color}26, #0b0817 70%)` }}
+        style={{ background: `linear-gradient(180deg, ${f.color}1f, #ffffff 42%)` }}
       >
         <div className="absolute inset-0 bg-stars opacity-50" />
-        <div className="relative flex gap-3 p-3">
+        <div className="relative h-[330px]">
+          <HeroStage look={def.look} framing="full" className="absolute inset-0" />
           <div
-            className="relative h-32 w-24 shrink-0 overflow-hidden rounded-2xl"
-            style={{ border: `1.5px solid ${r.color}`, boxShadow: `0 0 24px -6px ${f.glow}` }}
-          >
-            <Portrait look={def.look} className="h-full w-full" />
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-24"
+            style={{ background: 'linear-gradient(to top, #ffffff, rgba(255,255,255,0.75) 45%, transparent)' }}
+          />
+          <div className="pointer-events-none absolute left-3 top-3 flex flex-col items-start gap-1">
+            <span className="chip bg-white/85 text-ink-500 shadow-soft">Крутите пальцем ↔</span>
           </div>
+        </div>
+        <div className="relative -mt-12 flex gap-3 px-3 pb-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="text-sm">{f.icon}</span>
-              <h1 className="truncate font-display text-lg font-bold text-white">{def.name}</h1>
+              <h1 className="truncate font-display text-lg font-bold text-ink-900">{def.name}</h1>
             </div>
-            <div className="text-[11px] text-white/50">«{def.title}»</div>
+            <div className="text-[11px] text-ink-500">«{def.title}»</div>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <Pill tone="gold">{r.name}</Pill>
-              <span className="chip border border-white/10 bg-white/[0.06]" style={{ color: ROLES[def.role].color }}>
+              <span className="chip border border-ink-900/[0.08] bg-ink-900/[0.055]" style={{ color: ROLES[def.role].color }}>
                 {ROLES[def.role].icon} {ROLES[def.role].name}
               </span>
             </div>
             <div className="mt-1.5 flex items-center gap-2">
               <StarRow stars={save.stars} size={13} />
-              <span className="text-[11px] text-white/35">{save.stars}/{MAX_STARS}</span>
+              <span className="text-[11px] text-ink-400">{save.stars}/{MAX_STARS}</span>
             </div>
             <div className="mt-2 flex items-end justify-between">
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-white/40">Мощь</div>
-                <div className="font-display text-lg font-bold text-white">{formatPower(derived.power)}</div>
+                <div className="text-[10px] uppercase tracking-wider text-ink-400">Мощь</div>
+                <div className="font-display text-lg font-bold text-ink-900">{formatPower(derived.power)}</div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] uppercase tracking-wider text-white/40">Уровень</div>
-                <div className="font-display text-lg font-bold text-white">
+                <div className="text-[10px] uppercase tracking-wider text-ink-400">Уровень</div>
+                <div className="font-display text-lg font-bold text-ink-900">
                   {save.level}
-                  <span className="text-[11px] text-white/35"> / {cap}</span>
+                  <span className="text-[11px] text-ink-400"> / {cap}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="relative border-t border-white/10 p-3">
-          <p className="mb-2 text-[11px] italic leading-snug text-white/45">{def.lore}</p>
+        <div className="relative border-t border-ink-900/[0.08] p-3">
+          <p className="mb-2 text-[11px] italic leading-snug text-ink-500">{def.lore}</p>
           <div className="flex gap-2">
             <button
               type="button"
@@ -157,7 +161,7 @@ export default function HeroScreen() {
             type="button"
             onClick={() => setTab(t)}
             className={`flex-1 rounded-lg py-1.5 font-display text-[12px] font-semibold uppercase tracking-wider ${
-              tab === t ? 'bg-white/10 text-white' : 'text-white/45'
+              tab === t ? 'bg-ink-900/[0.07] text-ink-900' : 'text-ink-500'
             }`}
           >
             {label}
@@ -181,8 +185,8 @@ function StatsTab({ derived }: { derived: ReturnType<typeof deriveHero> }) {
     <div className="space-y-1.5">
       {STAT_ORDER.map((k) => (
         <div key={k} className="stat-row">
-          <span className="text-white/50">{STAT_LABEL[k]}</span>
-          <span className="font-display font-bold text-white">
+          <span className="text-ink-500">{STAT_LABEL[k]}</span>
+          <span className="font-display font-bold text-ink-900">
             {PCT_STATS.includes(k) ? `${derived.stats[k]}%` : Math.round(derived.stats[k])}
           </span>
         </div>
@@ -190,7 +194,7 @@ function StatsTab({ derived }: { derived: ReturnType<typeof deriveHero> }) {
       {(['dmgDealt', 'dmgTaken', 'healPower'] as const).map((k) =>
         derived.mods[k] !== 0 ? (
           <div key={k} className="stat-row">
-            <span className="text-white/50">
+            <span className="text-ink-500">
               {k === 'dmgDealt' ? 'Наносимый урон' : k === 'dmgTaken' ? 'Получаемый урон' : 'Сила лечения'}
             </span>
             <span className="font-display font-bold text-neon-lime">
@@ -206,15 +210,15 @@ function StatsTab({ derived }: { derived: ReturnType<typeof deriveHero> }) {
             const set = SET_BY_ID[s.setId];
             if (!set) return null;
             return (
-              <div key={s.setId} className="rounded-xl border border-white/10 p-2" style={{ background: `${set.color}12` }}>
+              <div key={s.setId} className="rounded-xl border border-ink-900/[0.08] p-2" style={{ background: `${set.color}12` }}>
                 <div className="flex items-center justify-between">
                   <span className="font-display text-[12px] font-bold" style={{ color: set.color }}>
                     {set.name}
                   </span>
-                  <span className="text-[11px] text-white/45">{s.count}/6</span>
+                  <span className="text-[11px] text-ink-500">{s.count}/6</span>
                 </div>
-                <div className={`text-[11px] ${s.count >= 2 ? 'text-white/70' : 'text-white/25'}`}>2: {set.bonus2.text}</div>
-                <div className={`text-[11px] ${s.count >= 4 ? 'text-white/70' : 'text-white/25'}`}>4: {set.bonus4.text}</div>
+                <div className={`text-[11px] ${s.count >= 2 ? 'text-ink-600' : 'text-ink-300'}`}>2: {set.bonus2.text}</div>
+                <div className={`text-[11px] ${s.count >= 4 ? 'text-ink-600' : 'text-ink-300'}`}>4: {set.bonus4.text}</div>
               </div>
             );
           })}
@@ -240,15 +244,15 @@ function SkillsTab({ heroId }: { heroId: string }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-display text-[13px] font-bold text-white">{sk.name}</span>
-                <span className="chip border border-white/10 bg-white/[0.06] text-white/50">
+                <span className="font-display text-[13px] font-bold text-ink-900">{sk.name}</span>
+                <span className="chip border border-ink-900/[0.08] bg-ink-900/[0.055] text-ink-500">
                   {SKILL_KIND_LABEL[sk.kind]}
                 </span>
                 <span className="ml-auto font-display text-[11px] font-bold text-neon-gold">
                   ур. {d.skillLevels[i]}
                 </span>
               </div>
-              <p className="mt-1 text-[12px] leading-snug text-white/65">{skillText(sk, d.skillLevels[i])}</p>
+              <p className="mt-1 text-[12px] leading-snug text-ink-600">{skillText(sk, d.skillLevels[i])}</p>
             </div>
           </div>
         </div>
@@ -273,9 +277,9 @@ function TreeTab({ heroId }: { heroId: string }) {
     <div>
       <div className="panel mb-3 flex items-center justify-between rounded-xl px-3 py-2">
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-white/40">Очки навыков</div>
+          <div className="text-[10px] uppercase tracking-wider text-ink-400">Очки навыков</div>
           <div className="font-display text-lg font-bold text-neon-cyan">
-            {avail} <span className="text-[11px] text-white/35">/ {total}</span>
+            {avail} <span className="text-[11px] text-ink-400">/ {total}</span>
           </div>
         </div>
         <button type="button" onClick={() => reset(heroId)} className="btn-ghost px-3 py-1.5 text-[11px]">
@@ -286,7 +290,7 @@ function TreeTab({ heroId }: { heroId: string }) {
       <div className="space-y-2">
         {tiers.map((tier) => (
           <div key={tier} className="relative">
-            <div className="mb-1 px-1 text-[10px] uppercase tracking-widest text-white/25">Ярус {tier}</div>
+            <div className="mb-1 px-1 text-[10px] uppercase tracking-widest text-ink-300">Ярус {tier}</div>
             <div className="grid grid-cols-3 gap-2">
               {nodes
                 .filter((n) => n.tier === tier)
@@ -302,19 +306,19 @@ function TreeTab({ heroId }: { heroId: string }) {
                       disabled={locked || maxed || avail <= 0}
                       className="relative rounded-xl border p-2 text-left transition-transform active:scale-95 disabled:opacity-45"
                       style={{
-                        background: rank > 0 ? 'linear-gradient(150deg, rgba(160,107,255,0.28), rgba(10,8,20,0.9))' : 'rgba(255,255,255,0.04)',
+                        background: rank > 0 ? 'linear-gradient(150deg, rgba(123,70,224,0.2), #ffffff 70%)' : 'rgba(27,21,51,0.045)',
                         borderColor: maxed ? '#ffc857' : rank > 0 ? 'rgba(160,107,255,0.6)' : 'rgba(255,255,255,0.1)',
                       }}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-base">{n.icon}</span>
-                        <span className="font-display text-[10px] font-bold text-white/70">
+                        <span className="font-display text-[10px] font-bold text-ink-600">
                           {rank}/{n.maxRank}
                         </span>
                       </div>
-                      <div className="mt-0.5 truncate font-display text-[11px] font-semibold text-white">{n.name}</div>
-                      <div className="text-[10px] leading-tight text-white/45">{n.text(rank)}</div>
-                      {locked && <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/45 text-sm">🔒</div>}
+                      <div className="mt-0.5 truncate font-display text-[11px] font-semibold text-ink-900">{n.name}</div>
+                      <div className="text-[10px] leading-tight text-ink-500">{n.text(rank)}</div>
+                      {locked && <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-ink-900/35 text-sm">🔒</div>}
                     </button>
                   );
                 })}
@@ -361,7 +365,7 @@ function GearTab({ heroId, onAuto }: { heroId: string; onAuto: () => void }) {
                 <button
                   type="button"
                   onClick={() => setSlot(s.id)}
-                  className="flex h-[62px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/12 text-white/25"
+                  className="flex h-[62px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-ink-900/10 text-ink-300"
                 >
                   <span className="text-lg">{s.icon}</span>
                   <span className="text-[11px]">{s.name}</span>
@@ -386,7 +390,7 @@ function GearTab({ heroId, onAuto }: { heroId: string; onAuto: () => void }) {
               Снять текущий предмет
             </button>
           )}
-          {candidates.length === 0 && <p className="py-6 text-center text-sm text-white/40">Нет предметов в этот слот</p>}
+          {candidates.length === 0 && <p className="py-6 text-center text-sm text-ink-400">Нет предметов в этот слот</p>}
           {candidates.map((g) => (
             <div key={g.uid} className="relative">
               <GearCard

@@ -42,13 +42,13 @@ export function BottomNav() {
               <span className={`text-[17px] leading-none ${active ? '' : 'opacity-60'}`}>{t.icon}</span>
               <span
                 className={`font-display text-[10px] font-semibold uppercase tracking-wide ${
-                  active ? 'text-white' : 'text-white/45'
+                  active ? 'text-ink-900' : 'text-ink-500'
                 }`}
               >
                 {t.label}
               </span>
               {badge && (
-                <span className="absolute right-1.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-neon-pink px-1 text-[9px] font-bold text-white">
+                <span className="absolute right-1.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-neon-pink px-1 text-[9px] font-bold text-ink-900">
                   {badge}
                 </span>
               )}
