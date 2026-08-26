@@ -6,3 +6,4 @@ dist
 .balance.mjs
 smoke.mjs
 *.tsbuildinfo
+refsheet-artifact.html
