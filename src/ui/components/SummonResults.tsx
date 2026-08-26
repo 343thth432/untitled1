@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useGame, type SummonResult } from '../../game/state/store';
 import { heroDef } from '../../game/data/heroes';
 import { RARITY, FACTIONS } from '../../game/data/factions';
-import { usePortrait } from '../../art/usePortrait';
+import { useDrawnAvatar } from '../../art/useDrawnAvatar';
 import HeroStage from '../../art/HeroStage';
 
 export default function SummonResults() {
@@ -93,7 +93,7 @@ export default function SummonResults() {
 function SummonCard({ r, shown, onPick }: { r: SummonResult; shown: boolean; onPick: () => void }) {
   const def = heroDef(r.heroId);
   const rar = RARITY[r.rarity];
-  const url = usePortrait(def.look, def.id, 'half', 260);
+  const url = useDrawnAvatar(def.look, def.id, 260);
   return (
     <button
       type="button"
@@ -108,7 +108,9 @@ function SummonCard({ r, shown, onPick }: { r: SummonResult; shown: boolean; onP
       }}
     >
       <div className="aspect-[1/1.2] w-full">
-        {shown && url && <img src={url} alt={def.name} className="h-full w-full object-cover" draggable={false} />}
+        {shown && url && (
+          <img src={url} alt={def.name} className="h-full w-full object-cover" style={{ objectPosition: '50% 16%' }} draggable={false} />
+        )}
       </div>
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-white via-white/85 to-transparent px-0.5 pb-0.5 pt-4">
         <div className="truncate text-center font-display text-[9px] font-bold text-ink-900">{def.name}</div>

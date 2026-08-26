@@ -1,7 +1,9 @@
 import { HERO_BY_ID } from '../../game/data/heroes';
 import { FACTIONS, RARITY } from '../../game/data/factions';
-import { usePortrait } from '../../art/usePortrait';
-import type { Framing } from '../../art/portraitCache';
+import { useDrawnAvatar } from '../../art/useDrawnAvatar';
+
+/** Как кадрировать рисунок в рамке: по пояс или крупным планом голова */
+export type Framing = 'bust' | 'half' | 'full';
 import { StarRow } from './Bits';
 
 interface Props {
@@ -36,7 +38,7 @@ export function Avatar({
   framing = 'half',
 }: Props) {
   const def = HERO_BY_ID[heroId];
-  const url = usePortrait(def?.look ?? HERO_BY_ID.momo.look, heroId, framing, framing === 'bust' ? 200 : 300);
+  const url = useDrawnAvatar(def?.look ?? HERO_BY_ID.momo.look, heroId, framing === 'bust' ? 220 : 320);
   if (!def) return null;
   const r = RARITY[def.rarity];
   const f = FACTIONS[def.faction];
@@ -65,7 +67,11 @@ export function Avatar({
             alt={def.name}
             draggable={false}
             className="absolute inset-0 h-full w-full object-cover"
-            style={{ opacity: dim ? 0.42 : 1, filter: dim ? 'grayscale(0.85)' : undefined }}
+            style={{
+              objectPosition: framing === 'bust' ? '50% 6%' : framing === 'full' ? '50% 50%' : '50% 20%',
+              opacity: dim ? 0.42 : 1,
+              filter: dim ? 'grayscale(0.85)' : undefined,
+            }}
           />
         ) : (
           <div className="absolute inset-0 animate-pulse" style={{ background: `${f.color}18` }} />

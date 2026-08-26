@@ -3,7 +3,7 @@ import { useGame } from '../../game/state/store';
 import { HEROES } from '../../game/data/heroes';
 import { RARITY, RARITY_ORDER, FACTIONS } from '../../game/data/factions';
 import { PITY_LEGEND, PITY_MYTHIC, SUMMON_GEM_COST, SUMMON_RATES } from '../../game/engine/progression';
-import { usePortrait } from '../../art/usePortrait';
+import { useDrawnAvatar } from '../../art/useDrawnAvatar';
 import { Bar, Pill, Section } from '../components/Bits';
 import Avatar from '../components/Avatar';
 
@@ -128,7 +128,7 @@ export default function SummonScreen() {
 
 function FeaturedCard({ id, offset }: { id: string; offset: number }) {
   const def = HEROES.find((h) => h.id === id)!;
-  const url = usePortrait(def.look, def.id, 'half', 260);
+  const url = useDrawnAvatar(def.look, def.id, 260);
   return (
     <div
       className="relative h-32 w-[22%] overflow-hidden rounded-2xl bg-white"
@@ -138,7 +138,9 @@ function FeaturedCard({ id, offset }: { id: string; offset: number }) {
         transform: `translateY(${offset}px)`,
       }}
     >
-      {url && <img src={url} alt={def.name} className="h-full w-full object-cover" draggable={false} />}
+      {url && (
+        <img src={url} alt={def.name} className="h-full w-full object-cover" style={{ objectPosition: '50% 14%' }} draggable={false} />
+      )}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-white via-white/85 to-transparent px-1 pb-1 pt-4 text-center">
         <div className="truncate font-display text-[10px] font-bold text-ink-900">{def.name}</div>
       </div>

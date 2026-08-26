@@ -128,3 +128,124 @@ export function seeded(str: string): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+// ── Техника «рисованного» кадра ───────────────────────────────
+
+/** Цвет линии: сильно затемнённый и слегка уведённый в фиолетовый — как тушь */
+export function ink(c: string, t = 0.62): string {
+  return mix(mix(c, '#1a1030', t), '#3a1f4d', 0.18);
+}
+
+/** Обводка переменной толщины: сначала широкая внешняя, потом узкая внутренняя */
+export function outline(
+  ctx: CanvasRenderingContext2D,
+  path: () => void,
+  color: string,
+  w: number,
+): void {
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  path();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = w;
+  ctx.stroke();
+  ctx.restore();
+}
+
+let hatchCache = new Map<string, CanvasPattern | null>();
+
+/** Диагональная штриховка — заполняет теневые куски «от руки» */
+export function hatch(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  alpha: number,
+  spacing = 7,
+  width = 1.6,
+): CanvasPattern | null {
+  const key = `${color}|${alpha}|${spacing}|${width}`;
+  const hit = hatchCache.get(key);
+  if (hit !== undefined) return hit;
+  const size = spacing * 2;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  let pat: CanvasPattern | null = null;
+  if (g) {
+    g.strokeStyle = rgba(color, alpha);
+    g.lineWidth = width;
+    g.lineCap = 'round';
+    for (let i = -1; i < 3; i++) {
+      g.beginPath();
+      g.moveTo(i * spacing - 2, size + 2);
+      g.lineTo(i * spacing + size + 2, -2);
+      g.stroke();
+    }
+    pat = ctx.createPattern(c, 'repeat');
+  }
+  hatchCache.set(key, pat);
+  return pat;
+}
+
+let grainTile: HTMLCanvasElement | null = null;
+
+/** Лёгкое зерно поверх всего кадра — снимает «векторную» стерильность */
+export function grain(ctx: CanvasRenderingContext2D, w: number, h: number, alpha = 0.05): void {
+  if (!grainTile) {
+    const size = 128;
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    const g = c.getContext('2d');
+    if (g) {
+      const img = g.createImageData(size, size);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const v = 128 + (Math.random() - 0.5) * 190;
+        img.data[i] = v;
+        img.data[i + 1] = v;
+        img.data[i + 2] = v;
+        img.data[i + 3] = 255;
+      }
+      g.putImageData(img, 0, 0);
+    }
+    grainTile = c;
+  }
+  const pat = ctx.createPattern(grainTile, 'repeat');
+  if (!pat) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'overlay';
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = pat;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+/** Заливка фигуры с обводкой и опциональной cel-тенью внутри */
+export function inked(
+  ctx: CanvasRenderingContext2D,
+  path: () => void,
+  fillStyle: string | CanvasGradient | CanvasPattern,
+  inkColor: string,
+  lineW: number,
+  shade?: { path: () => void; style: string | CanvasPattern },
+): void {
+  path();
+  ctx.fillStyle = fillStyle;
+  ctx.fill();
+  if (shade) {
+    ctx.save();
+    path();
+    ctx.clip();
+    shade.path();
+    ctx.fillStyle = shade.style;
+    ctx.fill();
+    ctx.restore();
+  }
+  path();
+  ctx.strokeStyle = inkColor;
+  ctx.lineWidth = lineW;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}

@@ -4,7 +4,7 @@ import { Battle, BATTLE_TIMEOUT, TICK, ULT_COST, fmt } from '../../game/engine/b
 import type { BattleResult, Combatant, FloatKind } from '../../game/types';
 import { HERO_BY_ID } from '../../game/data/heroes';
 import BattleStage, { type StageApi, type StageUnit } from '../../art/BattleStage';
-import { usePortrait } from '../../art/usePortrait';
+import { useDrawnAvatar } from '../../art/useDrawnAvatar';
 
 interface FloatItem {
   id: number;
@@ -396,7 +396,7 @@ function UnitHud({
 
 function UltButton({ unit, onCast, manual }: { unit: Combatant; onCast: () => void; manual: boolean }) {
   const def = HERO_BY_ID[unit.defId];
-  const url = usePortrait(def?.look ?? HERO_BY_ID.momo.look, unit.defId, 'bust', 200);
+  const url = useDrawnAvatar(def?.look ?? HERO_BY_ID.momo.look, unit.defId, 200);
   const ready = unit.energy >= ULT_COST && unit.alive;
   const pct = (unit.energy / ULT_COST) * 100;
   const skill = unit.skills[1];
@@ -415,7 +415,7 @@ function UltButton({ unit, onCast, manual }: { unit: Combatant; onCast: () => vo
           filter: unit.alive ? undefined : 'grayscale(1) opacity(0.5)',
         }}
       >
-        {url && <img src={url} alt={unit.name} className="absolute inset-0 h-full w-full object-cover object-top" draggable={false} />}
+        {url && <img src={url} alt={unit.name} className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: '50% 6%' }} draggable={false} />}
         <div
           className="absolute inset-x-0 bottom-0 bg-ink-900/40"
           style={{ height: `${100 - pct}%`, transition: 'height 0.12s linear' }}
