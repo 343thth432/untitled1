@@ -12,8 +12,6 @@ export const HEROES: HeroDef[] = [
     element: 'flame',
     lore: 'Сожгла собственный клан, чтобы затмение не добралось до соседних долин. С тех пор её меч всегда тёплый.',
     maxHp: 84,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
-    relic: 'ashmark',
     portrait: { aura: '#ff6b4a', eyes: '#ffd166' },
   },
   {
@@ -23,8 +21,6 @@ export const HEROES: HeroDef[] = [
     element: 'flame',
     lore: 'Кузнечная дочь, чья броня выкована из осколков павшего солнца.',
     maxHp: 84,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
-    relic: 'ashmark',
     portrait: { aura: '#ff6b4a', eyes: '#ffb347', horns: true },
   },
   {
@@ -34,8 +30,6 @@ export const HEROES: HeroDef[] = [
     element: 'flame',
     lore: 'Её стрелы находят цель даже сквозь дым затмения — говорят, их ведёт птица, которой давно нет.',
     maxHp: 84,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
-    relic: 'ashmark',
     portrait: { aura: '#ff6b4a', eyes: '#ff9770' },
   },
   {
@@ -45,8 +39,6 @@ export const HEROES: HeroDef[] = [
     element: 'flame',
     lore: 'Лечит огнём: больно, зато быстро.',
     maxHp: 84,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
-    relic: 'ashmark',
     portrait: { aura: '#ff9770', eyes: '#ff6b6b' },
   },
   {
@@ -56,8 +48,6 @@ export const HEROES: HeroDef[] = [
     element: 'flame',
     lore: 'Ещё путает заклинания, но взрывы получаются отличные.',
     maxHp: 84,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
-    relic: 'ashmark',
     portrait: { aura: '#ffb26b', eyes: '#ffd166' },
   },
   {
@@ -67,8 +57,6 @@ export const HEROES: HeroDef[] = [
     element: 'tide',
     lore: 'Управляет приливом так же спокойно, как дыханием. Затмение боится её именно поэтому.',
     maxHp: 86,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','crash','tidewall'],
-    relic: 'tidestone',
     portrait: { aura: '#4fb8ff', eyes: '#7ef9ff' },
   },
   {
@@ -78,8 +66,6 @@ export const HEROES: HeroDef[] = [
     element: 'tide',
     lore: 'Один выстрел — одна цель. Больше ей и не нужно.',
     maxHp: 86,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','crash','tidewall'],
-    relic: 'tidestone',
     portrait: { aura: '#7fd0ff', eyes: '#5ec8ff' },
   },
   {
@@ -89,8 +75,6 @@ export const HEROES: HeroDef[] = [
     element: 'tide',
     lore: 'Молчит весь бой. Говорит только когда все живы.',
     maxHp: 86,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','crash','tidewall'],
-    relic: 'tidestone',
     portrait: { aura: '#8ecae6', eyes: '#8ecae6' },
   },
   {
@@ -100,8 +84,6 @@ export const HEROES: HeroDef[] = [
     element: 'verdant',
     lore: 'Роща слушает её. Иногда роща отвечает.',
     maxHp: 86,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','thistle','sap','bloom'],
-    relic: 'seedring',
     portrait: { aura: '#68e08a', eyes: '#a7f3a0' },
   },
   {
@@ -111,8 +93,6 @@ export const HEROES: HeroDef[] = [
     element: 'verdant',
     lore: 'Дарит цветы. Никто из получивших не дожил до утра.',
     maxHp: 86,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','thistle','sap','bloom'],
-    relic: 'seedring',
     portrait: { aura: '#68e08a', eyes: '#b8f2a0' },
   },
   {
@@ -122,8 +102,6 @@ export const HEROES: HeroDef[] = [
     element: 'verdant',
     lore: 'Выросла в терновнике и не боится царапин.',
     maxHp: 86,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','thistle','sap','bloom'],
-    relic: 'seedring',
     portrait: { aura: '#9ae66e', eyes: '#7bd389' },
   },
   {
@@ -133,8 +111,6 @@ export const HEROES: HeroDef[] = [
     element: 'lumen',
     lore: 'Её удар — это не свет, а момент, когда тьма понимает, что проиграла.',
     maxHp: 84,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','glint','dawn','verdict'],
-    relic: 'sunbead',
     portrait: { aura: '#ffe07a', eyes: '#ffd60a' },
   },
   {
@@ -144,8 +120,6 @@ export const HEROES: HeroDef[] = [
     element: 'lumen',
     lore: 'Говорит, что смерть — это просто пауза. Пока что ей верят.',
     maxHp: 84,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','glint','dawn','verdict'],
-    relic: 'sunbead',
     portrait: { aura: '#ffe07a', eyes: '#ffe066' },
   },
   {
@@ -155,8 +129,6 @@ export const HEROES: HeroDef[] = [
     element: 'lumen',
     lore: 'Стреляет в небо. Стрелы падают туда, куда надо.',
     maxHp: 84,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','glint','dawn','verdict'],
-    relic: 'sunbead',
     portrait: { aura: '#ffe07a', eyes: '#c1e3ff' },
   },
   {
@@ -166,8 +138,6 @@ export const HEROES: HeroDef[] = [
     element: 'umbra',
     lore: 'Её никто не видел в бою. Видели только результат.',
     maxHp: 80,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
-    relic: 'nightglass',
     portrait: { aura: '#b57cff', eyes: '#ff5ea8', horns: true },
   },
   {
@@ -177,8 +147,6 @@ export const HEROES: HeroDef[] = [
     element: 'umbra',
     lore: 'Открыла дверь в пустоту из любопытства. Дверь так и не закрылась.',
     maxHp: 80,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
-    relic: 'nightglass',
     portrait: { aura: '#b57cff', eyes: '#c77dff' },
   },
   {
@@ -188,8 +156,6 @@ export const HEROES: HeroDef[] = [
     element: 'umbra',
     lore: 'Носит имена всех, кого не смогла спасти, на внутренней стороне щита.',
     maxHp: 80,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
-    relic: 'nightglass',
     portrait: { aura: '#8e7bb5', eyes: '#9d8df1' },
   },
   {
@@ -199,8 +165,6 @@ export const HEROES: HeroDef[] = [
     element: 'umbra',
     lore: 'Ворует у затмения. Затмение пока не заметило.',
     maxHp: 80,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
-    relic: 'nightglass',
     portrait: { aura: '#b57cff', eyes: '#ffd166' },
   },
 ];

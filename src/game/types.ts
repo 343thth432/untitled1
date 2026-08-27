@@ -152,10 +152,7 @@ export interface HeroDef {
   lore: string;
   portrait: Portrait;
   maxHp: number;
-  /** стартовая колода: id карт с повторами */
-  deck: string[];
   /** личная реликвия */
-  relic: string;
 }
 
 // ── путь ─────────────────────────────────────────────────────
@@ -177,8 +174,7 @@ export interface Leg {
   name: string;
   /** зерно для генерации этажа — карта не хранится, а строится заново */
   seed: string;
-  /** события этажа; последнее — хранитель у спуска */
-  nodes: RunNode[];
+  plan: import('../dungeon/map').FloorPlan;
 }
 
 export interface RunState {
@@ -186,15 +182,13 @@ export interface RunState {
   heroId: string;
   hp: number;
   maxHp: number;
-  /** искры — валюта торговца */
-  sparks: number;
-  deck: string[];
-  relics: string[];
+  /** заряды к оружию */
+  ammo: number;
+  weapon: import('../dungeon/weapon').WeaponId;
+  guns: import('../dungeon/weapon').WeaponId[];
   legs: Leg[];
   /** текущий этаж */
   leg: number;
-  /** id пройденных событий */
-  done: string[];
 }
 
 // ── знамения ─────────────────────────────────────────────────

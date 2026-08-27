@@ -1,4 +1,4 @@
-import { CELL, at, type Floor } from './map';
+import { CELL, at, type Floor, type Light } from './map';
 import { texOf, type Tex, type TexName } from './textures';
 
 /**
@@ -72,6 +72,7 @@ export interface Sprite {
 }
 
 export const FOV = 0.66;
+const INV127 = 1 / 127;
 /** высота свода и высота глаза в клетках — от них зависит, насколько зал просторный */
 export const WALL_H = 2.4;
 export const EYE_H = 0.78;
@@ -107,6 +108,26 @@ export class Raycaster {
     return this.buf;
   }
 
+  /** ближайшие огни, пересобираются каждый кадр */
+  private lit: { x: number; y: number; z: number; r: number; g: number; b: number; p: number }[] = [];
+
+  private pickLights(f: Floor, cam: Cam, t: number): void {
+    const out = this.lit;
+    out.length = 0;
+    const near: { l: Light; d: number }[] = [];
+    for (const l of f.lights) {
+      const d = (l.x - cam.x) ** 2 + (l.y - cam.y) ** 2;
+      if (d > 64) continue;
+      near.push({ l, d });
+    }
+    near.sort((a, b) => a.d - b.d);
+    for (const { l } of near.slice(0, 3)) {
+      // огонь дышит, кристалл светит ровно
+      const k = l.live ? 0.82 + 0.13 * Math.sin(t * 9.4 + l.x * 3.1) + 0.08 * Math.sin(t * 17.3 + l.y) : 1;
+      out.push({ x: l.x, y: l.y, z: l.z, r: l.r, g: l.g, b: l.b, p: l.power * k });
+    }
+  }
+
   render(f: Floor, cam: Cam, pal: Palette, flicker: number): void {
     const { w, h, px32, depth } = this;
     const dirX = Math.cos(cam.a);
@@ -124,26 +145,30 @@ export class Raycaster {
 
     const floorTex = texOf('floorCobble');
     const ceilTex = texOf('ceilRock');
+    const lit = this.lit;
     const rdx0 = dirX - planeX;
     const rdy0 = dirY - planeY;
     const rdx1 = dirX + planeX;
     const rdy1 = dirY + planeY;
 
     px32.fill(packFog(fr, fg, fb, 1, 0, 0, 0));
+    this.pickLights(f, cam, performance.now() / 1000);
 
     // ── пол ───────────────────────────────────────────────────
     if (floorTex) {
-      for (let y = half + 1; y < h; y++) {
+      for (let y = half + 1; y < h; y += 2) {
         const rowDist = (EYE_H * proj) / (y - half);
         this.plane(floorTex, y, rowDist, rdx0, rdy0, rdx1, rdy1, cam, EYE_H, 1, power, pal, ar, ag, ab, fr, fg, fb, dens);
+        if (y + 1 < h) px32.copyWithin((y + 1) * w, y * w, y * w + w);
       }
     }
     // ── потолок ───────────────────────────────────────────────
     if (ceilTex) {
       const up = WALL_H - EYE_H;
-      for (let y = half - 1; y >= 0; y--) {
+      for (let y = half - 1; y >= 0; y -= 2) {
         const rowDist = (up * proj) / (half - y);
         this.plane(ceilTex, y, rowDist, rdx0, rdy0, rdx1, rdy1, cam, -up, -1, power * 0.66, pal, ar, ag, ab, fr, fg, fb, dens);
+        if (y > 0) px32.copyWithin((y - 1) * w, y * w, y * w + w);
       }
     }
 
@@ -196,10 +221,18 @@ export class Raycaster {
       const hitY = cam.y + dist * rdy;
       const dxl = cam.x - hitX;
       const dyl = cam.y - hitY;
-      const flat = Math.hypot(dxl, dyl) || 1e-4;
+      const flat = Math.sqrt(dxl * dxl + dyl * dyl) || 1e-4;
       const fogK = 1 - Math.exp(-dist * dens);
       const atten = power / (1 + dist * 0.62 + dist * dist * 0.42);
       const mask = tex.size - 1;
+      // горизонтальная часть расстояния до каждого огня — одна на столбец
+      const lh: number[] = [];
+      for (const L2 of lit) {
+        const d = (L2.x - hitX) ** 2 + (L2.y - hitY) ** 2;
+        // дальше этого расстояния добавка тонет в мгле — считать её незачем
+        if (d < 42) lh.push(d);
+      }
+      const nl = lh.length;
 
       for (let y = top; y <= bot; y++) {
         // мировая высота точки и координата в текстуре: кладка не тянется,
@@ -207,9 +240,9 @@ export class Raycaster {
         const zw = EYE_H - ((y - half) * dist) / proj;
         const texY = ((((WALL_H - zw) * tex.size) | 0) & mask) >>> 0;
         const ti = (texY * tex.size + texX) * 3;
-        const tnx = tex.nrm[ti] / 127;
-        const tny = tex.nrm[ti + 1] / 127;
-        const tnz = tex.nrm[ti + 2] / 127;
+        const tnx = tex.nrm[ti] * INV127;
+        const tny = tex.nrm[ti + 1] * INV127;
+        const tnz = tex.nrm[ti + 2] * INV127;
         let nx: number;
         let ny: number;
         const nz = -tny;
@@ -221,7 +254,7 @@ export class Raycaster {
           ny = faceY * tnz;
         }
         const dz = EYE_H - zw;
-        const len = Math.hypot(flat, dz) || 1;
+        const len = Math.sqrt(flat * flat + dz * dz) || 1;
         const lx = dxl / len;
         const ly = dyl / len;
         const lz = dz / len;
@@ -230,7 +263,20 @@ export class Raycaster {
         const l2 = lam * lam;
         const spec = l2 * l2 * l2 * 0.45;
         const k = atten * (lam * 0.92 + 0.08) + spec * atten;
-        px32[y * w + x] = shade(tex.col, ti, k, pal.torch, ar, ag, ab, fr, fg, fb, fogK);
+        // добавка от факелов на стенах: по горизонтали расстояние уже известно
+        let sr = ar;
+        let sg = ag;
+        let sb = ab;
+        for (let i = 0; i < nl; i++) {
+          const L2 = lit[i];
+          const dzl = L2.z - zw;
+          const d2 = lh[i] + dzl * dzl;
+          const a2 = L2.p / (1 + d2 * 0.9);
+          sr += L2.r * a2;
+          sg += L2.g * a2;
+          sb += L2.b * a2;
+        }
+        px32[y * w + x] = shade(tex.col, ti, k, pal.torch, sr, sg, sb, fr, fg, fb, fogK);
       }
     }
   }
@@ -264,13 +310,29 @@ export class Raycaster {
     let fy = cam.y + rowDist * rdy0;
     const fogK = 1 - Math.exp(-rowDist * dens);
     const atten = power / (1 + rowDist * 0.62 + rowDist * rowDist * 0.42);
-    const invLen = 1 / Math.hypot(rowDist, dz);
+    const invLen = 1 / Math.sqrt(rowDist * rowDist + dz * dz);
     const lz = dz * invLen;
     const row = y * w;
+    const lit = this.lit;
+    const n = lit.length;
+    const zw = up > 0 ? 0 : WALL_H;
     for (let x = 0; x < w; x++, fx += stepX, fy += stepY) {
       const lx = (cam.x - fx) * invLen;
       const ly = (cam.y - fy) * invLen;
-      px32[row + x] = shadePlane(tex, fx, fy, lx, ly, lz, up, atten, pal, ar, ag, ab, fr, fg, fb, fogK);
+      let sr = ar;
+      let sg = ag;
+      let sb = ab;
+      for (let i = 0; i < n; i++) {
+        const L2 = lit[i];
+        const dzl = L2.z - zw;
+        const d2 = (L2.x - fx) ** 2 + (L2.y - fy) ** 2 + dzl * dzl;
+        if (d2 > 42) continue;
+        const a2 = L2.p / (1 + d2 * 0.9);
+        sr += L2.r * a2;
+        sg += L2.g * a2;
+        sb += L2.b * a2;
+      }
+      px32[row + x] = shadePlane(tex, fx, fy, lx, ly, lz, up, atten, pal, sr, sg, sb, fr, fg, fb, fogK);
     }
   }
 
@@ -286,8 +348,9 @@ export class Raycaster {
 
   /** выводит буфер на экран с мягким увеличением */
   present(ctx: CanvasRenderingContext2D, w: number, h: number): void {
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    // жёсткое увеличение: кадр считается в низком разрешении и растягивается
+    // без сглаживания — отсюда крупный честный пиксель, как в старых шутерах
+    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(this.buf, 0, 0, w, h);
   }
 
@@ -353,12 +416,12 @@ function shadePlane(
   fogK: number,
 ): number {
   const s = tex.size;
-  const tx = ((fx - Math.floor(fx)) * s) | 0;
-  const ty = ((fy - Math.floor(fy)) * s) | 0;
+  const tx = ((fx - (fx | 0)) * s) | 0;
+  const ty = ((fy - (fy | 0)) * s) | 0;
   const ti = (ty * s + tx) * 3;
-  const nx = tex.nrm[ti] / 127;
-  const ny = tex.nrm[ti + 1] / 127;
-  const nz = (tex.nrm[ti + 2] / 127) * up;
+  const nx = tex.nrm[ti] * INV127;
+  const ny = tex.nrm[ti + 1] * INV127;
+  const nz = tex.nrm[ti + 2] * INV127 * up;
   let lam = nx * lx + ny * ly + nz * lz;
   if (lam < 0) lam = 0;
   return shade(tex.col, ti, atten * (lam * 0.9 + 0.1), pal.torch, ar, ag, ab, fr, fg, fb, fogK);

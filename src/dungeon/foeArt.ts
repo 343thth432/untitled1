@@ -1,11 +1,81 @@
-import { figure, glowOrb } from './marks';
 import type { Portrait } from '../game/types';
+
 
 /**
  * Противник в дуэли: если для него положена картинка в public/art —
  * берём её, иначе рисуем силуэт со свечением. Движок людей не рисует,
  * поэтому запасной вариант честно остаётся тенью, а не «плохим рисунком».
  */
+
+function glowBall(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, inner: string, outer: string): void {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, inner);
+  g.addColorStop(0.4, outer);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** тёмная фигура в плаще: тело, капюшон, подол */
+function figure(ctx: CanvasRenderingContext2D, cx: number, base: number, hgt: number, wide: number, eye: string, rim: string): void {
+  const top = base - hgt;
+  ctx.beginPath();
+  ctx.moveTo(cx, top);
+  ctx.bezierCurveTo(cx + wide * 0.5, top + hgt * 0.06, cx + wide * 0.42, top + hgt * 0.22, cx + wide * 0.5, top + hgt * 0.34);
+  ctx.bezierCurveTo(cx + wide * 0.95, top + hgt * 0.5, cx + wide * 1.05, base - hgt * 0.06, cx + wide * 1.1, base);
+  ctx.lineTo(cx - wide * 1.1, base);
+  ctx.bezierCurveTo(cx - wide * 1.05, base - hgt * 0.06, cx - wide * 0.95, top + hgt * 0.5, cx - wide * 0.5, top + hgt * 0.34);
+  ctx.bezierCurveTo(cx - wide * 0.42, top + hgt * 0.22, cx - wide * 0.5, top + hgt * 0.06, cx, top);
+  ctx.closePath();
+  const g = ctx.createLinearGradient(cx - wide, top, cx + wide, base);
+  g.addColorStop(0, '#10121e');
+  g.addColorStop(0.5, '#070810');
+  g.addColorStop(1, '#04050a');
+  ctx.fillStyle = g;
+  ctx.fill();
+
+  // контровой по краю — иначе силуэт сливается со мглой
+  ctx.save();
+  ctx.clip();
+  ctx.globalCompositeOperation = 'lighter';
+  const r1 = ctx.createLinearGradient(cx - wide * 1.1, 0, cx - wide * 0.55, 0);
+  r1.addColorStop(0, rim);
+  r1.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = r1;
+  ctx.fillRect(cx - wide * 1.2, top, wide * 0.7, hgt + 10);
+  const r2 = ctx.createLinearGradient(cx + wide * 1.1, 0, cx + wide * 0.6, 0);
+  r2.addColorStop(0, rim);
+  r2.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = r2;
+  ctx.fillRect(cx + wide * 0.5, top, wide * 0.72, hgt + 10);
+  ctx.restore();
+
+  // глаза
+  ctx.globalCompositeOperation = 'lighter';
+  const ey = top + hgt * 0.13;
+  for (const s of [-1, 1]) {
+    glowBall(ctx, cx + s * wide * 0.2, ey, wide * 0.34, eye, 'rgba(0,0,0,0)');
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.ellipse(cx + s * wide * 0.2, ey, wide * 0.075, wide * 0.045, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+
+function glowOrb(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  inner: string,
+  outer: string,
+): void {
+  glowBall(ctx, x, y, r, inner, outer);
+}
 
 const W = 420;
 const H = 620;
