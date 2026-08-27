@@ -23,10 +23,10 @@ export const DW = 480;
 export const DH = 640;
 
 /** Лёгкий разворот в три четверти: черты сдвигаются, дальний глаз уже */
-const TURN = 9;
+export const TURN = 9;
 const TILT = -0.045;
 
-const HEAD = {
+export const HEAD = {
   cx: 240,
   top: 130,
   chin: 374,
@@ -170,7 +170,7 @@ function drawBackground(ctx: CanvasRenderingContext2D, look: Appearance, rnd: ()
 }
 
 // ── палитра кожи ─────────────────────────────────────────────
-interface SkinTones {
+export interface SkinTones {
   base: string;
   cel: string;
   deep: string;
@@ -179,7 +179,7 @@ interface SkinTones {
   lineSoft: string;
 }
 
-function skinTones(look: Appearance): SkinTones {
+export function skinTones(look: Appearance): SkinTones {
   const s = look.skin;
   return {
     base: s,
@@ -332,7 +332,7 @@ function drawBody(ctx: CanvasRenderingContext2D, look: Appearance): void {
 }
 
 // ── голова ───────────────────────────────────────────────────
-function drawHead(ctx: CanvasRenderingContext2D, look: Appearance): void {
+export function drawHead(ctx: CanvasRenderingContext2D, look: Appearance): void {
   const t = skinTones(look);
   const face = faceOutline();
 
@@ -448,7 +448,7 @@ function drawHead(ctx: CanvasRenderingContext2D, look: Appearance): void {
 }
 
 // ── лицо ─────────────────────────────────────────────────────
-function drawFace(ctx: CanvasRenderingContext2D, look: Appearance, sultry: number): void {
+export function drawFace(ctx: CanvasRenderingContext2D, look: Appearance, sultry: number): void {
   const { eyeY, eyeDX, eyeRX, eyeRY, browY, mouthY } = HEAD;
   const cx = HEAD.cx + TURN;
   const t = skinTones(look);
@@ -657,7 +657,7 @@ function drawFace(ctx: CanvasRenderingContext2D, look: Appearance, sultry: numbe
 }
 
 // ── причёска ─────────────────────────────────────────────────
-interface HairPack {
+export interface HairPack {
   base: CanvasGradient;
   mid: string;
   cel: string;
@@ -667,7 +667,7 @@ interface HairPack {
   shine: string;
 }
 
-function hairPack(ctx: CanvasRenderingContext2D, look: Appearance): HairPack {
+export function hairPack(ctx: CanvasRenderingContext2D, look: Appearance): HairPack {
   const c = hex(look.hairColor);
   const lum = (c.r * 0.299 + c.g * 0.587 + c.b * 0.114) / 255;
   return {
@@ -686,7 +686,7 @@ function hairPack(ctx: CanvasRenderingContext2D, look: Appearance): HairPack {
 }
 
 /** Прядь: острый верх, широкая середина, острый кончик */
-function strandPts(x: number, w: number, yTop: number, yTip: number, bow: number): P[] {
+export function strandPts(x: number, w: number, yTop: number, yTip: number, bow: number): P[] {
   const mid = yTop + (yTip - yTop) * 0.4;
   return [
     [x, yTop],
@@ -698,7 +698,7 @@ function strandPts(x: number, w: number, yTop: number, yTip: number, bow: number
   ];
 }
 
-function drawStrand(
+export function drawStrand(
   ctx: CanvasRenderingContext2D,
   f: HairPack,
   pts: P[],
@@ -727,7 +727,7 @@ function drawStrand(
   }
 }
 
-function drawBackHair(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => number): void {
+export function drawBackHair(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => number): void {
   const f = hairPack(ctx, look);
   const H = look.hair;
 
@@ -907,7 +907,7 @@ function bangsPts(): P[] {
   ];
 }
 
-function drawFrontHair(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => number): void {
+export function drawFrontHair(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => number): void {
   const f = hairPack(ctx, look);
 
   // основная масса чёлки
@@ -1228,7 +1228,7 @@ function drawOutfit(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => 
 }
 
 // ── аксессуары ───────────────────────────────────────────────
-function drawAccessory(ctx: CanvasRenderingContext2D, look: Appearance): void {
+export function drawAccessory(ctx: CanvasRenderingContext2D, look: Appearance): void {
   const tr = look.outfitTrim;
   const tline = ink(tr, 0.46);
   const f = hairPack(ctx, look);

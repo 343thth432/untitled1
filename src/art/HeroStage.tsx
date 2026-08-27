@@ -1,21 +1,23 @@
 import { useEffect, useRef } from 'react';
-import * as THREE from 'three';
 import type { Appearance } from '../game/types';
-import { Actor } from './model/actor';
-import { makeRenderer, setupLights } from './model/stageKit';
+import { SK, buildRig, drawRig, drawShadow, lookKey, type AnimName } from './rig';
+import { light, rgba } from './illustration/paint';
 
 interface Props {
   look: Appearance;
   className?: string;
-  /** можно вращать пальцем */
+  /** тап проигрывает эффектную позу */
   interactive?: boolean;
   /** кадрирование: по пояс или в полный рост */
   framing?: 'half' | 'full';
-  /** проигрывать анимацию каста при монтировании */
+  /** проиграть каст при появлении */
   showcase?: boolean;
 }
 
-/** Живая 3D-модель одной героини с вращением пальцем */
+const DUR: Record<AnimName, number> = { idle: 0, attack: 0.66, cast: 0.95, hurt: 0.46, dead: 1.1, win: 1.6 };
+const SHOW: AnimName[] = ['cast', 'attack', 'win'];
+
+/** Живая 2D-героиня: дыхание, покачивание, поза по тапу */
 export default function HeroStage({ look, className, interactive = true, framing = 'full', showcase }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -24,82 +26,75 @@ export default function HeroStage({ look, className, interactive = true, framing
     const canvas = canvasRef.current;
     const host = hostRef.current;
     if (!canvas || !host) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    let renderer: THREE.WebGLRenderer;
-    try {
-      renderer = makeRenderer(canvas, true);
-    } catch {
-      return;
-    }
+    const rig = buildRig(look, lookKey(look), 1);
+    let anim: AnimName = showcase ? 'cast' : 'idle';
+    let phase = 0;
+    let pick = 0;
 
-    const scene = new THREE.Scene();
-    setupLights(scene, look.aura);
+    const tap = (): void => {
+      if (!interactive || anim !== 'idle') return;
+      anim = SHOW[pick % SHOW.length];
+      pick++;
+      phase = 0;
+    };
+    host.addEventListener('pointerdown', tap);
 
-    const actor = new Actor(look, { outlines: true });
-    const pivot = new THREE.Group();
-    pivot.add(actor.root);
-    pivot.rotation.y = -0.35;
-    scene.add(pivot);
-
-    const halo = new THREE.Mesh(
-      new THREE.CircleGeometry(0.85, 40),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(look.aura), transparent: true, opacity: 0.14 }),
-    );
-    halo.position.set(0, framing === 'full' ? 0.95 : 1.2, -0.9);
-    scene.add(halo);
-
-    const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 40);
-    const target = framing === 'full' ? 0.9 : 1.16;
-    const dist = framing === 'full' ? 3.4 : 2.0;
-    cam.position.set(dist * 0.36, target + 0.28, dist);
-    cam.lookAt(0, target, 0);
-
-    const resize = () => {
-      const w = host.clientWidth;
-      const h = host.clientHeight;
-      if (!w || !h) return;
-      renderer.setSize(w, h, false);
-      cam.aspect = w / h;
-      cam.updateProjectionMatrix();
+    let w = 0;
+    let h = 0;
+    const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+    const resize = (): void => {
+      w = host.clientWidth;
+      h = host.clientHeight;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
     };
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(host);
 
-    // вращение пальцем
-    let dragging = false;
-    let lastX = 0;
-    let spin = 0;
-    const onDown = (e: PointerEvent) => {
-      if (!interactive) return;
-      dragging = true;
-      lastX = e.clientX;
-      canvas.setPointerCapture(e.pointerId);
-    };
-    const onMove = (e: PointerEvent) => {
-      if (!dragging) return;
-      spin += (e.clientX - lastX) * 0.012;
-      lastX = e.clientX;
-    };
-    const onUp = () => {
-      dragging = false;
-    };
-    canvas.addEventListener('pointerdown', onDown);
-    canvas.addEventListener('pointermove', onMove);
-    canvas.addEventListener('pointerup', onUp);
-    canvas.addEventListener('pointercancel', onUp);
-
-    if (showcase) window.setTimeout(() => actor.trigger('cast'), 260);
-
     let raf = 0;
     let last = performance.now();
-    const loop = (now: number) => {
+    let clock = 0;
+    const loop = (now: number): void => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      actor.update(dt);
-      pivot.rotation.y += ((-0.35 + spin) - pivot.rotation.y) * Math.min(1, dt * 9);
-      if (!dragging && !interactive) pivot.rotation.y = -0.35 + Math.sin(now / 2600) * 0.28;
-      renderer.render(scene, cam);
+      clock += dt;
+      if (!w || !h) {
+        raf = requestAnimationFrame(loop);
+        return;
+      }
+      if (anim !== 'idle') {
+        phase += dt / DUR[anim];
+        if (phase >= 1) {
+          phase = 0;
+          anim = 'idle';
+        }
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      // мягкое сияние ауры за спиной
+      const gx = w * 0.5;
+      const gy = framing === 'half' ? h * 0.62 : h * 0.46;
+      const glow = ctx.createRadialGradient(gx, gy, 4, gx, gy, Math.max(w, h) * 0.56);
+      glow.addColorStop(0, rgba(light(look.aura, 0.4), 0.3));
+      glow.addColorStop(0.55, rgba(look.aura, 0.1));
+      glow.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+
+      const full = framing === 'full';
+      const s = full ? (h * 0.94) / SK.ground : (h * 1.85) / SK.ground;
+      ctx.save();
+      ctx.translate(w * 0.5, full ? h * 0.98 : h * 1.5);
+      ctx.scale(s, s);
+      if (full) drawShadow(ctx, 1, 0.16);
+      drawRig(ctx, rig, { t: clock, anim, phase });
+      ctx.restore();
+
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -107,19 +102,13 @@ export default function HeroStage({ look, className, interactive = true, framing
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
-      canvas.removeEventListener('pointerdown', onDown);
-      canvas.removeEventListener('pointermove', onMove);
-      canvas.removeEventListener('pointerup', onUp);
-      canvas.removeEventListener('pointercancel', onUp);
-      actor.dispose();
-      halo.geometry.dispose();
-      renderer.dispose();
+      host.removeEventListener('pointerdown', tap);
     };
   }, [look, interactive, framing, showcase]);
 
   return (
     <div ref={hostRef} className={className}>
-      <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block', touchAction: 'pan-y' }} />
+      <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
     </div>
   );
 }
