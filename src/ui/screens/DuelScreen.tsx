@@ -4,7 +4,7 @@ import { CARDS } from '../../game/data/cards';
 import { ELEMENTS, STATUSES } from '../../game/data/elements';
 import { useGame, currentLeg } from '../../game/state/store';
 import type { Intent, StatusId } from '../../game/types';
-import DuelStage, { type DuelStageApi } from '../../art/DuelStage';
+import DuelStage, { type DuelStageApi } from '../../dungeon/DuelStage';
 import CardView from '../CardView';
 
 interface Float {
@@ -81,7 +81,7 @@ export default function DuelScreen() {
     seen.current = d.events.length;
     const add: Float[] = [];
     for (const e of fresh) {
-      if (e.t === 'card' && e.anim) apiRef.current?.play('hero', e.anim);
+      if (e.t === 'card' && e.anim) apiRef.current?.play('hero', e.anim === 'win' ? 'attack' : e.anim);
       if (e.t === 'foeTurn') apiRef.current?.play('foe', 'attack');
       if (e.t === 'hit') {
         if (e.v > 0) {
@@ -95,7 +95,6 @@ export default function DuelScreen() {
       if (e.t === 'heal' && e.v > 0) add.push({ id: fid.current++, who: e.who, text: `+${e.v}`, tone: 'heal' });
       if (e.t === 'over') {
         apiRef.current?.setDown(e.win ? 'foe' : 'hero', true);
-        if (e.win) apiRef.current?.play('hero', 'win');
       }
     }
     if (add.length) {
@@ -121,10 +120,12 @@ export default function DuelScreen() {
     <div className="relative flex h-full flex-col overflow-hidden bg-canvas">
       <div className="relative min-h-0 flex-1">
       <DuelStage
-        biome={leg.biome}
-        hero={hero.look}
-        foe={duel.foeDef.look}
-        foeCount={duel.foeDef.count ?? 1}
+        tier={leg.tier}
+        seed={`${run.seed}-${run.leg}`}
+        foeId={duel.foeDef.id}
+        portrait={duel.foeDef.portrait}
+        count={duel.foeDef.count ?? 1}
+        boss={duel.foeDef.tier === 'boss'}
         apiRef={apiRef}
         className="absolute inset-0"
       />
@@ -168,7 +169,7 @@ export default function DuelScreen() {
               transform: `translate(-50%,${-i * 16}px)`,
               color:
                 f.tone === 'dmg' ? '#e0405f' : f.tone === 'block' ? '#2f86c4' : f.tone === 'heal' ? '#2f9b6a' : '#6b6480',
-              textShadow: '0 2px 8px rgba(255,255,255,0.9)',
+              textShadow: '0 2px 10px rgba(0,0,0,0.95)',
             }}
           >
             {f.text}

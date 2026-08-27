@@ -4,7 +4,7 @@ import { ELEMENTS } from '../../game/data/elements';
 import { RELICS } from '../../game/data/relics';
 import { CARDS } from '../../game/data/cards';
 import { useGame } from '../../game/state/store';
-import HeroStage from '../../art/HeroStage';
+import HeroPortrait from '../../art/HeroPortrait';
 import CardView from '../CardView';
 
 export default function TitleScreen() {
@@ -18,7 +18,7 @@ export default function TitleScreen() {
 
   return (
     <div className="relative flex h-full flex-col bg-canvas">
-      <HeroStage look={hero.look} element={hero.element} framing="full" className="absolute inset-x-0 top-[11%] h-[45%]" />
+      <HeroPortrait id={hero.id} portrait={hero.portrait} element={hero.element} className="absolute inset-x-0 top-[10%] h-[48%]" />
       <div
         className="pointer-events-none absolute inset-x-0 top-[11%] h-[45%]"
         style={{ background: `linear-gradient(180deg, ${el.soft}00 55%, var(--canvas, #faf8f5) 100%)` }}

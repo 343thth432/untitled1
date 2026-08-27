@@ -14,12 +14,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
     relic: 'ashmark',
-    look: {
-      hair: 'ponytail', hairColor: '#ff6a3d', hairColor2: '#ffd166', eyeColor: '#ffd166',
-      skin: '#f7d9c4', outfit: '#2b1220', outfitTrim: '#ff6a3d', accessory: 'hairpin',
-      aura: '#ff6b4a', mood: 0.25,
-      outfitStyle: 'coat', stockings: '#3a1a28', cape: false, weapon: 'katana', figure: 0.55,
-    },
+    portrait: { aura: '#ff6b4a', eyes: '#ffd166' },
   },
   {
     id: 'honoka',
@@ -30,12 +25,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
     relic: 'ashmark',
-    look: {
-      hair: 'braid', hairColor: '#c23b22', hairColor2: '#ff9e6b', eyeColor: '#ffb347',
-      skin: '#f0cdb4', outfit: '#3a1a18', outfitTrim: '#ffb347', accessory: 'horns',
-      aura: '#ff6b4a', mood: 0.4,
-      outfitStyle: 'plate', stockings: null, cape: true, weapon: 'hammer', figure: 0.7,
-    },
+    portrait: { aura: '#ff6b4a', eyes: '#ffb347', horns: true },
   },
   {
     id: 'akane',
@@ -46,12 +36,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
     relic: 'ashmark',
-    look: {
-      hair: 'long', hairColor: '#ff4d6d', hairColor2: '#ffd6a5', eyeColor: '#ff9770',
-      skin: '#fadcc6', outfit: '#241019', outfitTrim: '#ff4d6d', accessory: 'visor',
-      aura: '#ff6b4a', mood: 0.2,
-      outfitStyle: 'harness', stockings: '#3a1420', cape: true, weapon: 'bow', figure: 0.6,
-    },
+    portrait: { aura: '#ff6b4a', eyes: '#ff9770' },
   },
   {
     id: 'rinka',
@@ -62,12 +47,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
     relic: 'ashmark',
-    look: {
-      hair: 'twin', hairColor: '#ff8fab', hairColor2: '#ffd166', eyeColor: '#ff6b6b',
-      skin: '#fbe0cd', outfit: '#3d1d2b', outfitTrim: '#ffb3c6', accessory: 'hairpin',
-      aura: '#ff9770', mood: 0.75,
-      outfitStyle: 'slit', stockings: '#ffd6e0', cape: false, weapon: 'wand', figure: 0.45,
-    },
+    portrait: { aura: '#ff9770', eyes: '#ff6b6b' },
   },
   {
     id: 'momo',
@@ -78,12 +58,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
     relic: 'ashmark',
-    look: {
-      hair: 'buns', hairColor: '#ff7b54', hairColor2: '#ffe6a7', eyeColor: '#ffd166',
-      skin: '#fce3d1', outfit: '#2e1a22', outfitTrim: '#ffb26b', accessory: 'none',
-      aura: '#ffb26b', mood: 0.85,
-      outfitStyle: 'qipao', stockings: '#ffe0c0', cape: false, weapon: 'grimoire', figure: 0.32,
-    },
+    portrait: { aura: '#ffb26b', eyes: '#ffd166' },
   },
   {
     id: 'mitsuki',
@@ -94,12 +69,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 86,
     deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','crash','tidewall'],
     relic: 'tidestone',
-    look: {
-      hair: 'wavy', hairColor: '#5ec8ff', hairColor2: '#c9f2ff', eyeColor: '#7ef9ff',
-      skin: '#f3ddd0', outfit: '#0f2338', outfitTrim: '#7ef9ff', accessory: 'crown',
-      aura: '#4fb8ff', mood: 0.15,
-      outfitStyle: 'robe', stockings: '#cfefff', cape: true, weapon: 'staff', figure: 0.62,
-    },
+    portrait: { aura: '#4fb8ff', eyes: '#7ef9ff' },
   },
   {
     id: 'seira',
@@ -110,12 +80,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 86,
     deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','crash','tidewall'],
     relic: 'tidestone',
-    look: {
-      hair: 'long', hairColor: '#a8dadc', hairColor2: '#e8f7ff', eyeColor: '#5ec8ff',
-      skin: '#f6e2d5', outfit: '#152a3d', outfitTrim: '#a8dadc', accessory: 'hairpin',
-      aura: '#7fd0ff', mood: 0.3,
-      outfitStyle: 'leotard', stockings: '#dff2ff', cape: false, weapon: 'crossbow', figure: 0.5,
-    },
+    portrait: { aura: '#7fd0ff', eyes: '#5ec8ff' },
   },
   {
     id: 'yuki',
@@ -126,12 +91,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 86,
     deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','crash','tidewall'],
     relic: 'tidestone',
-    look: {
-      hair: 'bob', hairColor: '#dff6ff', hairColor2: '#9fd8f5', eyeColor: '#8ecae6',
-      skin: '#f7e6da', outfit: '#0d2436', outfitTrim: '#cdeefc', accessory: 'veil',
-      aura: '#8ecae6', mood: 0.35,
-      outfitStyle: 'plate', stockings: '#e7f6ff', cape: true, weapon: 'glaive', figure: 0.55,
-    },
+    portrait: { aura: '#8ecae6', eyes: '#8ecae6' },
   },
   {
     id: 'koharu',
@@ -142,12 +102,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 86,
     deck: ['strike','strike','strike','strike','guard','guard','guard','thistle','sap','bloom'],
     relic: 'seedring',
-    look: {
-      hair: 'braid', hairColor: '#7ddb8f', hairColor2: '#d9f99d', eyeColor: '#a7f3a0',
-      skin: '#f8e3d1', outfit: '#16301f', outfitTrim: '#a7f3a0', accessory: 'ears',
-      aura: '#68e08a', mood: 0.8,
-      outfitStyle: 'robe', stockings: null, cape: false, weapon: 'staff', figure: 0.5,
-    },
+    portrait: { aura: '#68e08a', eyes: '#a7f3a0' },
   },
   {
     id: 'tsubaki',
@@ -158,12 +113,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 86,
     deck: ['strike','strike','strike','strike','guard','guard','guard','thistle','sap','bloom'],
     relic: 'seedring',
-    look: {
-      hair: 'long', hairColor: '#2f6b4f', hairColor2: '#ff8fab', eyeColor: '#b8f2a0',
-      skin: '#f4dcc9', outfit: '#1b2f24', outfitTrim: '#ff8fab', accessory: 'hairpin',
-      aura: '#68e08a', mood: 0.2,
-      outfitStyle: 'harness', stockings: '#25382c', cape: false, weapon: 'chakram', figure: 0.58,
-    },
+    portrait: { aura: '#68e08a', eyes: '#b8f2a0' },
   },
   {
     id: 'midori',
@@ -174,12 +124,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 86,
     deck: ['strike','strike','strike','strike','guard','guard','guard','thistle','sap','bloom'],
     relic: 'seedring',
-    look: {
-      hair: 'ponytail', hairColor: '#9ae66e', hairColor2: '#d7ffb0', eyeColor: '#7bd389',
-      skin: '#f9e5d4', outfit: '#1d3324', outfitTrim: '#9ae66e', accessory: 'none',
-      aura: '#9ae66e', mood: 0.6,
-      outfitStyle: 'sarashi', stockings: null, cape: false, weapon: 'spear', figure: 0.42,
-    },
+    portrait: { aura: '#9ae66e', eyes: '#7bd389' },
   },
   {
     id: 'hikari',
@@ -190,12 +135,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','glint','dawn','verdict'],
     relic: 'sunbead',
-    look: {
-      hair: 'long', hairColor: '#ffe6a7', hairColor2: '#fff6d6', eyeColor: '#ffd60a',
-      skin: '#fae3cf', outfit: '#2b2413', outfitTrim: '#ffd60a', accessory: 'halo',
-      aura: '#ffe07a', mood: 0.25,
-      outfitStyle: 'leotard', stockings: '#fff3c4', cape: true, weapon: 'greatsword', figure: 0.66,
-    },
+    portrait: { aura: '#ffe07a', eyes: '#ffd60a' },
   },
   {
     id: 'ame',
@@ -206,12 +146,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','glint','dawn','verdict'],
     relic: 'sunbead',
-    look: {
-      hair: 'wavy', hairColor: '#fff3bf', hairColor2: '#ffd6e0', eyeColor: '#ffe066',
-      skin: '#fbe6d4', outfit: '#2a2618', outfitTrim: '#fff3bf', accessory: 'halo',
-      aura: '#ffe07a', mood: 0.9,
-      outfitStyle: 'robe', stockings: null, cape: true, weapon: 'wand', figure: 0.55,
-    },
+    portrait: { aura: '#ffe07a', eyes: '#ffe066' },
   },
   {
     id: 'sora',
@@ -222,12 +157,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','glint','dawn','verdict'],
     relic: 'sunbead',
-    look: {
-      hair: 'ponytail', hairColor: '#cdb4ff', hairColor2: '#fff1c1', eyeColor: '#c1e3ff',
-      skin: '#f7e0cd', outfit: '#23223a', outfitTrim: '#fff1c1', accessory: 'visor',
-      aura: '#ffe07a', mood: 0.55,
-      outfitStyle: 'sarashi', stockings: '#efe6ff', cape: false, weapon: 'bow', figure: 0.5,
-    },
+    portrait: { aura: '#ffe07a', eyes: '#c1e3ff' },
   },
   {
     id: 'kuro',
@@ -238,12 +168,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 80,
     deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
     relic: 'nightglass',
-    look: {
-      hair: 'twin', hairColor: '#2b2340', hairColor2: '#b57cff', eyeColor: '#ff5ea8',
-      skin: '#f2d9c8', outfit: '#150f22', outfitTrim: '#b57cff', accessory: 'horns',
-      aura: '#b57cff', mood: 0.1,
-      outfitStyle: 'harness', stockings: '#241a3c', cape: true, weapon: 'daggers', figure: 0.6,
-    },
+    portrait: { aura: '#b57cff', eyes: '#ff5ea8', horns: true },
   },
   {
     id: 'rei',
@@ -254,12 +179,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 80,
     deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
     relic: 'nightglass',
-    look: {
-      hair: 'wavy', hairColor: '#6b4fa8', hairColor2: '#e0c3fc', eyeColor: '#c77dff',
-      skin: '#f0d8c8', outfit: '#1a1030', outfitTrim: '#c77dff', accessory: 'crown',
-      aura: '#b57cff', mood: 0.2,
-      outfitStyle: 'slit', stockings: '#2a1c4a', cape: true, weapon: 'grimoire', figure: 0.6,
-    },
+    portrait: { aura: '#b57cff', eyes: '#c77dff' },
   },
   {
     id: 'yuna',
@@ -270,12 +190,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 80,
     deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
     relic: 'nightglass',
-    look: {
-      hair: 'long', hairColor: '#3f3358', hairColor2: '#8e7bb5', eyeColor: '#9d8df1',
-      skin: '#f1dccb', outfit: '#161129', outfitTrim: '#9d8df1', accessory: 'veil',
-      aura: '#8e7bb5', mood: 0.3,
-      outfitStyle: 'coat', stockings: '#241c40', cape: true, weapon: 'scythe', figure: 0.56,
-    },
+    portrait: { aura: '#8e7bb5', eyes: '#9d8df1' },
   },
   {
     id: 'neko',
@@ -286,12 +201,7 @@ export const HEROES: HeroDef[] = [
     maxHp: 80,
     deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
     relic: 'nightglass',
-    look: {
-      hair: 'bob', hairColor: '#3d3557', hairColor2: '#ff9ecd', eyeColor: '#ffd166',
-      skin: '#f5ddcc', outfit: '#191330', outfitTrim: '#ff9ecd', accessory: 'ears',
-      aura: '#b57cff', mood: 0.7,
-      outfitStyle: 'leotard', stockings: '#2a2140', cape: false, weapon: 'claws', figure: 0.38,
-    },
+    portrait: { aura: '#b57cff', eyes: '#ffd166' },
   },
 ];
 

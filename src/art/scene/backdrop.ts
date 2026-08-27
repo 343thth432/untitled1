@@ -1,5 +1,4 @@
-import { mix, rgba, seeded, dark, light } from '../illustration/paint';
-import { blurOn, blurOff } from '../illustration/soft';
+import { blurOff, blurOn, dark, light, mix, rgba, seeded } from './color';
 import type { Element } from '../../game/types';
 
 /**

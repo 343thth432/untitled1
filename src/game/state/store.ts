@@ -6,13 +6,13 @@ import { OMENS } from '../data/omens';
 import { FOES } from '../data/foes';
 import { HERO_BY_ID, HEROES } from '../data/heroes';
 import { Duel } from '../engine/duel';
-import { advance, currentLeg, currentOptions, foeScale, isRunOver, newRun, relicMaxHp } from '../engine/run';
+import { currentLeg, descend, foeScale, isRunOver, newRun, nodeById, relicMaxHp } from '../engine/run';
 import { pick, rng, sample } from '../engine/rng';
 import { loadRaw, saveRaw, clearSave } from './storage';
 
 export type Scene =
   | { s: 'title' }
-  | { s: 'road' }
+  | { s: 'dungeon' }
   | { s: 'duel' }
   | { s: 'reward'; cards: string[]; sparks: number; relic?: string }
   | { s: 'rest' }
@@ -38,6 +38,8 @@ interface Store {
   run: RunState | null;
   scene: Scene;
   duel: Duel | null;
+  /** событие, которое сейчас разыгрывается */
+  at: string | null;
   /** растёт при каждом изменении дуэли — чтобы UI перерисовался */
   tick: number;
 
@@ -45,8 +47,7 @@ interface Store {
   start(heroId: string, seed?: string): void;
   abandon(): void;
 
-  choose(i: number): void;
-  enterNode(): void;
+  enterNode(id: string): void;
 
   playCard(i: number): void;
   endTurn(): void;
@@ -91,6 +92,7 @@ export const useGame = create<Store>((set, get) => ({
   run: null,
   scene: { s: 'title' },
   duel: null,
+  at: null,
   tick: 0,
 
   async boot() {
@@ -106,33 +108,29 @@ export const useGame = create<Store>((set, get) => ({
     } catch {
       /* повреждённый сейв просто игнорируем */
     }
-    set({ ready: true, meta, run, scene: run ? { s: 'road' } : { s: 'title' } });
+    set({ ready: true, meta, run, scene: run ? { s: 'dungeon' } : { s: 'title' } });
   },
 
   start(heroId, seed) {
     const run = newRun(heroId, seed);
     const meta = { ...get().meta, runs: get().meta.runs + 1 };
-    set({ run, meta, scene: { s: 'road' }, duel: null });
+    set({ run, meta, scene: { s: 'dungeon' }, duel: null, at: null });
     void persist(meta, run);
   },
 
   abandon() {
-    set({ run: null, duel: null, scene: { s: 'title' } });
+    set({ run: null, duel: null, at: null, scene: { s: 'title' } });
     void persist(get().meta, null);
     void clearSave().then(() => persist(get().meta, null));
   },
 
-  choose(i) {
+  enterNode(id) {
     const run = get().run;
     if (!run) return;
-    set({ run: { ...run, picked: i } });
-  },
-
-  enterNode() {
-    const run = get().run;
-    if (!run) return;
-    const node = currentOptions(run)[run.picked] ?? currentOptions(run)[0];
+    const node = nodeById(run, id);
+    if (!node || run.done.includes(id)) return;
     const hero = HERO_BY_ID[run.heroId];
+    set({ at: id });
     switch (node.kind) {
       case 'foe':
       case 'elite':
@@ -144,7 +142,7 @@ export const useGame = create<Store>((set, get) => ({
           foe,
           scale: foeScale(run) * (node.kind === 'elite' ? 1.05 : 1),
           relics: relicDefs(run.relics),
-          rng: rng(`${run.seed}-${run.leg}-${run.step}-${run.picked}`),
+          rng: rng(`${run.seed}-${run.leg}-${id}`),
         });
         set({ duel, scene: { s: 'duel' }, tick: get().tick + 1 });
         break;
@@ -183,14 +181,15 @@ export const useGame = create<Store>((set, get) => ({
     const run = get().run;
     if (!d || !run) return;
     if (d.over === 'lose') {
-      const meta = { ...get().meta, memory: get().meta.memory + run.leg * 30 + run.step * 6 };
+      const meta = { ...get().meta, memory: get().meta.memory + run.leg * 30 + run.done.length * 6 };
       set({ scene: { s: 'defeat' }, meta });
       void persist(meta, null);
       return;
     }
-    const node = currentOptions(run)[run.picked];
+    const node = nodeById(run, get().at ?? '');
+    if (!node) return;
     const hero = HERO_BY_ID[run.heroId];
-    const r = rng(`${run.seed}-r-${run.leg}-${run.step}`);
+    const r = rng(`${run.seed}-r-${run.leg}-${node.id}`);
     const extra = run.relics.includes('oldmap') ? 1 : 0;
     const pool = [...new Set([...rewardPool(hero.element), ...sample(r, ANY_POOL, 6)])];
     const cards = sample(r, pool, 3 + extra);
@@ -267,7 +266,7 @@ export const useGame = create<Store>((set, get) => ({
     if (!run || sc.s !== 'omen') return;
     const ch = sc.omen.choices[i];
     const e = ch.effects;
-    const r = rng(`${run.seed}-o-${run.leg}-${run.step}-${i}`);
+    const r = rng(`${run.seed}-o-${run.leg}-${get().at}-${i}`);
     let next: RunState = { ...run };
     if (e.hp) next.hp = Math.max(1, Math.min(next.maxHp, next.hp + e.hp));
     if (e.maxHp) next.maxHp += e.maxHp;
@@ -300,20 +299,26 @@ export const useGame = create<Store>((set, get) => ({
   toRoad() {
     const run = get().run;
     if (!run) return;
-    const next = { ...run };
-    advance(next);
-    if (isRunOver(next)) {
-      const meta = {
-        ...get().meta,
-        wins: get().meta.wins + 1,
-        memory: get().meta.memory + 200,
-        unlocked: unlockNext(get().meta),
-      };
-      set({ run: next, meta, scene: { s: 'victory' } });
-      void persist(meta, null);
-      return;
+    const id = get().at;
+    const node = id ? nodeById(run, id) : undefined;
+    const next: RunState = { ...run, done: id && !run.done.includes(id) ? [...run.done, id] : run.done };
+
+    // хранитель этажа побеждён — спускаемся ниже
+    if (node?.kind === 'boss') {
+      descend(next);
+      if (isRunOver(next)) {
+        const meta = {
+          ...get().meta,
+          wins: get().meta.wins + 1,
+          memory: get().meta.memory + 200,
+          unlocked: unlockNext(get().meta),
+        };
+        set({ run: next, meta, scene: { s: 'victory' }, at: null });
+        void persist(meta, null);
+        return;
+      }
     }
-    set({ run: next, scene: { s: 'road' } });
+    set({ run: next, scene: { s: 'dungeon' }, at: null });
     void persist(get().meta, next);
   },
 }));
@@ -339,4 +344,4 @@ function unlockNext(meta: Meta): string[] {
   return [...meta.unlocked, locked[0]];
 }
 
-export { currentLeg, currentOptions, isRunOver };
+export { currentLeg, isRunOver };

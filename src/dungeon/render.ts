@@ -71,10 +71,15 @@ export interface Sprite {
   draw: (ctx: CanvasRenderingContext2D, w: number, h: number, dist: number) => void;
 }
 
-const FOV = 0.66;
+export const FOV = 0.66;
 /** высота свода и высота глаза в клетках — от них зависит, насколько зал просторный */
-const WALL_H = 1.7;
-const EYE_H = 0.66;
+export const WALL_H = 2.4;
+export const EYE_H = 0.78;
+
+/** высота проекции для кадра шириной w — общая для стен и спрайтов */
+export function projOf(w: number): number {
+  return w / (2 * FOV);
+}
 
 export class Raycaster {
   readonly w: number;
@@ -109,6 +114,9 @@ export class Raycaster {
     const planeX = -dirY * FOV;
     const planeY = dirX * FOV;
     const half = h >> 1;
+    // масштаб проекции берём от ширины: вертикальный экран не должен
+    // растягивать стены на весь кадр
+    const proj = projOf(w);
     const power = pal.torch.power * flicker;
     const [ar, ag, ab] = pal.ambient;
     const [fr, fg, fb] = pal.fog;
@@ -126,7 +134,7 @@ export class Raycaster {
     // ── пол ───────────────────────────────────────────────────
     if (floorTex) {
       for (let y = half + 1; y < h; y++) {
-        const rowDist = (EYE_H * h) / (y - half);
+        const rowDist = (EYE_H * proj) / (y - half);
         this.plane(floorTex, y, rowDist, rdx0, rdy0, rdx1, rdy1, cam, EYE_H, 1, power, pal, ar, ag, ab, fr, fg, fb, dens);
       }
     }
@@ -134,7 +142,7 @@ export class Raycaster {
     if (ceilTex) {
       const up = WALL_H - EYE_H;
       for (let y = half - 1; y >= 0; y--) {
-        const rowDist = (up * h) / (half - y);
+        const rowDist = (up * proj) / (half - y);
         this.plane(ceilTex, y, rowDist, rdx0, rdy0, rdx1, rdy1, cam, -up, -1, power * 0.66, pal, ar, ag, ab, fr, fg, fb, dens);
       }
     }
@@ -172,7 +180,7 @@ export class Raycaster {
       const tex = texOf(TEX_OF_CELL[cell] ?? 'wallBrick');
       if (!tex) continue;
 
-      const scale = h / dist;
+      const scale = proj / dist;
       const yTop = half - (WALL_H - EYE_H) * scale;
       const yBot = half + EYE_H * scale;
       const top = Math.max(0, Math.ceil(yTop));
@@ -196,7 +204,7 @@ export class Raycaster {
       for (let y = top; y <= bot; y++) {
         // мировая высота точки и координата в текстуре: кладка не тянется,
         // а повторяется по высоте свода
-        const zw = EYE_H - ((y - half) * dist) / h;
+        const zw = EYE_H - ((y - half) * dist) / proj;
         const texY = ((((WALL_H - zw) * tex.size) | 0) & mask) >>> 0;
         const ti = (texY * tex.size + texX) * 3;
         const tnx = tex.nrm[ti] / 127;
@@ -266,12 +274,26 @@ export class Raycaster {
     }
   }
 
-  /** переносит буфер на экран с мягким увеличением */
-  blit(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  /** переносит посчитанные пиксели в холст буфера */
+  flush(): void {
     this.bctx.putImageData(this.img, 0, 0);
+  }
+
+  /** контекст буфера — сюда дорисовываются спрайты до вывода на экран */
+  get ctx(): CanvasRenderingContext2D {
+    return this.bctx;
+  }
+
+  /** выводит буфер на экран с мягким увеличением */
+  present(ctx: CanvasRenderingContext2D, w: number, h: number): void {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(this.buf, 0, 0, w, h);
+  }
+
+  blit(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    this.flush();
+    this.present(ctx, w, h);
   }
 }
 

@@ -7,7 +7,7 @@ import { RELICS, FOUND_POOL } from '../src/game/data/relics';
 import { FOES } from '../src/game/data/foes';
 import { HERO_BY_ID } from '../src/game/data/heroes';
 import { Duel } from '../src/game/engine/duel';
-import { advance, currentOptions, foeScale, isRunOver, newRun, relicMaxHp } from '../src/game/engine/run';
+import { currentLeg, descend, foeScale, isRunOver, newRun, relicMaxHp } from '../src/game/engine/run';
 import { pick, rng, sample } from '../src/game/engine/rng';
 import type { RunState } from '../src/game/types';
 
@@ -50,17 +50,24 @@ function autoRun(heroId: string, seed: string): { win: boolean; leg: number; ste
   const run: RunState = newRun(heroId, seed);
   const hero = HERO_BY_ID[heroId];
   let guard = 0;
-  while (!isRunOver(run) && guard++ < 200) {
-    const opts = currentOptions(run);
-    // предпочитаем элиту в первой половине отрезка, привал — когда мало здоровья
+  while (!isRunOver(run) && guard++ < 300) {
+    const leg = currentLeg(run);
+    const rest = leg.nodes.filter((n) => !run.done.includes(n.id));
+    if (!rest.length) {
+      descend(run);
+      continue;
+    }
+    // хранитель берётся последним, привал — когда мало здоровья
     const low = run.hp < run.maxHp * 0.45;
-    let idx = 0;
-    opts.forEach((o, i) => {
-      if (low && o.kind === 'rest') idx = i;
-      else if (!low && (o.kind === 'elite' || o.kind === 'find') && opts[idx].kind === 'foe') idx = i;
-    });
-    const node = opts[idx];
-    const r = rng(`${seed}-${run.leg}-${run.step}`);
+    const boss = rest.find((n) => n.kind === 'boss');
+    const others = rest.filter((n) => n.kind !== 'boss');
+    const node =
+      (low ? others.find((n) => n.kind === 'rest') : undefined) ??
+      others[0] ??
+      boss ??
+      rest[0];
+    const step = run.done.length;
+    const r = rng(`${seed}-${run.leg}-${node.id}`);
     if (node.kind === 'foe' || node.kind === 'elite' || node.kind === 'boss') {
       const d = new Duel({
         deck: run.deck,
@@ -68,17 +75,16 @@ function autoRun(heroId: string, seed: string): { win: boolean; leg: number; ste
         foe: FOES[node.foe ?? 'mourner'],
         scale: foeScale(run) * (node.kind === 'elite' ? 1.15 : 1),
         relics: run.relics.map((id) => RELICS[id]).filter(Boolean),
-        rng: rng(`${seed}-d-${run.leg}-${run.step}`),
+        rng: rng(`${seed}-d-${run.leg}-${node.id}`),
       });
       const res = playDuel(d);
       run.hp = d.hero.hp;
       turnsTotal += d.turn;
       duels++;
       if (res === 'lose') {
-        deaths.push(`${node.foe}@${run.leg}.${run.step}`);
-        return { win: false, leg: run.leg, step: run.step, hp: 0, deck: run.deck.length };
+        deaths.push(`${node.foe}@${run.leg}.${step}`);
+        return { win: false, leg: run.leg, step, hp: 0, deck: run.deck.length };
       }
-      // берём карту из награды
       const cards = sample(r, rewardPool(hero.element), 3);
       run.deck.push(pick(r, cards));
       if (node.kind === 'elite' || node.kind === 'boss') {
@@ -106,9 +112,10 @@ function autoRun(heroId: string, seed: string): { win: boolean; leg: number; ste
     } else if (node.kind === 'omen') {
       run.hp = Math.min(run.maxHp, run.hp + 8);
     }
-    advance(run);
+    run.done.push(node.id);
+    if (node.kind === 'boss') descend(run);
   }
-  return { win: true, leg: run.leg, step: run.step, hp: run.hp, deck: run.deck.length };
+  return { win: true, leg: run.leg, step: run.done.length, hp: run.hp, deck: run.deck.length };
 }
 
 const deaths: string[] = [];

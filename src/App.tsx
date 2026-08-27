@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useGame } from './game/state/store';
 import TitleScreen from './ui/screens/TitleScreen';
-import RoadScreen from './ui/screens/RoadScreen';
+import DungeonScreen from './ui/screens/DungeonScreen';
 import DuelScreen from './ui/screens/DuelScreen';
 import {
   EndScreen,
@@ -27,8 +27,8 @@ export default function App() {
         <div className="grid h-full place-items-center text-[13px] text-ink-500">Дорога просыпается…</div>
       ) : scene.s === 'title' ? (
         <TitleScreen />
-      ) : scene.s === 'road' ? (
-        <RoadScreen />
+      ) : scene.s === 'dungeon' ? (
+        <DungeonScreen />
       ) : scene.s === 'duel' ? (
         <DuelScreen />
       ) : scene.s === 'reward' ? (

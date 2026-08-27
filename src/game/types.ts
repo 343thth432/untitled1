@@ -1,51 +1,20 @@
-import type { BiomeId } from '../art/road';
+/** Слои подземелья */
+export type FloorId = 'crypt' | 'catacomb' | 'sanctum';
 
-// ── образ героини ────────────────────────────────────────────
-export type HairStyle = 'long' | 'twin' | 'bob' | 'ponytail' | 'braid' | 'short' | 'wavy' | 'buns';
-
-export type OutfitStyle =
-  | 'leotard'
-  | 'plate'
-  | 'slit'
-  | 'coat'
-  | 'sarashi'
-  | 'robe'
-  | 'harness'
-  | 'qipao';
-
-export type WeaponId =
-  | 'katana'
-  | 'greatsword'
-  | 'bow'
-  | 'staff'
-  | 'scythe'
-  | 'daggers'
-  | 'hammer'
-  | 'spear'
-  | 'grimoire'
-  | 'chakram'
-  | 'crossbow'
-  | 'glaive'
-  | 'wand'
-  | 'claws';
-
-export interface Appearance {
-  hair: HairStyle;
-  hairColor: string;
-  hairColor2: string;
-  eyeColor: string;
-  skin: string;
-  outfit: string;
-  outfitTrim: string;
-  accessory: 'horns' | 'halo' | 'ears' | 'crown' | 'visor' | 'hairpin' | 'veil' | 'none';
+/**
+ * Как персонаж выглядит в подземелье. Людей движок не рисует: в кадре —
+ * тёмный силуэт со свечением, а полноценный портрет подставляется картинкой,
+ * если она положена в public/art.
+ */
+export interface Portrait {
+  /** цвет свечения — им подсвечен силуэт и интерфейс */
   aura: string;
-  /** 0 — суровая, 1 — мягкая: влияет на веки и рот */
-  mood: number;
-  outfitStyle: OutfitStyle;
-  stockings: string | null;
-  cape: boolean;
-  weapon: WeaponId;
-  figure: number;
+  /** цвет глаз в темноте */
+  eyes: string;
+  /** рогатый силуэт */
+  horns?: boolean;
+  /** путь к картинке относительно public, если она есть */
+  img?: string;
 }
 
 // ── стихии ───────────────────────────────────────────────────
@@ -141,9 +110,9 @@ export interface FoeDef {
   element: Element;
   hp: number;
   /** откуда берётся внешность */
-  look: Appearance;
+  portrait: Portrait;
   /** биомы, где встречается */
-  where: BiomeId[];
+  where: FloorId[];
   /** сколько фигур в сцене: свора выходит втроём */
   count?: number;
   /** цикл намерений; turn начинается с 0 */
@@ -181,7 +150,7 @@ export interface HeroDef {
   title: string;
   element: Element;
   lore: string;
-  look: Appearance;
+  portrait: Portrait;
   maxHp: number;
   /** стартовая колода: id карт с повторами */
   deck: string[];
@@ -204,17 +173,17 @@ export interface RunNode {
 }
 
 export interface Leg {
-  biome: BiomeId;
+  tier: FloorId;
   name: string;
-  /** шаги пути; на шаге может быть развилка из двух узлов */
-  steps: RunNode[][];
+  /** зерно для генерации этажа — карта не хранится, а строится заново */
+  seed: string;
+  /** события этажа; последнее — хранитель у спуска */
+  nodes: RunNode[];
 }
 
 export interface RunState {
   seed: string;
   heroId: string;
-  /** попутчица: идёт рядом по дороге */
-  companion: string;
   hp: number;
   maxHp: number;
   /** искры — валюта торговца */
@@ -222,13 +191,10 @@ export interface RunState {
   deck: string[];
   relics: string[];
   legs: Leg[];
-  /** индекс отрезка и шага */
+  /** текущий этаж */
   leg: number;
-  step: number;
-  /** выбранный на текущем шаге узел */
-  picked: number;
-  /** пройденные узлы отрезка */
-  done: boolean[];
+  /** id пройденных событий */
+  done: string[];
 }
 
 // ── знамения ─────────────────────────────────────────────────

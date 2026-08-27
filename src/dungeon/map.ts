@@ -61,17 +61,17 @@ function centre(r: Room): [number, number] {
 /** прямоугольные залы, соединённые Г-образными коридорами */
 export function buildFloor(seed: string, stone: Cell, marks: MarkKind[]): Floor {
   const r: Rng = rng(seed);
-  const w = 27;
-  const h = 27;
+  const w = 19;
+  const h = 19;
   const cells = new Uint8Array(w * h).fill(stone);
   const rooms: Room[] = [];
 
   const fits = (a: Room): boolean =>
     rooms.every((b) => a.x > b.x + b.w + 1 || b.x > a.x + a.w + 1 || a.y > b.y + b.h + 1 || b.y > a.y + a.h + 1);
 
-  for (let tries = 0; tries < 220 && rooms.length < 7; tries++) {
-    const rw = 3 + Math.floor(r() * 4);
-    const rh = 3 + Math.floor(r() * 4);
+  for (let tries = 0; tries < 300 && rooms.length < 9; tries++) {
+    const rw = 3 + Math.floor(r() * 3);
+    const rh = 3 + Math.floor(r() * 3);
     const room: Room = {
       x: 1 + Math.floor(r() * (w - rw - 2)),
       y: 1 + Math.floor(r() * (h - rh - 2)),
@@ -108,8 +108,8 @@ export function buildFloor(seed: string, stone: Cell, marks: MarkKind[]): Floor 
   const alt = stone === CELL.brick ? CELL.rock : CELL.brick;
   for (let i = 0; i < w * h; i++) {
     if (cells[i] !== stone) continue;
-    if (r() < 0.16) cells[i] = alt;
-    else if (r() < 0.07) cells[i] = CELL.moss;
+    if (r() < 0.07) cells[i] = alt;
+    else if (r() < 0.03) cells[i] = CELL.moss;
   }
 
   // рамка по краю — из основного камня, чтобы силуэт был ровным
