@@ -17,7 +17,7 @@ export function Sheet({
   return (
     <div className="absolute inset-0 z-40 flex flex-col justify-end">
       <button type="button" aria-label="Закрыть" onClick={onClose} className="absolute inset-0 bg-ink-900/35 backdrop-blur-[2px]" />
-      <div className="animate-slideUp relative max-h-[82%] rounded-t-3xl border-t border-ink-900/[0.08] bg-paper shadow-card">
+      <div className="animate-slideUp relative max-h-[82%] rounded-t-3xl border-t border-white/10 bg-paper shadow-card">
         <div className="flex items-center justify-between px-4 pb-2 pt-3">
           <div className="mx-auto h-1 w-10 rounded-full bg-ink-900/20" />
         </div>

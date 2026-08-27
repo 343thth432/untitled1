@@ -33,44 +33,44 @@ export const TINTS: Record<Element | 'neutral', Tint> = {
     spark: '#ffe0a4',
   },
   flame: {
-    deep: '#0a0509',
-    base: '#1a1018',
-    glow: '#3a1e24',
-    warm: '#e8a15e',
-    cool: '#8d5f86',
-    spark: '#ffcf92',
+    deep: '#080610',
+    base: '#14101f',
+    glow: '#32222f',
+    warm: '#e5a468',
+    cool: '#6f6299',
+    spark: '#ffd7a2',
   },
   tide: {
-    deep: '#03080f',
-    base: '#0a1826',
-    glow: '#153347',
-    warm: '#8fd0d8',
-    cool: '#4d86c4',
-    spark: '#bfeeff',
+    deep: '#040810',
+    base: '#0b1424',
+    glow: '#1a2e4a',
+    warm: '#a8ccd8',
+    cool: '#4f81bd',
+    spark: '#d3ebff',
   },
   verdant: {
-    deep: '#050a08',
-    base: '#0e1a17',
-    glow: '#1c3327',
-    warm: '#cbc177',
-    cool: '#4f8f7a',
-    spark: '#e2f3b0',
+    deep: '#05080e',
+    base: '#0c1520',
+    glow: '#1b2e37',
+    warm: '#c9c48a',
+    cool: '#5c8f95',
+    spark: '#e8f2cc',
   },
   lumen: {
-    deep: '#0a0810',
-    base: '#171426',
-    glow: '#33294a',
-    warm: '#f0d79a',
-    cool: '#7d78c8',
-    spark: '#fff3cd',
+    deep: '#07070f',
+    base: '#131426',
+    glow: '#2d2a4a',
+    warm: '#efd79f',
+    cool: '#7a7bc0',
+    spark: '#fff2d0',
   },
   umbra: {
     deep: '#040409',
-    base: '#0b0a16',
-    glow: '#1d1832',
-    warm: '#9d7fc4',
-    cool: '#42417e',
-    spark: '#d9c8ff',
+    base: '#0a0a16',
+    glow: '#1e1934',
+    warm: '#a487c9',
+    cool: '#4a4a8a',
+    spark: '#dcccff',
   },
 };
 
@@ -154,12 +154,12 @@ export function buildBackdrop(
   for (let i = 0; i < far; i++) {
     const x = rnd() * w;
     const y = rnd() * h * 0.92;
-    const r = w * (0.07 + rnd() * 0.14);
+    const r = w * (0.06 + rnd() * rnd() * 0.18);
     const warm = rnd() < 0.55;
     const col = warm ? tint.warm : tint.cool;
     // ближе к ореолу — ярче
     const d = Math.hypot(x - hx, y - hy) / hr;
-    const a = (0.05 + rnd() * 0.07) * (1.25 - Math.min(1, d) * 0.7);
+    const a = (0.035 + rnd() * 0.055) * (1.25 - Math.min(1, d) * 0.7);
     disc(ctx, x, y, r, col, a);
   }
   blurOff(ctx);
@@ -169,11 +169,11 @@ export function buildBackdrop(
   for (let i = 0; i < mid; i++) {
     const x = rnd() * w;
     const y = rnd() * h;
-    const r = w * (0.025 + rnd() * 0.06);
+    const r = w * (0.016 + rnd() * rnd() * 0.085);
     const warm = rnd() < 0.62;
     const col = warm ? tint.warm : tint.cool;
     const d = Math.hypot(x - hx, y - hy) / hr;
-    const a = (0.07 + rnd() * 0.1) * (1.3 - Math.min(1, d) * 0.75);
+    const a = (0.05 + rnd() * 0.075) * (1.3 - Math.min(1, d) * 0.75);
     disc(ctx, x, y, r, col, a);
   }
 
@@ -317,5 +317,87 @@ export function stageGlow(
   ctx.beginPath();
   ctx.arc(0, 0, rx, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+}
+
+/**
+ * Готовая сцена под фигуры: фон печётся один раз на размер холста,
+ * искры и подсвет пола рисуются каждый кадр.
+ */
+export class Stage {
+  private baked: HTMLCanvasElement | null = null;
+  private w = 0;
+  private h = 0;
+  private sparks: Sparks;
+  private tint: Tint;
+  private seed: string;
+  private opts: BackdropOpts;
+
+  constructor(tint: Tint, seed: string, opts: BackdropOpts & { sparks?: number } = {}) {
+    this.tint = tint;
+    this.seed = seed;
+    this.opts = opts;
+    this.sparks = new Sparks(tint, opts.sparks ?? 54, seed + '-sp');
+  }
+
+  resize(w: number, h: number): void {
+    if (!w || !h) return;
+    if (this.w === w && this.h === h && this.baked) return;
+    this.w = w;
+    this.h = h;
+    this.baked = buildBackdrop(w, h, this.tint, this.seed, this.opts);
+    this.sparks.resize(w, h);
+  }
+
+  /** горизонт «пола»: доля высоты, на которой стоят фигуры */
+  draw(ctx: CanvasRenderingContext2D, t: number, dt: number, floorY?: number): void {
+    if (!this.baked) return;
+    ctx.drawImage(this.baked, 0, 0, this.w, this.h);
+    if (floorY != null) {
+      stageGlow(ctx, this.w * 0.5, floorY, this.w * 0.46, this.w * 0.1, this.tint.warm, 0.3);
+    }
+    this.sparks.draw(ctx, t, dt);
+  }
+}
+
+/**
+ * Полоса «земли» под ногами: не пейзаж, а лишь тёмная плоскость
+ * с бегущими бликами — она даёт чувство движения по дороге,
+ * не возвращая в кадр рисованный ландшафт.
+ */
+export function groundBand(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  y: number,
+  tint: Tint,
+  scroll: number,
+): void {
+  ctx.save();
+  const g = ctx.createLinearGradient(0, y - h * 0.06, 0, h);
+  g.addColorStop(0, rgba(tint.deep, 0));
+  g.addColorStop(0.3, rgba(tint.deep, 0.6));
+  g.addColorStop(1, rgba('#000000', 0.8));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, y - h * 0.06, w, h - y + h * 0.06);
+
+  // отражение сцены в мокрой плоскости
+  ctx.globalCompositeOperation = 'lighter';
+  const rg = ctx.createLinearGradient(0, y, 0, y + h * 0.1);
+  rg.addColorStop(0, rgba(tint.glow, 0.24));
+  rg.addColorStop(1, rgba(tint.glow, 0));
+  ctx.fillStyle = rg;
+  ctx.fillRect(0, y, w, h * 0.1);
+
+  // бегущие блики — ощущение хода
+  for (let i = 0; i < 14; i++) {
+    const span = w * 1.6;
+    const x = ((i * 137.5 - scroll * 0.6) % span + span) % span - w * 0.3;
+    const d = i / 14;
+    const yy = y + h * 0.012 + d * h * 0.075;
+    const len = w * (0.05 + d * 0.12);
+    ctx.fillStyle = rgba(tint.warm, 0.05 + d * 0.05);
+    ctx.fillRect(x, yy, len, 1.4 + d * 2.2);
+  }
   ctx.restore();
 }

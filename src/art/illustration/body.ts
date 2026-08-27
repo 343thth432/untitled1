@@ -907,21 +907,21 @@ function drawOutfit(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => 
     stroke(ctx, [[CX - 84, SK.bustY - br * 0.16], [CX, SK.bustY - br * 0.02], [CX + 84, SK.bustY - br * 0.16]], tr, 10, 0.95, 2);
   } else if (st === 'plate') {
     plate([
-      [CX - 80, bustTop + 26],
-      [CX - 46, bustTop - 6],
-      [CX - 13, bustTop + 30],
-      [CX, bustTop + 20],
-      [CX + 13, bustTop + 30],
-      [CX + 46, bustTop - 6],
-      [CX + 80, bustTop + 26],
-      [CX + 70, bustBot + 6],
-      [CX + 30, 406],
-      [CX, 418],
-      [CX - 30, 406],
-      [CX - 70, bustBot + 6],
+      [CX - 78, bustTop + 28],
+      [CX - 44, bustTop - 8],
+      [CX - 12, bustTop + 32],
+      [CX, bustTop + 22],
+      [CX + 12, bustTop + 32],
+      [CX + 44, bustTop - 8],
+      [CX + 78, bustTop + 28],
+      [CX + 60, bustBot + 12],
+      [CX + 22, bustBot + 24],
+      [CX, bustBot + 18],
+      [CX - 22, bustBot + 24],
+      [CX - 60, bustBot + 12],
     ]);
-    stroke(ctx, [[CX, bustTop + 26], [CX, 412]], sv.mid, 3, 0.45, 2);
-    stroke(ctx, [[CX + 3, bustTop + 26], [CX + 3, 412]], m.deep, 3, 0.4, 2);
+    stroke(ctx, [[CX, bustTop + 26], [CX, bustBot + 16]], sv.mid, 3, 0.45, 2);
+    stroke(ctx, [[CX + 3, bustTop + 26], [CX + 3, bustBot + 14]], m.deep, 3, 0.4, 2);
     filigree(ctx, CX, bustTop + 34, bustBot + 2, 44, sv.spec, m.deep, 3);
     for (const s of [-1, 1] as const) {
       stroke(
@@ -941,15 +941,6 @@ function drawOutfit(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => 
         1.4,
       );
     }
-    // брюшная пластина
-    plate([
-      [CX - 46, 424],
-      [CX, 414],
-      [CX + 46, 424],
-      [CX + 40, 486],
-      [CX, 506],
-      [CX - 40, 486],
-    ]);
     // горжет
     plate([
       [CX - 44, SK.neckBase + 4],
@@ -1129,7 +1120,7 @@ function drawSkirt(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => n
   if (!hasSkirt(st)) return;
   const c = cloth(look.outfit, 0.24);
   const tr = look.outfitTrim;
-  const long = st === 'plate' ? 740 : st === 'coat' ? 860 : 900;
+  const long = st === 'plate' ? 692 : st === 'coat' ? 726 : 748;
 
   for (const s of [-1, 1] as const) {
     const outX = st === 'plate' ? 104 : 112;
@@ -1619,7 +1610,7 @@ export function buildParts(raw: Appearance, id: string, scale = 1): Parts {
         stroke(ctx, [[sx - side * 28, y + 1], [sx + side * 34, y + 6]], sv.spec, 2.2, 0.55, 1.4);
       }
     } else if (sleeved) {
-      drawSleeve(ctx, subSeg(s, -0.1, 1.06, 3), c, side, look.outfitTrim);
+      drawSleeve(ctx, subSeg(s, -0.06, 0.22, 3.2), c, side, look.outfitTrim);
     }
   };
 
@@ -1637,7 +1628,7 @@ export function buildParts(raw: Appearance, id: string, scale = 1): Parts {
     if (gloved) {
       drawSleeve(ctx, subSeg(s, 0.4, 0.86, 2.6), st === 'plate' ? cloth(mix(look.outfit, '#161a26', 0.4), 0.55) : c, side, look.outfitTrim);
     } else if (sleeved) {
-      drawSleeve(ctx, subSeg(s, -0.12, 0.68, 5), c, side, look.outfitTrim);
+      drawSleeve(ctx, subSeg(s, 0.3, 1.02, 3.4), c, side, look.outfitTrim);
     }
   };
 
@@ -1652,7 +1643,7 @@ export function buildParts(raw: Appearance, id: string, scale = 1): Parts {
     };
     const g = drawLimb(ctx, look, s, side, { marks: ['thigh'] });
     occlude(ctx, g, 'b', skin(look).deep, 22);
-    if (sock) drawSleeve(ctx, subSeg(s, 0.26, 1.08, 2.6), sock, side, look.outfitTrim, true);
+    if (sock) drawSleeve(ctx, subSeg(s, 0.44, 1.08, 2.6), sock, side, look.outfitTrim, true);
   };
 
   const legShin = (side: 1 | -1) => (ctx: CanvasRenderingContext2D): void => {

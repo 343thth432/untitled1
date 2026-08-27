@@ -4,11 +4,11 @@ export const ELEMENTS: Record<
   Element,
   { name: string; icon: string; color: string; glow: string; soft: string }
 > = {
-  flame: { name: 'Пламя', icon: '🔥', color: '#e2572f', glow: 'rgba(226,87,47,0.5)', soft: '#ffe6dc' },
-  tide: { name: 'Прилив', icon: '🌊', color: '#2f7fc4', glow: 'rgba(47,127,196,0.5)', soft: '#dcecfa' },
-  verdant: { name: 'Лоза', icon: '🌿', color: '#37945c', glow: 'rgba(55,148,92,0.5)', soft: '#dff2e4' },
-  lumen: { name: 'Свет', icon: '✦', color: '#c08a17', glow: 'rgba(192,138,23,0.5)', soft: '#fbf0d6' },
-  umbra: { name: 'Тьма', icon: '🌑', color: '#7a4bd4', glow: 'rgba(122,75,212,0.5)', soft: '#ece0fb' },
+  flame: { name: 'Пламя', icon: '🔥', color: '#ff7f52', glow: 'rgba(255,127,82,0.55)', soft: '#3a1c15' },
+  tide: { name: 'Прилив', icon: '🌊', color: '#5fb0f2', glow: 'rgba(95,176,242,0.55)', soft: '#14283d' },
+  verdant: { name: 'Лоза', icon: '🌿', color: '#5ecb8b', glow: 'rgba(94,203,139,0.55)', soft: '#132e21' },
+  lumen: { name: 'Свет', icon: '✦', color: '#f5cc5c', glow: 'rgba(245,204,92,0.55)', soft: '#33290f' },
+  umbra: { name: 'Тьма', icon: '🌑', color: '#a882ff', glow: 'rgba(168,130,255,0.55)', soft: '#241c3d' },
 };
 
 export const STATUSES: Record<StatusId, StatusDef> = {

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import type { Appearance } from '../game/types';
+import type { Appearance, Element } from '../game/types';
 import { SK, buildRig, drawRig, drawShadow, lookKey, type AnimName } from './rig';
-import { light, rgba } from './illustration/paint';
+import { Stage, tintOf } from './scene/backdrop';
 
 interface Props {
   look: Appearance;
@@ -12,13 +12,15 @@ interface Props {
   framing?: 'half' | 'full';
   /** проиграть каст при появлении */
   showcase?: boolean;
+  /** стихия задаёт оттенок ночного фона */
+  element?: Element | null;
 }
 
 const DUR: Record<AnimName, number> = { idle: 0, walk: 0, attack: 0.66, cast: 0.95, hurt: 0.46, dead: 1.1, win: 1.6 };
 const SHOW: AnimName[] = ['cast', 'attack', 'win'];
 
 /** Живая 2D-героиня: дыхание, покачивание, поза по тапу */
-export default function HeroStage({ look, className, interactive = true, framing = 'full', showcase }: Props) {
+export default function HeroStage({ look, className, interactive = true, framing = 'full', showcase, element }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -30,6 +32,13 @@ export default function HeroStage({ look, className, interactive = true, framing
     if (!ctx) return;
 
     const rig = buildRig(look, lookKey(look), 1);
+    const tint = tintOf(element);
+    const floor = framing === 'full' ? 0.98 : 1.5;
+    const stage = new Stage(tint, `hero-${element ?? 'n'}`, {
+      focus: 0.5,
+      density: 0.9,
+      sparks: 40,
+    });
     let anim: AnimName = showcase ? 'cast' : 'idle';
     let phase = 0;
     let pick = 0;
@@ -50,6 +59,7 @@ export default function HeroStage({ look, className, interactive = true, framing
       h = host.clientHeight;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
+      stage.resize(w, h);
     };
     resize();
     const ro = new ResizeObserver(resize);
@@ -76,15 +86,7 @@ export default function HeroStage({ look, className, interactive = true, framing
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
 
-      // мягкое сияние ауры за спиной
-      const gx = w * 0.5;
-      const gy = framing === 'half' ? h * 0.62 : h * 0.46;
-      const glow = ctx.createRadialGradient(gx, gy, 4, gx, gy, Math.max(w, h) * 0.56);
-      glow.addColorStop(0, rgba(light(look.aura, 0.4), 0.3));
-      glow.addColorStop(0.55, rgba(look.aura, 0.1));
-      glow.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, w, h);
+      stage.draw(ctx, clock, dt, framing === 'full' ? h * floor : undefined);
 
       const full = framing === 'full';
       const s = full ? (h * 0.94) / SK.ground : (h * 1.85) / SK.ground;

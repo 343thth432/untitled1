@@ -70,7 +70,7 @@ export default function RoadScreen() {
         </div>
         <div className="mt-1.5 flex items-center gap-1.5 px-1">
           {run.relics.map((id) => (
-            <span key={id} title={RELICS[id]?.text} className="grid h-7 w-7 place-items-center rounded-full bg-white/80 text-[14px] shadow-soft">
+            <span key={id} title={RELICS[id]?.text} className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-[14px] shadow-soft">
               {RELICS[id]?.icon ?? '•'}
             </span>
           ))}

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Appearance } from '../game/types';
-import { BIOMES, buildScene, drawScene, Weatherfall, type BiomeId, type RoadScene } from './road';
+import { BIOMES, Weatherfall, type BiomeId } from './road';
+import { Stage, groundBand } from './scene/backdrop';
 import { SK, buildRig, drawRig, drawShadow, lookKey, type AnimName } from './rig';
 import { setBlurScale } from './illustration/soft';
 
@@ -44,7 +45,7 @@ export default function DuelStage({ biome, hero, foe, foeCount = 1, apiRef, clas
     if (!ctx) return;
 
     const b = BIOMES[biome];
-    let scene: RoadScene | null = null;
+    const stage = new Stage(b.tint, `duel-${biome}`, { focus: 0.5, floor: 0.92, sparks: 60 });
     let weather: Weatherfall | null = null;
     let w = 0;
     let h = 0;
@@ -79,7 +80,7 @@ export default function DuelStage({ biome, hero, foe, foeCount = 1, apiRef, clas
       if (!w || !h) return;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
-      scene = buildScene(b, w, h, `${biome}-duel-${w}x${h}`);
+      stage.resize(w, h);
       weather = new Weatherfall(b, w, h);
     };
     resize();
@@ -94,14 +95,14 @@ export default function DuelStage({ biome, hero, foe, foeCount = 1, apiRef, clas
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       clock += dt;
-      if (!scene || !weather || !w || !h) {
+      if (!weather || !w || !h) {
         raf = requestAnimationFrame(loop);
         return;
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawScene(ctx, scene, 400, clock);
-
       const groundY = h * 0.92;
+      stage.draw(ctx, clock, dt, groundY);
+      groundBand(ctx, w, h, groundY, b.tint, clock * 40);
       const s = (h * 0.62) / SK.ground;
       const foeS = s * 0.94;
 

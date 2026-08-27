@@ -179,7 +179,7 @@ export default function DuelScreen() {
       </div>
 
       {/* героиня и рука */}
-      <div className="relative z-10 shrink-0 border-t border-ink-900/[0.07] bg-white/85 px-3 pb-2 pt-2 backdrop-blur-md"
+      <div className="relative z-10 shrink-0 border-t border-white/10 bg-[#0c1120]/90 px-3 pb-2 pt-2 backdrop-blur-md"
         style={{ paddingBottom: 'calc(var(--safe-bottom) + 8px)' }}>
         <div className="px-1">
           <div className="flex items-center gap-2">

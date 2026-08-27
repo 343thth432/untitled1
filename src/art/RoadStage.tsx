@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Appearance, NodeKind } from '../game/types';
-import { BIOMES, buildScene, drawMarker, drawScene, Weatherfall, type BiomeId, type RoadScene } from './road';
+import { BIOMES, drawMarker, Weatherfall, type BiomeId } from './road';
+import { Stage, groundBand } from './scene/backdrop';
 import { SK, buildRig, drawRig, drawShadow, lookKey } from './rig';
 import { setBlurScale } from './illustration/soft';
 
@@ -38,7 +39,7 @@ export default function RoadStage({ biome, look, companion, markers, counts, pic
     if (!ctx) return;
 
     const b = BIOMES[biome];
-    let scene: RoadScene | null = null;
+    const stage = new Stage(b.tint, `road-${biome}`, { focus: 0.42, floor: 0.86, sparks: 44 });
     let weather: Weatherfall | null = null;
     let w = 0;
     let h = 0;
@@ -52,7 +53,7 @@ export default function RoadStage({ biome, look, companion, markers, counts, pic
       if (!w || !h) return;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
-      scene = buildScene(b, w, h, `${biome}-${w}x${h}`);
+      stage.resize(w, h);
       weather = new Weatherfall(b, w, h);
     };
     resize();
@@ -83,15 +84,16 @@ export default function RoadStage({ biome, look, companion, markers, counts, pic
         arrived = false;
         scroll += dt * 8;
       }
-      if (!scene || !weather || !w || !h) {
+      if (!weather || !w || !h) {
         raf = requestAnimationFrame(loop);
         return;
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawScene(ctx, scene, scroll, clock);
+      const groundY = h * 0.86;
+      stage.draw(ctx, clock, dt, groundY);
+      groundBand(ctx, w, h, groundY, b.tint, scroll);
 
       // метки впереди: подъезжают справа
-      const groundY = h * 0.8;
       const n = st.markers.length;
       st.markers.forEach((kind, i) => {
         const lane = n > 1 ? (i === 0 ? -0.09 : 0.09) : 0;

@@ -1,0 +1,8 @@
+Текстуры подземелья — ambientCG (ambientcg.com), лицензия CC0 1.0.
+
+wallBrick: ambientCG «Bricks096» — CC0, https://ambientcg.com/view?id=Bricks096
+wallRock: ambientCG «Rock030» — CC0, https://ambientcg.com/view?id=Rock030
+wallMoss: ambientCG «Bricks094» — CC0, https://ambientcg.com/view?id=Bricks094
+floorCobble: ambientCG «PavingStones141» — CC0, https://ambientcg.com/view?id=PavingStones141
+ceilRock: ambientCG «Rock022» — CC0, https://ambientcg.com/view?id=Rock022
+doorWood: ambientCG «Planks023A» — CC0, https://ambientcg.com/view?id=Planks023A

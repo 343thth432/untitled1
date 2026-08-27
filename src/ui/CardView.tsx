@@ -26,7 +26,7 @@ export function CardView({
 }) {
   const el = card.element ? ELEMENTS[card.element] : null;
   const accent = el?.color ?? '#6b6480';
-  const soft = el?.soft ?? '#f1eef6';
+  const soft = el?.soft ?? '#2a2740';
   return (
     <button
       type="button"
@@ -39,10 +39,10 @@ export function CardView({
       style={{
         height: compact ? 132 : 158,
         borderColor: `${accent}55`,
-        background: `linear-gradient(160deg, ${soft}, #ffffff 62%)`,
+        background: `linear-gradient(158deg, ${accent}26, #141a2e 44%, #0c1020)`,
         boxShadow: selected
-          ? `0 14px 26px -14px ${accent}, 0 0 0 2px ${accent}66`
-          : '0 8px 18px -14px rgba(26,20,48,0.7)',
+          ? `0 16px 30px -14px ${accent}, 0 0 0 2px ${accent}88, inset 0 1px 0 ${accent}44`
+          : `0 12px 24px -16px #000, inset 0 1px 0 ${soft}18`,
       }}
     >
       <div className="flex items-center justify-between">
