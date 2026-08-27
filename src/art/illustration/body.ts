@@ -1078,6 +1078,131 @@ function drawSkirt(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => n
   }
 }
 
+// ── длинные волосы по фигуре ─────────────────────────────────
+/**
+ * Портретная голова обрезана по грудь, поэтому длину волос
+ * дорисовываем уже в пространстве фигуры — до пояса и ниже.
+ */
+function drawHairFall(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => number): void {
+  const H = look.hair;
+  if (H === 'short' || H === 'bob' || H === 'buns') return;
+  const f = hairPack(ctx, look);
+  const line = ink(look.hairColor, 0.46);
+
+  const lock = (pts: P[], fill: string | CanvasGradient = f.base): void => {
+    shape(ctx, pts, 12);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.save();
+    shape(ctx, pts, 12);
+    ctx.clip();
+    const xs = pts.map((p) => p[0]);
+    const x0 = Math.min(...xs);
+    const x1 = Math.max(...xs);
+    const ys = pts.map((p) => p[1]);
+    ctx.beginPath();
+    ctx.rect(x0 + (x1 - x0) * 0.52, Math.min(...ys) - 10, (x1 - x0) * 0.6, Math.max(...ys) + 20);
+    ctx.fillStyle = rgba(f.cel, 0.72);
+    ctx.fill();
+    ctx.restore();
+    shapeInk(ctx, pts, line, 1.5, 4);
+  };
+
+  /** блик-«полумесяц» и кончик другого оттенка */
+  const sheen = (x: number, yTop: number, yBot: number, w: number): void => {
+    taper(
+      ctx,
+      [
+        [x, yTop + (yBot - yTop) * 0.12],
+        [x - w * 0.3, yTop + (yBot - yTop) * 0.3],
+        [x + w * 0.1, yTop + (yBot - yTop) * 0.52],
+      ],
+      [0, w * 0.5, 0],
+      rgba(f.shine, 0.5),
+      10,
+    );
+  };
+
+  /** отдельная прядь с острым кончиком */
+  const strand = (x: number, yTop: number, len: number, w: number, bow: number): void => {
+    const tip: P = [x + bow, yTop + len];
+    const pts: P[] = [
+      [x - w * 0.5, yTop],
+      [x + w * 0.5, yTop + 5],
+      [x + w * 0.44 + bow * 0.68, yTop + len * 0.52],
+      [x + w * 0.14 + bow * 0.92, yTop + len * 0.9],
+      tip,
+      [x - w * 0.1 + bow * 0.8, yTop + len * 0.88],
+      [x - w * 0.44 + bow * 0.5, yTop + len * 0.54],
+    ];
+    lock(pts);
+    sheen(x - w * 0.1, yTop, yTop + len, w * 0.62);
+    taper(
+      ctx,
+      [[x + w * 0.2 + bow * 0.6, yTop + len * 0.68], [x + bow, yTop + len * 0.99]],
+      [w * 0.36, 0],
+      rgba(f.tip, 0.55),
+      8,
+    );
+  };
+
+  /** хвост — три слоя прядей, чтобы читалась масса волос */
+  const tail = (side: -1 | 1, xTop: number, yTop: number, len: number, wide: number, bow: number): void => {
+    strand(xTop, yTop, len, wide, side * bow);
+    strand(xTop + side * wide * 0.62, yTop + 12, len * 0.76, wide * 0.62, side * bow * 1.9);
+    strand(xTop - side * wide * 0.5, yTop + 22, len * 0.58, wide * 0.46, side * bow * 0.4);
+    for (let i = 0; i < 2; i++) {
+      taper(
+        ctx,
+        [
+          [xTop + side * wide * (0.1 + i * 0.2), yTop + len * 0.12],
+          [xTop + side * (wide * (0.24 + i * 0.2)) + (rnd() - 0.5) * 5, yTop + len * 0.46],
+          [xTop + side * wide * (0.16 + i * 0.16) + side * bow * 0.5, yTop + len * 0.76],
+        ],
+        [0, 2.4, 0],
+        rgba(f.deep, 0.38),
+        10,
+      );
+    }
+  };
+
+  if (H === 'twin') {
+    tail(-1, CX - 94, 306, 300, 40, 18);
+    tail(1, CX + 94, 306, 300, 40, 18);
+  } else if (H === 'ponytail') {
+    tail(1, CX + 58, 274, 400, 48, 60);
+  } else if (H === 'braid') {
+    const x = CX + 30;
+    for (let i = 0; i < 6; i++) {
+      const y = 300 + i * 62;
+      const w = 46 - i * 4;
+      lock([
+        [x - w * 0.5, y],
+        [x + w * 0.5, y + 6],
+        [x + w * 0.42, y + 58],
+        [x - w * 0.44, y + 52],
+      ]);
+      taper(ctx, [[x - w * 0.4, y + 14], [x + w * 0.4, y + 44]], [0, 3], rgba(f.deep, 0.45), 8);
+    }
+  } else {
+    // long / wavy — плотная масса с волнистым краем
+    lock([
+      [CX - 70, 292],
+      [CX, 300],
+      [CX + 70, 292],
+      [CX + 64, 420],
+      [CX + 36, 496],
+      [CX, 512],
+      [CX - 36, 494],
+      [CX - 64, 418],
+    ]);
+    sheen(CX - 18, 300, 500, 54);
+    for (const side of [-1, 1] as const) {
+      tail(side, CX + side * 80, 300, H === 'wavy' ? 272 : 340, 42, 14);
+    }
+  }
+}
+
 // ── плащ ─────────────────────────────────────────────────────
 function drawCape(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => number): void {
   if (!look.cape) return;
@@ -1192,7 +1317,7 @@ interface Box {
 
 const BOX: Record<PartName, Box> = {
   cape: { ox: 128, oy: 296, w: 304, h: 700 },
-  backHair: { ox: 116, oy: 20, w: 328, h: 520 },
+  backHair: { ox: 110, oy: 14, w: 340, h: 760 },
   armFarUpper: { ox: 126, oy: 274, w: 152, h: 292 },
   armFarFore: { ox: 96, oy: 438, w: 162, h: 302 },
   legFarThigh: { ox: 138, oy: 546, w: 168, h: 396 },
@@ -1351,6 +1476,7 @@ export function buildParts(look: Appearance, id: string, scale = 1): Parts {
   return {
     cape: makePart('cape', scale, (ctx) => drawCape(ctx, look, seeded(`${id}cape`))),
     backHair: makePart('backHair', scale, (ctx) => {
+      drawHairFall(ctx, look, seeded(`${id}fall`));
       ctx.save();
       headTransform(ctx);
       drawBackHair(ctx, look, seeded(id));
