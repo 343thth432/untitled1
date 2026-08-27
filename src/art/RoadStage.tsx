@@ -86,17 +86,17 @@ export default function RoadStage({ biome, look, markers, picked, walking, onArr
       drawScene(ctx, scene, scroll, clock);
 
       // метки впереди: подъезжают справа
-      const groundY = h * 0.83;
+      const groundY = h * 0.8;
       const n = st.markers.length;
       st.markers.forEach((kind, i) => {
         const lane = n > 1 ? (i === 0 ? -0.09 : 0.09) : 0;
-        const from = 0.8 + i * 0.06;
+        const from = 0.76 + i * 0.05;
         const to = 0.56 + lane * 2.4;
         const k = st.walking ? travel : 0;
         const x = w * (from + (to - from) * k);
         const y = groundY + lane * h * 0.05 + (st.walking ? 0 : Math.sin(clock * 1.6 + i) * 2);
         const dim = st.walking && i !== st.picked;
-        const s = (0.66 + 0.42 * k) * (n > 1 ? 0.86 : 1);
+        const s = (0.95 + 0.3 * k) * (n > 1 ? 0.82 : 1);
         ctx.save();
         if (dim) ctx.globalAlpha = 0.35;
         else if (!st.walking && i === st.picked) {
@@ -113,7 +113,7 @@ export default function RoadStage({ biome, look, markers, picked, walking, onArr
       });
 
       // героиня
-      const s = (h * 0.32) / SK.ground;
+      const s = (h * 0.34) / SK.ground;
       ctx.save();
       ctx.translate(w * 0.27, groundY);
       ctx.scale(s, s);

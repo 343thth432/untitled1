@@ -237,7 +237,7 @@ export interface RoadScene {
 const TILE = 1400;
 
 export function buildScene(biome: Biome, w: number, h: number, seed: string): RoadScene {
-  const horizon = 0.62;
+  const horizon = 0.56;
   const hy = h * horizon;
 
   // ── небо ──

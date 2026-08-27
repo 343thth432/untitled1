@@ -18,9 +18,9 @@ export default function TitleScreen() {
 
   return (
     <div className="relative flex h-full flex-col bg-canvas">
-      <HeroStage look={hero.look} framing="full" className="absolute inset-x-0 top-0 h-[52%]" />
+      <HeroStage look={hero.look} framing="full" className="absolute inset-x-0 top-[11%] h-[45%]" />
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[52%]"
+        className="pointer-events-none absolute inset-x-0 top-[11%] h-[45%]"
         style={{ background: `linear-gradient(180deg, ${el.soft}00 55%, var(--canvas, #faf8f5) 100%)` }}
       />
       <div className="relative z-10 px-5 pt-6" style={{ paddingTop: 'calc(var(--safe-top) + 18px)' }}>

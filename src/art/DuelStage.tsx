@@ -99,7 +99,7 @@ export default function DuelStage({ biome, hero, foe, apiRef, className }: Props
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       drawScene(ctx, scene, 400, clock);
 
-      const groundY = h * 0.9;
+      const groundY = h * 0.92;
       const s = (h * 0.62) / SK.ground;
       const foeS = s * 0.94;
 
