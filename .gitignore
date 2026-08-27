@@ -8,3 +8,4 @@ smoke.mjs
 *.tsbuildinfo
 refsheet-artifact.html
 .preview/
+.sim.mjs

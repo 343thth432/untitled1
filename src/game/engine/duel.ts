@@ -67,10 +67,6 @@ export class Duel {
       status: {},
       element: o.foe.element,
     };
-    for (const h of this.hookAll('maxHp')) {
-      this.hero.maxHp += h.v;
-      this.hero.hp += h.v;
-    }
     for (const h of this.hookAll('startStatus')) this.addStatus('hero', h.id, h.v);
     this.drawPile = shuffle(this.r, o.deck);
     this.rollIntents();

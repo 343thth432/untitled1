@@ -4,8 +4,8 @@ const RAW: RelicDef[] = [
   // ── личные ──
   { id: 'ashmark', name: 'Пепельная метка', icon: '🜂', rare: 'common', text: 'Начинаешь дуэль с 2 силы.', hooks: [{ t: 'startStatus', id: 'might', v: 2 }] },
   { id: 'tidestone', name: 'Камень отлива', icon: '🜄', rare: 'common', text: 'Каждый ход начинаешь с 5 блока.', hooks: [{ t: 'startBlock', v: 5 }] },
-  { id: 'seedring', name: 'Кольцо семени', icon: '🜃', rare: 'common', text: '+12 к пределу здоровья.', hooks: [{ t: 'maxHp', v: 12 }] },
-  { id: 'sunbead', name: 'Солнечная бусина', icon: '☉', rare: 'common', text: 'После дуэли лечит 6.', hooks: [{ t: 'healAfterDuel', v: 6 }] },
+  { id: 'seedring', name: 'Кольцо семени', icon: '🜃', rare: 'common', text: '+8 к пределу здоровья.', hooks: [{ t: 'maxHp', v: 8 }] },
+  { id: 'sunbead', name: 'Солнечная бусина', icon: '☉', rare: 'common', text: 'После дуэли лечит 4.', hooks: [{ t: 'healAfterDuel', v: 4 }] },
   { id: 'nightglass', name: 'Ночное стекло', icon: '🌑', rare: 'common', text: 'Первая карта за ход бесплатна.', hooks: [{ t: 'firstCardFree' }] },
 
   // ── находки ──

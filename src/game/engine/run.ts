@@ -51,7 +51,7 @@ function buildLeg(r: Rng, i: number, element: Element): Leg {
   const { biome, name, steps } = LEGS[i];
   const out: RunNode[][] = [];
   const filler: NodeKind[] = shuffle(r, [
-    'foe', 'foe', 'foe', 'omen', 'omen', 'rest', 'find', 'trade', 'elite', 'foe', 'omen', 'elite', 'find',
+    'foe', 'omen', 'rest', 'foe', 'find', 'omen', 'trade', 'foe', 'rest', 'elite', 'omen', 'find', 'foe',
   ]);
   let fi = 0;
   const next = (): NodeKind => filler[fi++ % filler.length];
@@ -80,8 +80,8 @@ export function newRun(heroId: string, seed = String(Date.now())): RunState {
   return {
     seed,
     heroId,
-    hp: hero.maxHp,
-    maxHp: hero.maxHp,
+    hp: hero.maxHp + relicMaxHp([hero.relic]),
+    maxHp: hero.maxHp + relicMaxHp([hero.relic]),
     sparks: 40,
     deck: hero.deck.slice(),
     relics: [hero.relic],
@@ -91,6 +91,17 @@ export function newRun(heroId: string, seed = String(Date.now())): RunState {
     picked: 0,
     done: [],
   };
+}
+
+/** прибавка к пределу здоровья от реликвий */
+export function relicMaxHp(relics: string[]): number {
+  let v = 0;
+  for (const id of relics) {
+    const r = RELICS[id];
+    if (!r) continue;
+    for (const h of r.hooks) if (h.t === 'maxHp') v += h.v;
+  }
+  return v;
 }
 
 export function currentLeg(run: RunState): Leg {
@@ -104,8 +115,8 @@ export function currentOptions(run: RunState): RunNode[] {
 
 /** сила противников растёт по отрезкам и шагам */
 export function foeScale(run: RunState): number {
-  const legK = 1 + run.leg * 0.34;
-  const stepK = 1 + (run.step / Math.max(1, currentLeg(run).steps.length)) * 0.22;
+  const legK = 1 + run.leg * 0.3;
+  const stepK = 1 + (run.step / Math.max(1, currentLeg(run).steps.length)) * 0.12;
   return legK * stepK;
 }
 

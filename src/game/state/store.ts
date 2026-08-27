@@ -6,7 +6,7 @@ import { OMENS } from '../data/omens';
 import { FOES } from '../data/foes';
 import { HERO_BY_ID, HEROES } from '../data/heroes';
 import { Duel } from '../engine/duel';
-import { advance, currentLeg, currentOptions, foeScale, isRunOver, newRun } from '../engine/run';
+import { advance, currentLeg, currentOptions, foeScale, isRunOver, newRun, relicMaxHp } from '../engine/run';
 import { pick, rng, sample } from '../engine/rng';
 import { loadRaw, saveRaw, clearSave } from './storage';
 
@@ -142,7 +142,7 @@ export const useGame = create<Store>((set, get) => ({
           deck: run.deck,
           hero: { hp: run.hp, maxHp: run.maxHp, element: hero.element },
           foe,
-          scale: foeScale(run) * (node.kind === 'elite' ? 1.15 : node.kind === 'boss' ? 1 : 1),
+          scale: foeScale(run) * (node.kind === 'elite' ? 1.05 : 1),
           relics: relicDefs(run.relics),
           rng: rng(`${run.seed}-${run.leg}-${run.step}-${run.picked}`),
         });
@@ -192,7 +192,7 @@ export const useGame = create<Store>((set, get) => ({
     const hero = HERO_BY_ID[run.heroId];
     const r = rng(`${run.seed}-r-${run.leg}-${run.step}`);
     const extra = run.relics.includes('oldmap') ? 1 : 0;
-    const pool = [...rewardPool(hero.element), ...sample(r, ANY_POOL, 6)];
+    const pool = [...new Set([...rewardPool(hero.element), ...sample(r, ANY_POOL, 6)])];
     const cards = sample(r, pool, 3 + extra);
     const sparks = node.kind === 'boss' ? 90 : node.kind === 'elite' ? 55 : 28;
     const relic = node.kind === 'elite' || node.kind === 'boss' ? pickRelic(run, r()) : undefined;
@@ -205,8 +205,8 @@ export const useGame = create<Store>((set, get) => ({
     const sc = get().scene;
     if (!run || sc.s !== 'reward') return;
     const deck = id ? [...run.deck, id] : run.deck;
-    const relics = sc.relic ? [...run.relics, sc.relic] : run.relics;
-    const next: RunState = { ...run, deck, relics, sparks: run.sparks + sc.sparks };
+    let next: RunState = { ...run, deck, sparks: run.sparks + sc.sparks };
+    if (sc.relic) next = withRelic(next, sc.relic);
     set({ run: next });
     get().toRoad();
   },
@@ -235,7 +235,7 @@ export const useGame = create<Store>((set, get) => ({
   takeRelic(id) {
     const run = get().run;
     if (!run) return;
-    set({ run: { ...run, relics: [...run.relics, id] } });
+    set({ run: withRelic(run, id) });
     get().toRoad();
   },
 
@@ -253,7 +253,7 @@ export const useGame = create<Store>((set, get) => ({
     const next: RunState =
       kind === 'card'
         ? { ...run, sparks: run.sparks - price, deck: [...run.deck, w.cards[i]] }
-        : { ...run, sparks: run.sparks - price, relics: [...run.relics, w.relics[i]] };
+        : withRelic({ ...run, sparks: run.sparks - price }, w.relics[i]);
     set({ run: next, scene: { s: 'trade', node } });
   },
 
@@ -280,7 +280,7 @@ export const useGame = create<Store>((set, get) => ({
     }
     if (e.relic) {
       const id = e.relic === 'random' ? pickRelic(next, r()) : e.relic;
-      if (!next.relics.includes(id)) next.relics = [...next.relics, id];
+      if (!next.relics.includes(id)) next = withRelic(next, id);
     }
     if (e.upgrade) {
       const j = next.deck.findIndex((c) => CARDS[c].up);
@@ -317,6 +317,14 @@ export const useGame = create<Store>((set, get) => ({
     void persist(get().meta, next);
   },
 }));
+
+/** реликвия с пересчётом предела здоровья */
+function withRelic(run: RunState, id: string): RunState {
+  if (run.relics.includes(id)) return run;
+  const relics = [...run.relics, id];
+  const maxHp = HERO_BY_ID[run.heroId].maxHp + relicMaxHp(relics);
+  return { ...run, relics, maxHp, hp: Math.min(maxHp, run.hp + (maxHp - run.maxHp)) };
+}
 
 function pickRelic(run: RunState, roll = Math.random()): string {
   const owned = new Set(run.relics);

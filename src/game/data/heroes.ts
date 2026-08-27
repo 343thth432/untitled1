@@ -11,7 +11,7 @@ export const HEROES: HeroDef[] = [
     title: 'Пепельный Клинок',
     element: 'flame',
     lore: 'Сожгла собственный клан, чтобы затмение не добралось до соседних долин. С тех пор её меч всегда тёплый.',
-    maxHp: 72,
+    maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
     relic: 'ashmark',
     look: {
@@ -27,7 +27,7 @@ export const HEROES: HeroDef[] = [
     title: 'Страж Горна',
     element: 'flame',
     lore: 'Кузнечная дочь, чья броня выкована из осколков павшего солнца.',
-    maxHp: 72,
+    maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
     relic: 'ashmark',
     look: {
@@ -43,7 +43,7 @@ export const HEROES: HeroDef[] = [
     title: 'Пламенный Сокол',
     element: 'flame',
     lore: 'Её стрелы находят цель даже сквозь дым затмения — говорят, их ведёт птица, которой давно нет.',
-    maxHp: 72,
+    maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
     relic: 'ashmark',
     look: {
@@ -59,7 +59,7 @@ export const HEROES: HeroDef[] = [
     title: 'Искра Горна',
     element: 'flame',
     lore: 'Лечит огнём: больно, зато быстро.',
-    maxHp: 72,
+    maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
     relic: 'ashmark',
     look: {
@@ -75,7 +75,7 @@ export const HEROES: HeroDef[] = [
     title: 'Ученица Горна',
     element: 'flame',
     lore: 'Ещё путает заклинания, но взрывы получаются отличные.',
-    maxHp: 72,
+    maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','ember','flurry','pyre'],
     relic: 'ashmark',
     look: {
@@ -91,8 +91,8 @@ export const HEROES: HeroDef[] = [
     title: 'Лунный Прилив',
     element: 'tide',
     lore: 'Управляет приливом так же спокойно, как дыханием. Затмение боится её именно поэтому.',
-    maxHp: 78,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','ripple','tidewall'],
+    maxHp: 86,
+    deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','crash','tidewall'],
     relic: 'tidestone',
     look: {
       hair: 'wavy', hairColor: '#5ec8ff', hairColor2: '#c9f2ff', eyeColor: '#7ef9ff',
@@ -107,8 +107,8 @@ export const HEROES: HeroDef[] = [
     title: 'Ледяная Стрела',
     element: 'tide',
     lore: 'Один выстрел — одна цель. Больше ей и не нужно.',
-    maxHp: 78,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','ripple','tidewall'],
+    maxHp: 86,
+    deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','crash','tidewall'],
     relic: 'tidestone',
     look: {
       hair: 'long', hairColor: '#a8dadc', hairColor2: '#e8f7ff', eyeColor: '#5ec8ff',
@@ -123,8 +123,8 @@ export const HEROES: HeroDef[] = [
     title: 'Стена Инея',
     element: 'tide',
     lore: 'Молчит весь бой. Говорит только когда все живы.',
-    maxHp: 78,
-    deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','ripple','tidewall'],
+    maxHp: 86,
+    deck: ['strike','strike','strike','strike','guard','guard','guard','undertow','crash','tidewall'],
     relic: 'tidestone',
     look: {
       hair: 'bob', hairColor: '#dff6ff', hairColor2: '#9fd8f5', eyeColor: '#8ecae6',
@@ -139,7 +139,7 @@ export const HEROES: HeroDef[] = [
     title: 'Шёпот Рощи',
     element: 'verdant',
     lore: 'Роща слушает её. Иногда роща отвечает.',
-    maxHp: 82,
+    maxHp: 86,
     deck: ['strike','strike','strike','strike','guard','guard','guard','thistle','sap','bloom'],
     relic: 'seedring',
     look: {
@@ -155,7 +155,7 @@ export const HEROES: HeroDef[] = [
     title: 'Ядовитый Цветок',
     element: 'verdant',
     lore: 'Дарит цветы. Никто из получивших не дожил до утра.',
-    maxHp: 82,
+    maxHp: 86,
     deck: ['strike','strike','strike','strike','guard','guard','guard','thistle','sap','bloom'],
     relic: 'seedring',
     look: {
@@ -171,7 +171,7 @@ export const HEROES: HeroDef[] = [
     title: 'Терновый Щит',
     element: 'verdant',
     lore: 'Выросла в терновнике и не боится царапин.',
-    maxHp: 82,
+    maxHp: 86,
     deck: ['strike','strike','strike','strike','guard','guard','guard','thistle','sap','bloom'],
     relic: 'seedring',
     look: {
@@ -187,7 +187,7 @@ export const HEROES: HeroDef[] = [
     title: 'Рассветный Клинок',
     element: 'lumen',
     lore: 'Её удар — это не свет, а момент, когда тьма понимает, что проиграла.',
-    maxHp: 74,
+    maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','glint','dawn','verdict'],
     relic: 'sunbead',
     look: {
@@ -203,7 +203,7 @@ export const HEROES: HeroDef[] = [
     title: 'Хранительница Зари',
     element: 'lumen',
     lore: 'Говорит, что смерть — это просто пауза. Пока что ей верят.',
-    maxHp: 74,
+    maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','glint','dawn','verdict'],
     relic: 'sunbead',
     look: {
@@ -219,7 +219,7 @@ export const HEROES: HeroDef[] = [
     title: 'Небесный Лучник',
     element: 'lumen',
     lore: 'Стреляет в небо. Стрелы падают туда, куда надо.',
-    maxHp: 74,
+    maxHp: 84,
     deck: ['strike','strike','strike','strike','guard','guard','guard','glint','dawn','verdict'],
     relic: 'sunbead',
     look: {
@@ -235,7 +235,7 @@ export const HEROES: HeroDef[] = [
     title: 'Танцующая в Тенях',
     element: 'umbra',
     lore: 'Её никто не видел в бою. Видели только результат.',
-    maxHp: 68,
+    maxHp: 80,
     deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
     relic: 'nightglass',
     look: {
@@ -251,7 +251,7 @@ export const HEROES: HeroDef[] = [
     title: 'Владычица Пустоты',
     element: 'umbra',
     lore: 'Открыла дверь в пустоту из любопытства. Дверь так и не закрылась.',
-    maxHp: 68,
+    maxHp: 80,
     deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
     relic: 'nightglass',
     look: {
@@ -267,7 +267,7 @@ export const HEROES: HeroDef[] = [
     title: 'Скорбный Оплот',
     element: 'umbra',
     lore: 'Носит имена всех, кого не смогла спасти, на внутренней стороне щита.',
-    maxHp: 68,
+    maxHp: 80,
     deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
     relic: 'nightglass',
     look: {
@@ -283,7 +283,7 @@ export const HEROES: HeroDef[] = [
     title: 'Полночная Тень',
     element: 'umbra',
     lore: 'Ворует у затмения. Затмение пока не заметило.',
-    maxHp: 68,
+    maxHp: 80,
     deck: ['strike','strike','strike','strike','guard','guard','guard','nick','veil','eclipse'],
     relic: 'nightglass',
     look: {

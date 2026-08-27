@@ -8,19 +8,19 @@ const RAW: CardDef[] = [
   // ── базовые ──
   {
     id: 'strike', name: 'Удар', type: 'attack', cost: 1, element: null, rare: 'base',
-    text: 'Наносит {0} урона.', effects: [{ t: 'damage', v: 6 }], up: 'strike+', anim: 'attack',
+    text: 'Наносит {0} урона.', effects: [{ t: 'damage', v: 7 }], up: 'strike+', anim: 'attack',
   },
   {
     id: 'strike+', name: 'Удар+', type: 'attack', cost: 1, element: null, rare: 'base',
-    text: 'Наносит {0} урона.', effects: [{ t: 'damage', v: 9 }], anim: 'attack',
+    text: 'Наносит {0} урона.', effects: [{ t: 'damage', v: 11 }], anim: 'attack',
   },
   {
     id: 'guard', name: 'Заслон', type: 'guard', cost: 1, element: null, rare: 'base',
-    text: 'Даёт {0} блока.', effects: [{ t: 'block', v: 5 }], up: 'guard+',
+    text: 'Даёт {0} блока.', effects: [{ t: 'block', v: 6 }], up: 'guard+',
   },
   {
     id: 'guard+', name: 'Заслон+', type: 'guard', cost: 1, element: null, rare: 'base',
-    text: 'Даёт {0} блока.', effects: [{ t: 'block', v: 8 }],
+    text: 'Даёт {0} блока.', effects: [{ t: 'block', v: 9 }],
   },
 
   // ── пламя ──
@@ -68,7 +68,7 @@ const RAW: CardDef[] = [
   {
     id: 'undertow', name: 'Отбойник', type: 'guard', cost: 1, element: 'tide', rare: 'common',
     text: 'Даёт {0} блока и {1} слабости противнику.',
-    effects: [{ t: 'block', v: 5 }, { t: 'status', who: 'foe', id: 'weak', v: 1 }], up: 'undertow+',
+    effects: [{ t: 'block', v: 6 }, { t: 'status', who: 'foe', id: 'weak', v: 1 }], up: 'undertow+',
   },
   {
     id: 'undertow+', name: 'Отбойник+', type: 'guard', cost: 1, element: 'tide', rare: 'common',
@@ -94,11 +94,11 @@ const RAW: CardDef[] = [
     effects: [{ t: 'block', v: 12 }, { t: 'doubleBlock' }],
   },
   {
-    id: 'crash', name: 'Обвал волны', type: 'attack', cost: 2, element: 'tide', rare: 'rare',
+    id: 'crash', name: 'Обвал волны', type: 'attack', cost: 1, element: 'tide', rare: 'rare',
     text: 'Обращает весь блок в урон.', effects: [{ t: 'damage', v: 0, fromBlock: true }], up: 'crash+', anim: 'attack',
   },
   {
-    id: 'crash+', name: 'Обвал волны+', type: 'attack', cost: 1, element: 'tide', rare: 'rare',
+    id: 'crash+', name: 'Обвал волны+', type: 'attack', cost: 0, element: 'tide', rare: 'rare',
     text: 'Обращает весь блок в урон.', effects: [{ t: 'damage', v: 0, fromBlock: true }], anim: 'attack',
   },
 
@@ -115,11 +115,11 @@ const RAW: CardDef[] = [
   },
   {
     id: 'sap', name: 'Живица', type: 'art', cost: 1, element: 'verdant', rare: 'common',
-    text: 'Даёт {0} истока.', effects: [{ t: 'status', who: 'self', id: 'regen', v: 4 }], up: 'sap+', anim: 'cast',
+    text: 'Даёт {0} истока.', effects: [{ t: 'status', who: 'self', id: 'regen', v: 3 }], up: 'sap+', anim: 'cast',
   },
   {
     id: 'sap+', name: 'Живица+', type: 'art', cost: 1, element: 'verdant', rare: 'common',
-    text: 'Даёт {0} истока.', effects: [{ t: 'status', who: 'self', id: 'regen', v: 7 }], anim: 'cast',
+    text: 'Даёт {0} истока.', effects: [{ t: 'status', who: 'self', id: 'regen', v: 5 }], anim: 'cast',
   },
   {
     id: 'bindroot', name: 'Путы корней', type: 'art', cost: 2, element: 'verdant', rare: 'rare',
@@ -132,12 +132,12 @@ const RAW: CardDef[] = [
   {
     id: 'bloom', name: 'Цветение', type: 'art', cost: 2, element: 'verdant', rare: 'rare',
     text: 'Даёт {0} плавности и лечит {1}.',
-    effects: [{ t: 'status', who: 'self', id: 'grace', v: 2 }, { t: 'heal', v: 6 }], up: 'bloom+', anim: 'cast',
+    effects: [{ t: 'status', who: 'self', id: 'grace', v: 2 }, { t: 'heal', v: 4 }], up: 'bloom+', anim: 'cast',
   },
   {
     id: 'bloom+', name: 'Цветение+', type: 'art', cost: 2, element: 'verdant', rare: 'rare',
     text: 'Даёт {0} плавности и лечит {1}.',
-    effects: [{ t: 'status', who: 'self', id: 'grace', v: 3 }, { t: 'heal', v: 10 }], anim: 'cast',
+    effects: [{ t: 'status', who: 'self', id: 'grace', v: 3 }, { t: 'heal', v: 7 }], anim: 'cast',
   },
 
   // ── свет ──
@@ -152,12 +152,12 @@ const RAW: CardDef[] = [
   {
     id: 'dawn', name: 'Рассвет', type: 'art', cost: 1, element: 'lumen', rare: 'common',
     text: 'Лечит {0} и даёт {1} энергии.',
-    effects: [{ t: 'heal', v: 5 }, { t: 'energy', v: 1 }], up: 'dawn+', anim: 'cast',
+    effects: [{ t: 'heal', v: 4 }, { t: 'energy', v: 1 }], up: 'dawn+', anim: 'cast',
   },
   {
     id: 'dawn+', name: 'Рассвет+', type: 'art', cost: 1, element: 'lumen', rare: 'common',
     text: 'Лечит {0} и даёт {1} энергии.',
-    effects: [{ t: 'heal', v: 9 }, { t: 'energy', v: 1 }], anim: 'cast',
+    effects: [{ t: 'heal', v: 7 }, { t: 'energy', v: 1 }], anim: 'cast',
   },
   {
     id: 'verdict', name: 'Приговор', type: 'attack', cost: 2, element: 'lumen', rare: 'rare',
