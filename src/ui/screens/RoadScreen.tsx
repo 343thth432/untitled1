@@ -28,6 +28,7 @@ export default function RoadScreen() {
   const leg = currentLeg(run);
   const opts = currentOptions(run);
   const kinds = opts.map((o) => o.kind);
+  const counts = opts.map((o) => (o.foe ? (FOES[o.foe]?.count ?? 1) : 1));
   const el = ELEMENTS[hero.element];
   const hpPct = Math.round((run.hp / run.maxHp) * 100);
 
@@ -36,7 +37,9 @@ export default function RoadScreen() {
       <RoadStage
         biome={leg.biome}
         look={hero.look}
+        companion={HERO_BY_ID[run.companion]?.look}
         markers={kinds}
+        counts={counts}
         picked={run.picked}
         walking={walking}
         onArrive={enter}

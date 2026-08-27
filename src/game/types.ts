@@ -144,6 +144,8 @@ export interface FoeDef {
   look: Appearance;
   /** биомы, где встречается */
   where: BiomeId[];
+  /** сколько фигур в сцене: свора выходит втроём */
+  count?: number;
   /** цикл намерений; turn начинается с 0 */
   pattern: Intent[][];
 }
@@ -211,6 +213,8 @@ export interface Leg {
 export interface RunState {
   seed: string;
   heroId: string;
+  /** попутчица: идёт рядом по дороге */
+  companion: string;
   hp: number;
   maxHp: number;
   /** искры — валюта торговца */

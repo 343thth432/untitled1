@@ -7,8 +7,12 @@ import { setBlurScale } from './illustration/soft';
 interface Props {
   biome: BiomeId;
   look: Appearance;
+  /** попутчица идёт чуть позади */
+  companion?: Appearance;
   /** метки, стоящие впереди на дороге */
   markers: NodeKind[];
+  /** сколько фигур у каждой метки */
+  counts?: number[];
   /** какая метка выбрана */
   picked: number;
   /** идём ли к метке; по прибытии зовём onArrive */
@@ -20,11 +24,11 @@ interface Props {
 const TRAVEL = 1.5;
 
 /** Живая дорога: пейзаж, героиня и то, что ждёт впереди */
-export default function RoadStage({ biome, look, markers, picked, walking, onArrive, className }: Props) {
+export default function RoadStage({ biome, look, companion, markers, counts, picked, walking, onArrive, className }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const stateRef = useRef({ walking, picked, markers, onArrive });
-  stateRef.current = { walking, picked, markers, onArrive };
+  const stateRef = useRef({ walking, picked, markers, counts, onArrive });
+  stateRef.current = { walking, picked, markers, counts, onArrive };
 
   useEffect(() => {
     const host = hostRef.current;
@@ -40,6 +44,7 @@ export default function RoadStage({ biome, look, markers, picked, walking, onArr
     let h = 0;
     const dpr = Math.min(2.5, window.devicePixelRatio || 1);
     const rig = buildRig(look, lookKey(look), 0.7);
+    const mate = companion ? buildRig(companion, lookKey(companion), 0.6) : null;
 
     const resize = (): void => {
       w = host.clientWidth;
@@ -108,14 +113,26 @@ export default function RoadStage({ biome, look, markers, picked, walking, onArr
           ctx.fill();
           ctx.restore();
         }
-        drawMarker(ctx, kind as never, b, x, y, s, clock);
+        drawMarker(ctx, kind as never, b, x, y, s, clock, st.counts?.[i] ?? 1);
         ctx.restore();
       });
 
-      // героиня
+      // попутчица чуть позади и мельче
       const s = (h * 0.34) / SK.ground;
+      if (mate) {
+        const ms = s * 0.84;
+        ctx.save();
+        ctx.translate(w * 0.115, groundY - h * 0.028);
+        ctx.scale(ms, ms);
+        setBlurScale(1);
+        drawShadow(ctx, 1, 0.18);
+        drawRig(ctx, mate, { t: clock + 1.7, anim: st.walking ? 'walk' : 'idle', phase: 0, alpha: 0.96 });
+        ctx.restore();
+      }
+
+      // героиня
       ctx.save();
-      ctx.translate(w * 0.27, groundY);
+      ctx.translate(w * 0.3, groundY);
       ctx.scale(s, s);
       setBlurScale(1);
       drawShadow(ctx, 1, 0.24);
@@ -131,7 +148,7 @@ export default function RoadStage({ biome, look, markers, picked, walking, onArr
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [biome, look]);
+  }, [biome, look, companion]);
 
   return (
     <div ref={hostRef} className={className}>

@@ -51,12 +51,12 @@ const RAW: FoeDef[] = [
   // ── рядовые ──
   {
     id: 'mourner', name: 'Плакальщица', title: 'тень с обочины', tier: 'foe', element: 'umbra', hp: 42,
-    look: shade('rei', '#8b6fd6'), where: ['mist', 'city'],
+    look: shade('rei', '#8b6fd6'), where: ['mist', 'city'], count: 2,
     pattern: [[strike(6)], [strike(4, 2)], [cursed('weak', 2)], [strike(8)]],
   },
   {
     id: 'strayhound', name: 'Бродячая свора', title: 'голодные тени', tier: 'foe', element: 'verdant', hp: 38,
-    look: shade('koharu', '#5fbf7a'), where: ['mist', 'steppe'],
+    look: shade('koharu', '#5fbf7a'), where: ['mist', 'steppe'], count: 3,
     pattern: [[strike(3, 3)], [guard(5), strike(3)], [strike(3, 3)]],
   },
   {
@@ -66,7 +66,7 @@ const RAW: FoeDef[] = [
   },
   {
     id: 'rainwarden', name: 'Дождевая стража', title: 'стоит на посту', tier: 'foe', element: 'tide', hp: 52,
-    look: shade('seira', '#5aa8d8'), where: ['steppe', 'city'],
+    look: shade('seira', '#5aa8d8'), where: ['steppe', 'city'], count: 2,
     pattern: [[guard(9)], [strike(7)], [guard(9), strike(3)], [strike(5, 2)]],
   },
   {
@@ -81,7 +81,7 @@ const RAW: FoeDef[] = [
   },
   {
     id: 'lampkeeper', name: 'Фонарщица', title: 'светит не тебе', tier: 'foe', element: 'lumen', hp: 48,
-    look: shade('ame', '#d9bf6a'), where: ['city'],
+    look: shade('ame', '#d9bf6a'), where: ['city'], count: 2,
     pattern: [[strike(6), cursed('weak', 1)], [guard(8)], [strike(10)]],
   },
   {

@@ -15,6 +15,8 @@ interface Props {
   biome: BiomeId;
   hero: Appearance;
   foe: Appearance;
+  /** сколько фигур у противника в сцене */
+  foeCount?: number;
   apiRef: React.MutableRefObject<DuelStageApi | null>;
   className?: string;
 }
@@ -30,7 +32,7 @@ const DUR: Record<AnimName, number> = {
 };
 
 /** Сцена дуэли: пейзаж отрезка и двое напротив друг друга */
-export default function DuelStage({ biome, hero, foe, apiRef, className }: Props) {
+export default function DuelStage({ biome, hero, foe, foeCount = 1, apiRef, className }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -112,21 +114,30 @@ export default function DuelStage({ biome, hero, foe, apiRef, className }: Props
             if (!a.down) a.name = 'idle';
           }
         }
-        const x = who === 'hero' ? w * 0.24 : w * 0.77;
+        const x = who === 'hero' ? w * 0.24 : w * 0.75;
         const y = who === 'hero' ? groundY : groundY - h * 0.07;
         const sc = who === 'hero' ? s : foeS;
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.scale(sc, sc);
-        setBlurScale(1);
-        drawShadow(ctx, 1, a.down ? 0.1 : 0.24);
-        drawRig(ctx, rigs[who], {
-          t: clock + (who === 'foe' ? 2.1 : 0),
-          anim: a.name,
-          phase: a.ph,
-          flip: who === 'foe',
-        });
-        ctx.restore();
+        const n = who === 'foe' ? Math.max(1, foeCount) : 1;
+        // свита рисуется первой, вожак — поверх
+        for (let i = n - 1; i >= 0; i--) {
+          const back = i > 0;
+          const dx = back ? (i % 2 ? 1 : -1) * (0.095 + Math.floor((i - 1) / 2) * 0.055) * w : 0;
+          const dy = back ? -h * (0.042 + i * 0.012) : 0;
+          const ds = back ? sc * (0.8 - i * 0.045) : sc;
+          ctx.save();
+          ctx.translate(x + dx, y + dy);
+          ctx.scale(ds, ds);
+          setBlurScale(1);
+          drawShadow(ctx, 1, a.down ? 0.08 : back ? 0.16 : 0.24);
+          drawRig(ctx, rigs[who], {
+            t: clock + (who === 'foe' ? 2.1 + i * 1.3 : 0),
+            anim: back ? (a.down ? 'dead' : 'idle') : a.name,
+            phase: back ? (a.down ? a.ph : 0) : a.ph,
+            flip: who === 'foe',
+            alpha: back ? 0.82 : 1,
+          });
+          ctx.restore();
+        }
         head[who] = [x, y - SK.ground * sc * (a.down ? 0.12 : 0.98)];
       }
 
@@ -140,7 +151,7 @@ export default function DuelStage({ biome, hero, foe, apiRef, className }: Props
       ro.disconnect();
       apiRef.current = null;
     };
-  }, [biome, hero, foe, apiRef]);
+  }, [biome, hero, foe, foeCount, apiRef]);
 
   return (
     <div ref={hostRef} className={className}>

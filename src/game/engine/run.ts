@@ -77,9 +77,11 @@ export function newRun(heroId: string, seed = String(Date.now())): RunState {
   const hero = HERO_BY_ID[heroId];
   const r = rng(seed);
   uid = 0;
+  const others = Object.keys(HERO_BY_ID).filter((id) => id !== heroId);
   return {
     seed,
     heroId,
+    companion: others[Math.floor(r() * others.length) % others.length],
     hp: hero.maxHp + relicMaxHp([hero.relic]),
     maxHp: hero.maxHp + relicMaxHp([hero.relic]),
     sparks: 40,

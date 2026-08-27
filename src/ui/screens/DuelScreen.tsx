@@ -124,6 +124,7 @@ export default function DuelScreen() {
         biome={leg.biome}
         hero={hero.look}
         foe={duel.foeDef.look}
+        foeCount={duel.foeDef.count ?? 1}
         apiRef={apiRef}
         className="absolute inset-0"
       />
