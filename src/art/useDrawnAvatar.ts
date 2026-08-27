@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Appearance } from '../game/types';
-import { drawPortrait, DW, DH } from './illustration/portrait';
+import { HEAD, drawHead } from './illustration/head';
+import { setBlurScale } from './illustration/soft';
 
 const cache = new Map<string, string>();
 
@@ -13,10 +14,23 @@ export function drawnAvatar(look: Appearance, id: string, width = 300): string {
   try {
     const c = document.createElement('canvas');
     c.width = width;
-    c.height = Math.round((width * DH) / DW);
+    c.height = Math.round((width * 4) / 3);
     const ctx = c.getContext('2d');
     if (ctx) {
-      drawPortrait(ctx, look, id, c.width, c.height);
+      // кадрируем поясной портрет: голова чуть выше центра
+      const k = (c.height * 0.82) / HEAD.h;
+      const bg = ctx.createLinearGradient(0, 0, 0, c.height);
+      bg.addColorStop(0, 'rgba(255,255,255,0)');
+      bg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.save();
+      ctx.translate(c.width / 2 - HEAD.cx * k, c.height * 0.05 - 10 * k);
+      ctx.scale(k, k);
+      setBlurScale(k);
+      drawHead(ctx, look, id);
+      ctx.restore();
+      setBlurScale(1);
       url = c.toDataURL('image/png');
     }
   } catch {
