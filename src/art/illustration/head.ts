@@ -188,27 +188,87 @@ export function drawFaceBase(ctx: CanvasRenderingContext2D, look: Appearance): v
   contour(ctx, face, rgba(t.line, 0.32), 1.6, 1, 16);
 }
 
+/**
+ * Эльфийское ухо: длинное, отведённое назад-вверх, с острым кончиком.
+ * У тонкого края кожа просвечивает — тёплое свечение по кромке даёт
+ * ощущение живой плоти, а не приклеенной пластины.
+ */
 export function drawEars(ctx: CanvasRenderingContext2D, look: Appearance): void {
   const t = skin(look);
   for (const s of [-1, 1] as const) {
-    const ex = cx + s * 140 + turn * 0.3;
-    const ear: P[] = [
-      [ex - s * 6, 254],
-      [ex + s * 22, 268],
-      [ex + s * 26, 316],
-      [ex + s * 10, 346],
-      [ex - s * 8, 332],
-    ];
-    path(ctx, ear, 12);
-    ctx.fillStyle = mix(t.mid, '#d98a90', 0.16);
+    const ex = cx + s * 132 + turn * 0.3;
+    const tipX = ex + s * 78;
+    const tipY = 178;
+
+    const outline = (): void => {
+      ctx.beginPath();
+      ctx.moveTo(ex - s * 12, 272);
+      ctx.quadraticCurveTo(ex + s * 4, 236, ex + s * 34, 212);
+      ctx.quadraticCurveTo(ex + s * 60, 192, tipX, tipY);
+      ctx.quadraticCurveTo(ex + s * 56, 222, ex + s * 38, 262);
+      ctx.quadraticCurveTo(ex + s * 28, 302, ex + s * 12, 332);
+      ctx.quadraticCurveTo(ex - s * 6, 326, ex - s * 14, 304);
+      ctx.closePath();
+    };
+
+    // тело уха: у основания плотная кожа, к кончику — просвет
+    outline();
+    const g = ctx.createLinearGradient(ex - s * 10, 300, tipX, tipY);
+    g.addColorStop(0, t.mid);
+    g.addColorStop(0.45, mix(t.mid, t.sss, 0.22));
+    g.addColorStop(0.82, mix(t.warm, t.sss, 0.5));
+    g.addColorStop(1, mix(t.sss, '#ffd7c2', 0.4));
+    ctx.fillStyle = g;
     ctx.fill();
+
     ctx.save();
-    path(ctx, ear, 12);
+    outline();
     ctx.clip();
-    smudge(ctx, [[ex + s * 4, 268], [ex + s * 18, 282], [ex + s * 10, 322], [ex - s * 2, 306]], t.deep, 0.35, 7);
-    gloss(ctx, [ex + s * 18, 288], 8, 16, 0, t.spec, 0.3, 8);
+    // раковина: тень по внутреннему краю
+    smudge(
+      ctx,
+      [
+        [ex + s * 2, 280],
+        [ex + s * 24, 244],
+        [ex + s * 48, 210],
+        [ex + s * 34, 250],
+        [ex + s * 18, 296],
+        [ex + s * 4, 316],
+      ],
+      t.deep,
+      0.4,
+      9,
+    );
+    // подсвет по верхней кромке — свет проходит сквозь ухо
+    smudge(
+      ctx,
+      [
+        [ex + s * 10, 240],
+        [ex + s * 40, 206],
+        [tipX - s * 4, tipY + 6],
+        [ex + s * 46, 224],
+        [ex + s * 16, 258],
+      ],
+      mix(t.sss, '#ffd0b4', 0.45),
+      0.5,
+      8,
+    );
+    bloom(ctx, [tipX - s * 10, tipY + 16], 30, mix(t.sss, '#ffc9a8', 0.5), 0.4);
+    gloss(ctx, [ex + s * 18, 268], 7, 22, s * 0.5, t.spec, 0.28, 8);
     ctx.restore();
-    edge(ctx, ear, t.line, 5, 0.3, 4, 12);
+
+    // тонкий контур, светлеющий к острию
+    ctx.save();
+    outline();
+    const eg = ctx.createLinearGradient(ex - s * 10, 300, tipX, tipY);
+    eg.addColorStop(0, rgba(t.line, 0.5));
+    eg.addColorStop(0.7, rgba(mix(t.line, t.warm, 0.4), 0.42));
+    eg.addColorStop(1, rgba(mix(t.spec, '#ffffff', 0.4), 0.6));
+    ctx.strokeStyle = eg;
+    ctx.lineWidth = 2.6;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    ctx.restore();
   }
 }
 

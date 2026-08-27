@@ -38,14 +38,16 @@ const BOX: Record<WeaponId, Box> = {
   claws: { x0: -70, y0: -120, w: 150, h: 180 },
 };
 
+/** вороная сталь: тёмная масса и узкие блики, а не белая пластина */
 function steel(ctx: CanvasRenderingContext2D, a: P, b: P, c: string): CanvasGradient {
   return linear(ctx, a[0], a[1], b[0], b[1], [
-    [0, light(c, 0.82)],
-    [0.22, light(c, 0.3)],
-    [0.5, c],
-    [0.68, dark(c, 0.26)],
-    [0.86, light(c, 0.5)],
-    [1, dark(c, 0.16)],
+    [0, dark(c, 0.46)],
+    [0.14, light(c, 0.62)],
+    [0.26, c],
+    [0.5, dark(c, 0.4)],
+    [0.72, dark(c, 0.56)],
+    [0.88, light(c, 0.44)],
+    [1, dark(c, 0.5)],
   ]);
 }
 
@@ -113,7 +115,7 @@ function blade(ctx: CanvasRenderingContext2D, pts: P[], c: string, edge = true):
 
 function paint(ctx: CanvasRenderingContext2D, id: WeaponId, look: Appearance): void {
   // клинок — сталь с лёгким оттенком отделки, чтобы не спорил с костюмом
-  const metal = mix('#e4ebf4', look.outfitTrim, 0.18);
+  const metal = mix('#8d99b4', look.outfitTrim, 0.2);
   const acc = look.aura;
   const hilt = dark(look.outfit, 0.24);
 

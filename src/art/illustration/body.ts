@@ -8,6 +8,8 @@ import {
   contour,
   edge,
   edgeSides,
+  NIGHT,
+  bodyGradient,
   fadeJoint,
   gloss,
   metal,
@@ -782,11 +784,73 @@ function fold(ctx: CanvasRenderingContext2D, a: P, b: P, c: Cloth, w: number, up
   stroke(ctx, [a, [(a[0] + b[0]) / 2 + (up ? 3 : -3), (a[1] + b[1]) / 2], b], up ? c.spec : c.deep, w, up ? 0.4 : 0.42, w * 0.7);
 }
 
+/** одиночный завиток: спираль, затухающая к центру */
+function scroll(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  s: 1 | -1,
+  turns: number,
+  col: string,
+  w: number,
+  a: number,
+): void {
+  const pts: P[] = [];
+  const n = 24;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const ang = -Math.PI * 0.4 + t * Math.PI * 2 * turns;
+    const rr = r * (1 - t * 0.84);
+    pts.push([x + s * rr * Math.cos(ang), y + rr * Math.sin(ang)]);
+  }
+  stroke(ctx, pts, col, w, a, 1.1);
+}
+
+/**
+ * Серебряная филигрань по тёмной броне: стебель вдоль пластины и
+ * зеркальные завитки. Рисуется дважды — тёмный оттиск со сдвигом
+ * даёт впечатление гравировки, светлый сверху — саму нить.
+ */
+function filigree(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y0: number,
+  y1: number,
+  half: number,
+  silver: string,
+  shade: string,
+  curls = 3,
+): void {
+  const h = y1 - y0;
+  const pass = (dx: number, dy: number, col: string, w: number, a: number): void => {
+    for (const s of [-1, 1] as const) {
+      const stem: P[] = [];
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        stem.push([x + dx + s * Math.sin(t * 2.4) * half * 0.62, y0 + dy + t * h]);
+      }
+      stroke(ctx, stem, col, w, a, 1.2);
+      for (let k = 0; k < curls; k++) {
+        const t = 0.16 + (k / Math.max(1, curls - 1)) * 0.7;
+        const bx = x + dx + s * Math.sin(t * 2.4) * half * 0.62;
+        const by = y0 + dy + t * h;
+        const r = half * (0.3 + (k % 2) * 0.12);
+        scroll(ctx, bx + s * r * 0.7, by, r, s, 0.82, col, w * 0.8, a * 0.9);
+      }
+    }
+  };
+  pass(1.4, 1.6, shade, 2.6, 0.5);
+  pass(0, 0, silver, 2, 0.72);
+}
+
 function drawOutfit(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => number): void {
   const st = look.outfitStyle;
   const c = cloth(look.outfit, st === 'leotard' || st === 'harness' ? 0.62 : 0.28);
   const tr = look.outfitTrim;
-  const m = metal(tr);
+  // отделка — серебро, сами пластины — вороная сталь
+  const m = metal(mix(look.outfit, '#12151f', 0.4));
+  const sv = metal(tr);
   const f = look.figure;
   const br = 36 + f * 24;
   const bustTop = SK.bustY - br - 6;
@@ -806,7 +870,9 @@ function drawOutfit(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => 
     ctx.fillStyle = g;
     ctx.fill();
     edge(ctx, pts, m.line, 9, 0.42, 6, 14);
-    contour(ctx, pts, rgba(m.line, 0.34), 1.5, 1, 14);
+    // серебряный кант по краю пластины
+    contour(ctx, pts, rgba(sv.mid, 0.5), 2.4, 1, 14);
+    contour(ctx, pts, rgba(sv.spec, 0.42), 1, 1, 14);
   };
 
   // ── верх ─────────────────────────────────────────────────
@@ -854,8 +920,9 @@ function drawOutfit(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => 
       [CX - 30, 406],
       [CX - 70, bustBot + 6],
     ]);
-    stroke(ctx, [[CX, bustTop + 26], [CX, 412]], m.spec, 3, 0.45, 2);
+    stroke(ctx, [[CX, bustTop + 26], [CX, 412]], sv.mid, 3, 0.45, 2);
     stroke(ctx, [[CX + 3, bustTop + 26], [CX + 3, 412]], m.deep, 3, 0.4, 2);
+    filigree(ctx, CX, bustTop + 34, bustBot + 2, 44, sv.spec, m.deep, 3);
     for (const s of [-1, 1] as const) {
       stroke(
         ctx,
@@ -868,7 +935,7 @@ function drawOutfit(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => 
       stroke(
         ctx,
         [[CX + s * 12, bustTop + 32], [CX + s * 56, bustTop + 26], [CX + s * 70, bustBot - 10], [CX + s * 28, bustBot + 6]],
-        m.spec,
+        sv.spec,
         2.4,
         0.6,
         1.4,
@@ -1103,7 +1170,8 @@ function drawSkirt(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => n
   }
 
   if (st === 'plate') {
-    const m = metal(tr);
+    const m = metal(mix(look.outfit, '#12151f', 0.4));
+    const sv = metal(tr);
     for (const s of [-1, 1] as const) {
       const p: P[] = [[CX + s * 34, 530], [CX + s * 90, 538], [CX + s * 98, 662], [CX + s * 40, 646]];
       path(ctx, p, 12);
@@ -1116,6 +1184,8 @@ function drawSkirt(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => n
       ctx.fillStyle = g;
       ctx.fill();
       edge(ctx, p, m.line, 8, 0.42, 6, 12);
+      contour(ctx, p, rgba(sv.mid, 0.46), 2, 1, 12);
+      filigree(ctx, CX + s * 66, 556, 640, 22, sv.spec, m.deep, 2);
     }
   }
 }
@@ -1123,8 +1193,8 @@ function drawSkirt(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => n
 // ── плащ ─────────────────────────────────────────────────────
 function drawCape(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => number): void {
   if (!look.cape) return;
-  const c = cloth(mix(look.aura, look.outfit, 0.42), 0.2);
-  const lining = cloth(light(look.outfitTrim, 0.16), 0.3);
+  const c = cloth(mix(look.outfit, dark(look.aura, 0.55), 0.3), 0.2);
+  const lining = cloth(mix(look.outfit, look.outfitTrim, 0.18), 0.3);
   const bottom = 900;
   const pts: P[] = [
     [CX - 62, SK.shoulderY - 14],
@@ -1163,25 +1233,37 @@ function drawHairFall(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () =
   if (H === 'short' || H === 'bob' || H === 'buns') return;
   const h = hairTone(look);
 
+  /**
+   * Хвост волос: пряди расходятся у корня и сходятся к одному острию.
+   * Раньше они шли параллельно и читались прямоугольной плитой.
+   */
   const tail = (side: -1 | 1, root: P, len: number, wide: number, bow: number): void => {
-    for (let i = 0; i < 5; i++) {
-      const k = i / 4;
-      const w = wide * (1 - k * 0.5);
-      const tip: P = [root[0] + side * (bow * (0.4 + k)) + (rnd() - 0.5) * 10, root[1] + len * (1 - k * 0.34)];
-      const r: P = [root[0] + side * (k - 0.4) * wide * 1.4, root[1] + i * 5];
-      hairLock(ctx, h, rnd, r, tip, w, side * (6 + k * 16));
+    const n = 6;
+    for (let i = 0; i < n; i++) {
+      const k = i / (n - 1);
+      const bell = Math.sin(Math.PI * (0.16 + k * 0.74));
+      const w = wide * (0.4 + bell * 0.66);
+      const l = len * (0.68 + bell * 0.34);
+      const rx = root[0] + side * (k - 0.45) * wide * 1.5;
+      const ry = root[1] - i * 4 + (rnd() - 0.5) * 10;
+      // кончики стягиваются к общей точке — хвост заостряется книзу
+      const tx =
+        root[0] +
+        side * (bow * 0.6 + (0.5 - Math.abs(k - 0.5)) * bow * 0.7) +
+        (rnd() - 0.5) * 16;
+      hairLock(ctx, h, rnd, [rx, ry], [tx, ry + l], w, side * (12 + k * 26), true);
     }
   };
 
   if (H === 'twin') {
-    tail(-1, [CX - 96, 238], 330, 34, 26);
-    tail(1, [CX + 96, 238], 330, 34, 26);
+    tail(-1, [CX - 60, 214], 372, 32, 34);
+    tail(1, [CX + 60, 214], 372, 32, 34);
   } else if (H === 'ponytail') {
-    tail(1, [CX + 56, 220], 430, 40, 78);
+    tail(1, [CX + 56, 178], 486, 40, 78);
   } else if (H === 'braid') {
     const x = CX + 26;
-    for (let i = 0; i < 7; i++) {
-      const y = 232 + i * 54;
+    for (let i = 0; i < 8; i++) {
+      const y = 168 + i * 54;
       const w = 40 - i * 3;
       fabric(
         ctx,
@@ -1192,10 +1274,10 @@ function drawHairFall(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () =
       );
     }
   } else {
-    tail(-1, [CX - 84, 232], 380, 36, 16);
-    tail(1, [CX + 84, 232], 380, 36, 16);
-    tail(-1, [CX - 36, 226], 300, 30, 6);
-    tail(1, [CX + 36, 226], 300, 30, 6);
+    tail(-1, [CX - 64, 206], 424, 34, 22);
+    tail(1, [CX + 64, 206], 424, 34, 22);
+    tail(-1, [CX - 28, 192], 360, 28, 8);
+    tail(1, [CX + 28, 192], 360, 28, 8);
   }
 }
 
@@ -1208,6 +1290,7 @@ function hairLock(
   tip: P,
   w: number,
   bow: number,
+  blunt = false,
 ): void {
   const dx = tip[0] - root[0];
   const dy = tip[1] - root[1];
@@ -1220,15 +1303,19 @@ function hairLock(
     root[0] + ux * len * t + nx * (o + bow * Math.sin(Math.PI * t)),
     root[1] + uy * len * t + ny * (o + bow * Math.sin(Math.PI * t)),
   ];
+  // у пряди, растущей из-под массы волос, корень срезан ровно:
+  // остриё на макушке читалось бы «пилой» над плечами
+  const rA: P = blunt ? at(0, w * 0.86) : root;
+  const rB: P = blunt ? at(0, -w * 0.86) : root;
   const draw = (): void => {
     ctx.beginPath();
-    ctx.moveTo(root[0], root[1]);
+    ctx.moveTo(rA[0], rA[1]);
     const a1 = at(0.26, w * 1.5);
     const a2 = at(0.72, w * 1.05);
     ctx.bezierCurveTo(a1[0], a1[1], a2[0], a2[1], tip[0], tip[1]);
     const b1 = at(0.72, -w * 1.05);
     const b2 = at(0.26, -w * 1.5);
-    ctx.bezierCurveTo(b1[0], b1[1], b2[0], b2[1], root[0], root[1]);
+    ctx.bezierCurveTo(b1[0], b1[1], b2[0], b2[1], rB[0], rB[1]);
     ctx.closePath();
   };
   draw();
@@ -1351,6 +1438,23 @@ const JOINT_OF: Record<PartName, P> = {
 
 export const HAND_ANCHOR: P = [CX + SK.wristX + 14, SK.wristY + 14];
 
+/** насколько сильно тень сцены ложится на часть: лицо светлее всего */
+const LIGHT_BIAS: Record<PartName, number> = {
+  cape: 1.2,
+  backHair: 1.12,
+  armFarUpper: 1.24,
+  armFarFore: 1.24,
+  legFarThigh: 1.18,
+  legFarShin: 1.22,
+  legNearThigh: 1,
+  legNearShin: 1.06,
+  torso: 1,
+  skirt: 1.12,
+  head: 0.46,
+  armNearUpper: 0.92,
+  armNearFore: 0.9,
+};
+
 interface Fade {
   at: P;
   dir: P;
@@ -1379,9 +1483,42 @@ function makePart(
     setBlurScale(1);
   }
   if (fade) fadeJoint(c, res, b.ox, b.oy, fade.at, fade.dir, fade.len);
-  // ключевой свет сверху-слева и контровой ауры справа
-  rimPass(c, 'rgba(255,248,236,1)', 2.4 * res, 2.6 * res, 0.5, 1.4 * res);
-  rimPass(c, rimColor, -2.6 * res, 1.6 * res, 0.34, 2 * res);
+
+  // единый свет сцены: ключ сверху-слева, тень уходит вниз-вправо
+  const L = NIGHT;
+  const k = LIGHT_BIAS[name];
+  bodyGradient(
+    c,
+    res,
+    b.ox,
+    b.oy,
+    [BW * 0.06, 0],
+    [BW * 1.02, BH * 0.74],
+    [
+      [0, rgba(L.shade, 0)],
+      [0.38, rgba(L.shade, L.depth * 0.16 * k)],
+      [1, rgba(L.shade, L.depth * 0.66 * k)],
+    ],
+  );
+  // ноги тонут в темноте, лицо остаётся самым светлым
+  bodyGradient(
+    c,
+    res,
+    b.ox,
+    b.oy,
+    [0, SK.waistY - 20],
+    [0, SK.ground + 30],
+    [
+      [0, rgba(L.shade, 0)],
+      [0.5, rgba(L.shade, L.sink * 0.28)],
+      [1, rgba('#05070f', L.sink)],
+    ],
+  );
+
+  // контровые: холодный по верхней кромке, тёплый из глубины кадра
+  rimPass(c, L.key, 2.2 * res, 2.4 * res, 0.4, 1.2 * res);
+  rimPass(c, L.back, -2.6 * res, -1.6 * res, 0.36, 2.2 * res);
+  rimPass(c, rimColor, -2.6 * res, 1.6 * res, 0.24, 2.4 * res);
   const j = JOINT_OF[name];
   return {
     canvas: c,
@@ -1401,7 +1538,23 @@ function dirTo(a: P, b: P): P {
   return [dx / l, dy / l];
 }
 
-export function buildParts(look: Appearance, id: string, scale = 1): Parts {
+/**
+ * Приводит образ к палитре референса: тёмная броня с оттенком
+ * собственного цвета, серебряная нить отделки. Стихия остаётся
+ * в ауре и в свечении по кромке, а не в цвете ткани — иначе
+ * фигура спорит с ночным фоном и выглядит игрушечной.
+ */
+function refine(look: Appearance): Appearance {
+  return {
+    ...look,
+    outfit: mix(look.outfit, '#0a0d18', 0.7),
+    outfitTrim: dark(mix(look.outfitTrim, '#c6d1e6', 0.55), 0.14),
+    stockings: look.stockings ? mix(look.stockings, '#0b0e1a', 0.62) : null,
+  };
+}
+
+export function buildParts(raw: Appearance, id: string, scale = 1): Parts {
+  const look = refine(raw);
   const rim = mix(look.aura, '#ffffff', 0.34);
   const st = look.outfitStyle;
   const sleeved = st === 'coat' || st === 'robe' || st === 'qipao';
@@ -1420,7 +1573,8 @@ export function buildParts(look: Appearance, id: string, scale = 1): Parts {
     };
     drawLimb(ctx, look, s, side, { marks: side > 0 ? ['shoulder'] : [] });
     if (st === 'plate') {
-      const m = metal(look.outfitTrim);
+      const m = metal(mix(look.outfit, '#12151f', 0.4));
+      const sv = metal(look.outfitTrim);
       const sx = CX + side * SK.shoulderX;
       const p: P[] = [
         [sx - side * 34, SK.shoulderY - 18],
@@ -1440,7 +1594,8 @@ export function buildParts(look: Appearance, id: string, scale = 1): Parts {
       ctx.fillStyle = g;
       ctx.fill();
       edge(ctx, p, m.line, 9, 0.42, 6, 14);
-      contour(ctx, p, rgba(m.line, 0.34), 1.5, 1, 14);
+      contour(ctx, p, rgba(sv.mid, 0.5), 2.2, 1, 14);
+      contour(ctx, p, rgba(sv.spec, 0.4), 0.9, 1, 14);
       // ламели наплечника
       for (let i = 0; i < 2; i++) {
         const y = SK.shoulderY + 6 + i * 18;
@@ -1461,7 +1616,7 @@ export function buildParts(look: Appearance, id: string, scale = 1): Parts {
         ctx.fillStyle = lg;
         ctx.fill();
         edge(ctx, lame, m.line, 6, 0.42, 4, 12);
-        stroke(ctx, [[sx - side * 28, y + 1], [sx + side * 34, y + 6]], m.spec, 2.2, 0.55, 1.4);
+        stroke(ctx, [[sx - side * 28, y + 1], [sx + side * 34, y + 6]], sv.spec, 2.2, 0.55, 1.4);
       }
     } else if (sleeved) {
       drawSleeve(ctx, subSeg(s, -0.1, 1.06, 3), c, side, look.outfitTrim);
@@ -1480,7 +1635,7 @@ export function buildParts(look: Appearance, id: string, scale = 1): Parts {
     const g = drawLimb(ctx, look, s, side, { marks: ['elbow', 'wristBone'], occA: true });
     drawHand(ctx, look, g, side);
     if (gloved) {
-      drawSleeve(ctx, subSeg(s, 0.4, 0.86, 2.6), st === 'plate' ? cloth(look.outfitTrim, 0.7) : c, side, look.outfitTrim);
+      drawSleeve(ctx, subSeg(s, 0.4, 0.86, 2.6), st === 'plate' ? cloth(mix(look.outfit, '#161a26', 0.4), 0.55) : c, side, look.outfitTrim);
     } else if (sleeved) {
       drawSleeve(ctx, subSeg(s, -0.12, 0.68, 5), c, side, look.outfitTrim);
     }

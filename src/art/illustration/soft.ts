@@ -264,16 +264,18 @@ export interface Skin {
 }
 
 export function skin(look: Appearance): Skin {
-  const s = look.skin;
+  // фарфоровая кожа с холодной тенью: тон подтягивается к светлому,
+  // а полутени уходят в серо-фиолетовое, а не в загар
+  const s = mix(look.skin, '#fbe8de', 0.12);
   return {
-    spec: mix(light(s, 0.5), '#fff6ec', 0.5),
-    lit: light(s, 0.16),
+    spec: mix(light(s, 0.52), '#fffaf4', 0.6),
+    lit: light(s, 0.2),
     mid: s,
-    warm: mix(s, '#e79b7f', 0.22),
-    shade: dark(mix(s, '#b07a86', 0.34), 0.1),
-    deep: dark(mix(s, '#8a4f5e', 0.46), 0.2),
-    sss: mix(s, '#d9614f', 0.38),
-    line: dark(mix(s, '#7a4250', 0.6), 0.34),
+    warm: mix(s, '#e6a58e', 0.16),
+    shade: mix(dark(s, 0.26), '#8b7fae', 0.38),
+    deep: mix(dark(s, 0.46), '#4b4574', 0.44),
+    sss: mix(s, '#e0705f', 0.32),
+    line: mix(dark(s, 0.5), '#3c4066', 0.56),
   };
 }
 
@@ -335,3 +337,53 @@ export function skinFill(
   g.addColorStop(1, t.shade);
   return g;
 }
+
+// ── общий свет сцены на фигуре ───────────────────────────────
+
+/**
+ * Накладывает градиент в координатах тела поверх уже нарисованной части.
+ * Точки задаются в общем пространстве фигуры, поэтому все части
+ * получают один и тот же свет и собираются в цельный объём.
+ */
+export function bodyGradient(
+  c: HTMLCanvasElement,
+  res: number,
+  ox: number,
+  oy: number,
+  a: P,
+  b: P,
+  stops: [number, string][],
+  mode: GlobalCompositeOperation = 'source-atop',
+): void {
+  const ctx = c.getContext('2d');
+  if (!ctx) return;
+  ctx.save();
+  ctx.setTransform(res, 0, 0, res, -ox * res, -oy * res);
+  ctx.globalCompositeOperation = mode;
+  const g = ctx.createLinearGradient(a[0], a[1], b[0], b[1]);
+  for (const [t, col] of stops) g.addColorStop(t, col);
+  ctx.fillStyle = g;
+  ctx.fillRect(ox - 8, oy - 8, c.width / res + 16, c.height / res + 16);
+  ctx.restore();
+}
+
+export interface SceneLight {
+  /** цвет теневой стороны */
+  shade: string;
+  /** холодный ключевой контровой (верх-лево) */
+  key: string;
+  /** тёплый контровой из глубины (низ-право) */
+  back: string;
+  /** насыщенность теней 0..1 */
+  depth: number;
+  /** насколько низ фигуры уходит во мрак 0..1 */
+  sink: number;
+}
+
+export const NIGHT: SceneLight = {
+  shade: '#141a30',
+  key: '#e8f1ff',
+  back: '#ffcb85',
+  depth: 0.56,
+  sink: 0.8,
+};

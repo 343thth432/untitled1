@@ -141,28 +141,33 @@ function track(ph: number, stops: [number, number][]): number {
 // Знак поворота руки: «+» — мах назад (влево), «−» — вперёд (вправо).
 
 /** дыхание, покачивание, контрапост */
+/**
+ * Контрапост: вес на ближней ноге, таз наклонён, корпус отвечает
+ * встречным изгибом, голова возвращается к вертикали. Без этого
+ * фигура читается как кукла в позе «руки по швам».
+ */
 function idlePose(t: number): Pose {
   const b = Math.sin(t * 1.9);
   const s = Math.sin(t * 0.86);
   const p = base();
-  p.rootX = s * 1.6;
+  p.rootX = 7 + s * 1.6;
   p.rootY = 2 + b * 2.4;
-  p.rootRot = s * 0.008;
+  p.rootRot = 0.035 + s * 0.008;
   p.stretch = 1 + b * 0.006;
   p.rot = {
-    torso: -0.03 + s * 0.014,
-    head: 0.05 - s * 0.022,
-    backHair: -0.02 + s * 0.05,
+    torso: -0.075 + s * 0.014,
+    head: 0.085 - s * 0.022,
+    backHair: -0.03 + s * 0.05,
     cape: s * 0.06,
-    skirt: s * 0.035,
-    armNearUpper: 0.06 + b * 0.02,
-    armNearFore: -0.2 - b * 0.03,
-    armFarUpper: -0.07 - b * 0.018,
-    armFarFore: -0.15 - b * 0.024,
-    legNearThigh: 0.018,
-    legNearShin: -0.024,
-    legFarThigh: -0.022,
-    legFarShin: 0.026,
+    skirt: -0.02 + s * 0.035,
+    armNearUpper: -0.1 + b * 0.02,
+    armNearFore: -0.26 - b * 0.03,
+    armFarUpper: 0.055 - b * 0.018,
+    armFarFore: -0.3 - b * 0.024,
+    legNearThigh: -0.03,
+    legNearShin: 0.012,
+    legFarThigh: -0.115,
+    legFarShin: 0.155,
   };
   p.weapon = s * 0.04;
   return p;
