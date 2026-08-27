@@ -121,19 +121,19 @@ export const BIOMES: Record<BiomeId, Biome> = {
     sunAt: [0.2, 0.46],
     sunR: 0.042,
     fog: '#fae6d8',
-    ridge: ['#d9bdb3', '#c8a8a2', '#ad8d8c'],
+    ridge: ['#cfae a3'.replace(' ',''), '#bd9a94', '#a07f7e'],
     mid: '#e6d6cc',
     midAlt: '#cdb8b0',
     midDeep: '#b09a92',
-    ground: '#e0cebd',
-    groundLit: '#fffaf0',
-    road: '#f2e2ce',
-    roadEdge: '#8f7860',
+    ground: '#d4bea6',
+    groundLit: '#fdf3e6',
+    road: '#f0dfc8',
+    roadEdge: '#7d6853',
     roadLit: '#fffaf2',
     weather: 'dust',
     motes: '#fff4e2',
-    grade: '#e79f77',
-    gradeAlpha: 0.12,
+    grade: '#e08b5c',
+    gradeAlpha: 0.15,
     flora: 'pillar',
     rays: 1,
     birds: 1,
@@ -625,6 +625,8 @@ interface Layer {
   canvas: HTMLCanvasElement;
   par: number;
   top: number;
+  /** сила покачивания от ветра */
+  sway?: number;
 }
 
 interface Cloud {
@@ -838,7 +840,7 @@ export function buildScene(biome: Biome, w: number, h: number, seed: string): Ro
       ctx.fillRect(0, 0, TILE, lh);
 
       // трава на дальней обочине
-      ctx.strokeStyle = rgba(b.groundLit, 0.32);
+      ctx.strokeStyle = rgba(mix(b.groundLit, b.ground, 0.4), 0.4);
       for (let i = 0; i < 200; i++) grassTuft(ctx, rnd, rnd() * TILE, roadTop - rnd() * roadTop, 4 + rnd() * 10);
 
       // полотно
@@ -976,9 +978,9 @@ export function buildScene(biome: Biome, w: number, h: number, seed: string): Ro
       ctx.stroke();
       ctx.restore();
 
-      ctx.strokeStyle = rgba(b.groundLit, 0.62);
+      ctx.strokeStyle = rgba(mix(b.groundLit, b.ground, 0.3), 0.6);
       for (let i = 0; i < 190; i++) grassTuft(ctx, rnd, rnd() * TILE, roadTop + 3, 5 + rnd() * 13);
-      ctx.strokeStyle = rgba(dark(b.groundLit, 0.18), 0.7);
+      ctx.strokeStyle = rgba(mix(dark(b.groundLit, 0.22), b.ground, 0.45), 0.75);
       for (let i = 0; i < 170; i++) grassTuft(ctx, rnd, rnd() * TILE, roadBot + 2, 8 + rnd() * 22);
 
       const eg = ctx.createLinearGradient(0, roadBot - 8, 0, roadBot + 30);
@@ -1017,7 +1019,7 @@ export function buildScene(biome: Biome, w: number, h: number, seed: string): Ro
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, TILE, lh);
     });
-    layers.push({ canvas: c, par: 1.9, top: 1 - 0.17 });
+    layers.push({ canvas: c, par: 1.9, top: 1 - 0.17, sway: 0.05 });
   }
 
   // ── ветви над головой: рамка кадра ──
@@ -1053,7 +1055,7 @@ export function buildScene(biome: Biome, w: number, h: number, seed: string): Ro
         }
       }
     });
-    layers.push({ canvas: c, par: 2.4, top: -0.03 });
+    layers.push({ canvas: c, par: 2.4, top: -0.03, sway: -0.035 });
   }
 
   // ── подвижное ──
@@ -1313,10 +1315,17 @@ export function drawScene(
     const y = l.top * h;
     let x = -((scroll * l.par) % lw);
     if (x > 0) x -= lw;
+    ctx.save();
+    if (l.sway) {
+      // сдвиг верхушек по ветру: наклон вокруг нижней кромки слоя
+      const k = l.sway * wind;
+      ctx.transform(1, 0, k, 1, -k * (y + lh), 0);
+    }
     while (x < w) {
       ctx.drawImage(l.canvas, Math.round(x), Math.round(y), lw, lh);
       x += lw;
     }
+    ctx.restore();
   }
 
   // прохожие вдалеке
@@ -1375,11 +1384,12 @@ export function drawScene(
   if (b.heat > 0) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 5; i++) {
-      const y = h * (s.horizon - 0.01 + i * 0.012);
-      ctx.globalAlpha = 0.05 + Math.sin(t * 2 + i) * 0.025;
+    blur(ctx, 7);
+    for (let i = 0; i < 3; i++) {
+      const y = h * (s.horizon - 0.004 + i * 0.016);
+      ctx.globalAlpha = 0.035 + Math.sin(t * 2 + i) * 0.018;
       ctx.fillStyle = b.sun;
-      ctx.fillRect(0, y + Math.sin(t * 3 + i) * 2, w, 3);
+      ctx.fillRect(0, y + Math.sin(t * 3 + i) * 3, w, 5);
     }
     ctx.restore();
   }
