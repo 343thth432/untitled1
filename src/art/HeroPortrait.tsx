@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Element, Portrait } from '../game/types';
 import { Sparks, buildBackdrop, stageGlow, tintOf, type Tint } from './scene/backdrop';
-import { foeImage, foeSilhouette, FOE_ART } from '../dungeon/foeArt';
+import { charImage, foeSilhouette, FOE_ART } from '../dungeon/foeArt';
 
 interface Props {
   id: string;
@@ -60,7 +60,7 @@ export default function HeroPortrait({ id, portrait, element, className }: Props
         ctx.drawImage(bd, 0, 0, w, h);
         stageGlow(ctx, w * 0.5, h * 0.97, w * 0.4, w * 0.08, tint.warm, 0.34);
 
-        const img = foeImage(portrait);
+        const img = charImage('heroes', id, portrait);
         const src: CanvasImageSource = img ?? art;
         const aspect = img ? img.naturalWidth / img.naturalHeight : FOE_ART.W / FOE_ART.H;
         const sh = h * 0.94;

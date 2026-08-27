@@ -12,14 +12,25 @@ const H = 620;
 const cache = new Map<string, HTMLCanvasElement>();
 const imgs = new Map<string, HTMLImageElement | null>();
 
-export function foeImage(portrait: Portrait): HTMLImageElement | null {
-  if (!portrait.img) return null;
-  let hit = imgs.get(portrait.img);
+const base = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
+
+/**
+ * Картинка персонажа по соглашению об именах: положи файл
+ * public/art/foes/<id>.webp (или .png) — и он сам появится в игре
+ * вместо силуэта. Ничего править в коде не нужно.
+ */
+export function charImage(kind: 'foes' | 'heroes', id: string, portrait?: Portrait): HTMLImageElement | null {
+  const src = portrait?.img ?? `${base}art/${kind}/${id}.webp`;
+  let hit = imgs.get(src);
   if (hit === undefined) {
     const im = new Image();
-    im.src = portrait.img;
-    im.onerror = () => imgs.set(portrait.img as string, null);
-    imgs.set(portrait.img, im);
+    im.onerror = () => {
+      // .webp нет — пробуем .png, потом сдаёмся и оставляем силуэт
+      if (!portrait?.img && im.src.endsWith('.webp')) im.src = src.replace(/\.webp$/, '.png');
+      else imgs.set(src, null);
+    };
+    im.src = src;
+    imgs.set(src, im);
     hit = im;
   }
   return hit && hit.complete && hit.naturalWidth > 0 ? hit : null;

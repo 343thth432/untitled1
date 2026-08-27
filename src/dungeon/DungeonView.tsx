@@ -69,9 +69,8 @@ export default function DungeonView({ floor, palette, onEnter, locked, className
       ready = true;
     });
 
-    if (import.meta.env.DEV) {
-      (window as unknown as { __dbg?: unknown }).__dbg = { floor, walker };
-    }
+    // отладочный доступ к карте — нужен автотестам, в сборке не мешает
+    (window as unknown as { __dbg?: unknown }).__dbg = { floor, walker };
 
     const tryEnter = (): void => {
       const m = floor.marks.find((k) => !k.taken && k.x === walker.cx && k.y === walker.cy);

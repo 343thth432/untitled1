@@ -1,7 +1,7 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 import type { FloorId, Portrait } from '../game/types';
 import { buildFloor, CELL, type Cell } from './map';
-import { foeImage, foeSilhouette, FOE_ART } from './foeArt';
+import { charImage, foeSilhouette, FOE_ART } from './foeArt';
 import { EYE_H, PALETTES, Raycaster, projOf, type Cam } from './render';
 import { loadAll, type TexName } from './textures';
 
@@ -138,7 +138,7 @@ export default function DuelStage({ tier, seed, foeId, portrait, count, boss, ap
           fl * (1 + hurt * 0.5),
         );
         rc.flush();
-        drawFoe(rc, anim.foe, clock, art, portrait, boss);
+        drawFoe(rc, anim.foe, clock, art, portrait, boss, foeId);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         rc.present(ctx, w, h);
 
@@ -180,11 +180,12 @@ function drawFoe(
   art: HTMLCanvasElement,
   portrait: Portrait,
   boss: boolean,
+  foeId: string,
 ): void {
   const ctx = rc.ctx;
   const { w, h } = rc;
   const half = h >> 1;
-  const img = foeImage(portrait);
+  const img = charImage('foes', foeId, portrait);
   const src: CanvasImageSource = img ?? art;
   const aspect = img ? img.naturalWidth / img.naturalHeight : FOE_ART.W / FOE_ART.H;
 
