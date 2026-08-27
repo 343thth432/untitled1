@@ -47,6 +47,44 @@ export function solid(f: Floor, x: number, y: number): boolean {
   return at(f, x, y) !== CELL.empty;
 }
 
+/** кратчайший путь по клеткам; пустой массив — пути нет */
+export function pathTo(f: Floor, from: [number, number], to: [number, number]): [number, number][] {
+  const key = (x: number, y: number): number => y * f.w + x;
+  const start = key(from[0], from[1]);
+  const goal = key(to[0], to[1]);
+  if (start === goal) return [];
+  const prev = new Map<number, number>();
+  const seen = new Uint8Array(f.w * f.h);
+  seen[start] = 1;
+  let frontier = [from];
+  while (frontier.length) {
+    const next: [number, number][] = [];
+    for (const [x, y] of frontier) {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= f.w || ny >= f.h) continue;
+        const k = key(nx, ny);
+        if (seen[k] || solid(f, nx, ny)) continue;
+        seen[k] = 1;
+        prev.set(k, key(x, y));
+        if (k === goal) {
+          const out: [number, number][] = [];
+          let cur = k;
+          while (cur !== start) {
+            out.push([cur % f.w, Math.floor(cur / f.w)]);
+            cur = prev.get(cur) as number;
+          }
+          return out.reverse();
+        }
+        next.push([nx, ny]);
+      }
+    }
+    frontier = next;
+  }
+  return [];
+}
+
 interface Room {
   x: number;
   y: number;

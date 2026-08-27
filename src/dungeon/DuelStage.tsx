@@ -192,11 +192,11 @@ function drawFoe(
   const lunge = st.name === 'attack' ? Math.sin(st.ph * Math.PI) : 0;
   const recoil = st.name === 'hurt' ? Math.sin(st.ph * Math.PI) : 0;
   const dead = st.down ? Math.min(1, st.ph) : 0;
-  const dist = 2.5 - lunge * 0.9 + recoil * 0.25;
+  const dist = 1.85 - lunge * 0.62 + recoil * 0.2;
   const sway = Math.sin(t * 1.1) * 0.012 + recoil * 0.05;
 
   const proj = projOf(w);
-  const sh = ((boss ? 1.9 : 1.6) * proj) / dist;
+  const sh = ((boss ? 2.2 : 1.85) * proj) / dist;
   const sw = sh * aspect;
   const bottom = half + (EYE_H * proj) / dist + dead * sh * 0.42;
   const cx = w / 2 + w * sway + recoil * w * 0.03 * Math.sin(t * 40);

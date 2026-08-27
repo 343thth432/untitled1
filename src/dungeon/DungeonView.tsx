@@ -69,6 +69,10 @@ export default function DungeonView({ floor, palette, onEnter, locked, className
       ready = true;
     });
 
+    if (import.meta.env.DEV) {
+      (window as unknown as { __dbg?: unknown }).__dbg = { floor, walker };
+    }
+
     const tryEnter = (): void => {
       const m = floor.marks.find((k) => !k.taken && k.x === walker.cx && k.y === walker.cy);
       if (m) stateRef.current.onEnter(m);
@@ -76,6 +80,7 @@ export default function DungeonView({ floor, palette, onEnter, locked, className
 
     cmdRef.current = (c) => {
       if (stateRef.current.locked || walker.busy) return;
+      walker.stop();
       if (c === 'left') walker.turn(-1);
       else if (c === 'right') walker.turn(1);
       else if (walker.step(floor, c === 'fwd' ? 1 : -1)) queueMicrotask(() => void 0);
@@ -100,16 +105,47 @@ export default function DungeonView({ floor, palette, onEnter, locked, className
     };
     window.addEventListener('keydown', key);
 
+    const hits: Hit[] = [];
     let raf = 0;
     let last = performance.now();
     let clock = 0;
     let wasBusy = false;
 
+    // тап по метке — идём к ней сами, чтобы не давить стрелку два десятка раз
+    const tap = (e: PointerEvent): void => {
+      if (stateRef.current.locked) return;
+      const box = canvas.getBoundingClientRect();
+      const fx = (e.clientX - box.left) / box.width;
+      const fy = (e.clientY - box.top) / box.height;
+      if (walker.walking) {
+        walker.stop();
+        return;
+      }
+      // тап по плану этажа — идём в ту клетку
+      const cssX = e.clientX - box.left;
+      const cssY = e.clientY - box.top;
+      const mb = mapBox(w);
+      if (cssX >= mb.x0 && cssX <= mb.x0 + mb.size && cssY >= mb.y0 && cssY <= mb.y0 + mb.size) {
+        const dx = Math.floor((cssX - mb.x0) / MAP.cell) - MAP.r;
+        const dy = Math.floor((cssY - mb.y0) / MAP.cell) - MAP.r;
+        walker.goTo(floor, walker.cx + dx, walker.cy + dy);
+        return;
+      }
+      const hit = hits.find((k) => fx >= k.x0 && fx <= k.x1 && fy >= k.y0 && fy <= k.y1);
+      if (hit) {
+        walker.goTo(floor, hit.mark.x, hit.mark.y);
+        return;
+      }
+      // тап по верхней половине кадра — шаг вперёд
+      if (fy < 0.62) cmdRef.current?.('fwd');
+    };
+    canvas.addEventListener('pointerdown', tap);
+
     const loop = (now: number): void => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       clock += dt;
-      walker.update(dt);
+      walker.update(dt, floor);
       if (wasBusy && !walker.busy) tryEnter();
       wasBusy = walker.busy;
 
@@ -118,7 +154,7 @@ export default function DungeonView({ floor, palette, onEnter, locked, className
         const fl = flick(clock);
         rc.render(floor, cam, pal, fl);
         rc.flush();
-        drawMarks(rc, floor, cam, clock);
+        drawMarks(rc, floor, cam, clock, hits);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         rc.present(ctx, w, h);
         overlay(ctx, w, h, pal, fl);
@@ -132,6 +168,7 @@ export default function DungeonView({ floor, palette, onEnter, locked, className
       cancelAnimationFrame(raf);
       ro.disconnect();
       window.removeEventListener('keydown', key);
+      canvas.removeEventListener('pointerdown', tap);
       cmdRef.current = null;
     };
   }, [floor, palette]);
@@ -164,8 +201,18 @@ export default function DungeonView({ floor, palette, onEnter, locked, className
   );
 }
 
+/** экранные прямоугольники меток последнего кадра — для попадания тапом */
+export interface Hit {
+  mark: Mark;
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
+
 /** билборды меток с перекрытием стенами по буферу глубины */
-function drawMarks(rc: Raycaster, f: Floor, cam: Cam, t: number): void {
+function drawMarks(rc: Raycaster, f: Floor, cam: Cam, t: number, hits: Hit[]): void {
+  hits.length = 0;
   const ctx = rc.ctx;
   const { w, h, depth } = rc;
   const half = h >> 1;
@@ -194,6 +241,7 @@ function drawMarks(rc: Raycaster, f: Floor, cam: Cam, t: number): void {
     const sw = sh * (256 / 320);
     const left = scr - sw / 2;
     if (left > w || left + sw < 0) continue;
+    hits.push({ mark: m, x0: left / w, x1: (left + sw) / w, y0: (bottom - sh) / h, y1: bottom / h });
 
     // ореол пробивается сквозь мглу
     ctx.save();
@@ -257,12 +305,17 @@ function overlay(ctx: CanvasRenderingContext2D, w: number, h: number, pal: Palet
 }
 
 /** план этажа в углу — без него в коридорах теряешься */
+const MAP = { cell: 6, r: 8, pad: 10 };
+
+function mapBox(w: number): { x0: number; y0: number; size: number } {
+  const size = (MAP.r * 2 + 1) * MAP.cell;
+  return { x0: w - size - MAP.pad, y0: MAP.pad, size };
+}
+
 function minimap(ctx: CanvasRenderingContext2D, f: Floor, wk: Walker, w: number): void {
-  const cellPx = 4;
-  const r = 7;
-  const size = (r * 2 + 1) * cellPx;
-  const x0 = w - size - 10;
-  const y0 = 10;
+  const cellPx = MAP.cell;
+  const r = MAP.r;
+  const { x0, y0, size } = mapBox(w);
   ctx.save();
   ctx.globalAlpha = 0.78;
   ctx.fillStyle = 'rgba(6,8,14,0.8)';

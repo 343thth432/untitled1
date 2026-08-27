@@ -1,4 +1,4 @@
-import { solid, type Floor } from './map';
+import { pathTo, solid, type Floor } from './map';
 import type { Cam } from './render';
 
 const STEP_T = 0.28;
@@ -26,6 +26,8 @@ export class Walker {
   bob = 0;
   /** упор в стену — лёгкий толчок назад */
   private bump = 0;
+  /** очередь клеток при автопереходе */
+  private route: [number, number][] = [];
 
   constructor(f: Floor) {
     this.cx = Math.floor(f.spawn[0]);
@@ -91,9 +93,40 @@ export class Walker {
     return true;
   }
 
-  update(dt: number): void {
-    if (this.t >= 1) return;
-    this.t = Math.min(1, this.t + dt / this.dur);
-    this.bob = Math.sin(Math.min(1, this.t) * Math.PI * 2) * (this.bump ? 0.2 : 1);
+  /** идти к клетке кратчайшим путём */
+  goTo(f: Floor, x: number, y: number): boolean {
+    const route = pathTo(f, [this.cx, this.cy], [x, y]);
+    if (!route.length) return false;
+    this.route = route;
+    return true;
+  }
+
+  get walking(): boolean {
+    return this.route.length > 0;
+  }
+
+  stop(): void {
+    this.route = [];
+  }
+
+  update(dt: number, f?: Floor): void {
+    if (this.t < 1) {
+      this.t = Math.min(1, this.t + dt / this.dur);
+      this.bob = Math.sin(Math.min(1, this.t) * Math.PI * 2) * (this.bump ? 0.2 : 1);
+      return;
+    }
+    // автопереход: сначала доворачиваем, потом шагаем
+    if (!f || !this.route.length) return;
+    const [nx, ny] = this.route[0];
+    const dx = nx - this.cx;
+    const dy = ny - this.cy;
+    const want = dx > 0 ? 0 : dy > 0 ? 1 : dx < 0 ? 2 : 3;
+    if (want !== this.face) {
+      const diff = ((want - this.face + 4) % 4) as 0 | 1 | 2 | 3;
+      this.turn(diff === 3 ? -1 : 1);
+      return;
+    }
+    this.route.shift();
+    if (!this.step(f, 1)) this.route = [];
   }
 }

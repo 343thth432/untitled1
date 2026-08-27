@@ -320,9 +320,11 @@ function shade(
   const cr = col[ti];
   const cg = col[ti + 1];
   const cb = col[ti + 2];
-  let r = (cr * (ar + (t.r * k) / 255 * 255)) / 255;
-  let g = (cg * (ag + (t.g * k) / 255 * 255)) / 255;
-  let b = (cb * (ab + (t.b * k) / 255 * 255)) / 255;
+  // мягкое колено: у стены под самым носом свет не выжигает кладку добела
+  const kk = k / (1 + k * 0.5);
+  let r = (cr * (ar + t.r * kk)) / 255;
+  let g = (cg * (ag + t.g * kk)) / 255;
+  let b = (cb * (ab + t.b * kk)) / 255;
   r = r > 255 ? 255 : r;
   g = g > 255 ? 255 : g;
   b = b > 255 ? 255 : b;
