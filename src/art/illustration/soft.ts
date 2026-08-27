@@ -186,6 +186,70 @@ export function bloom(
   ctx.restore();
 }
 
+/**
+ * Контровой свет: серп по кромке силуэта. Считается вычитанием
+ * сдвинутой копии — так свет ложится ровно по краю формы,
+ * как в трёхмерной сцене.
+ */
+export function rimPass(
+  c: HTMLCanvasElement,
+  color: string,
+  dx: number,
+  dy: number,
+  alpha: number,
+  soft: number,
+): void {
+  const w = c.width;
+  const h = c.height;
+  if (!w || !h) return;
+  const ctx = c.getContext('2d');
+  if (!ctx) return;
+  const tmp = document.createElement('canvas');
+  tmp.width = w;
+  tmp.height = h;
+  const t = tmp.getContext('2d');
+  if (!t) return;
+  t.drawImage(c, 0, 0);
+  t.globalCompositeOperation = 'destination-out';
+  t.drawImage(c, dx, dy);
+  t.globalCompositeOperation = 'source-in';
+  t.fillStyle = color;
+  t.fillRect(0, 0, w, h);
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-atop';
+  ctx.globalAlpha = alpha;
+  if (soft > 0) ctx.filter = `blur(${soft.toFixed(2)}px)`;
+  ctx.drawImage(tmp, 0, 0);
+  ctx.restore();
+}
+
+/**
+ * Растворяет часть у сустава: всё «выше» точки стирается, дальше
+ * прозрачность нарастает. Так плечо не выглядит приставленным шаром.
+ */
+export function fadeJoint(
+  c: HTMLCanvasElement,
+  res: number,
+  ox: number,
+  oy: number,
+  at: P,
+  dir: P,
+  len: number,
+): void {
+  const ctx = c.getContext('2d');
+  if (!ctx) return;
+  ctx.save();
+  ctx.setTransform(res, 0, 0, res, -ox * res, -oy * res);
+  ctx.globalCompositeOperation = 'destination-out';
+  const g = ctx.createLinearGradient(at[0], at[1], at[0] + dir[0] * len, at[1] + dir[1] * len);
+  g.addColorStop(0, 'rgba(0,0,0,1)');
+  g.addColorStop(0.55, 'rgba(0,0,0,0.5)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(ox - 40, oy - 40, c.width / res + 80, c.height / res + 80);
+  ctx.restore();
+}
+
 // ── палитры ──────────────────────────────────────────────────
 
 export interface Skin {

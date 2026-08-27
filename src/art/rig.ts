@@ -31,7 +31,7 @@ const PARENT: Record<PartName, PartName | null> = {
   armNearFore: 'armNearUpper',
 };
 
-export type AnimName = 'idle' | 'attack' | 'cast' | 'hurt' | 'dead' | 'win';
+export type AnimName = 'idle' | 'walk' | 'attack' | 'cast' | 'hurt' | 'dead' | 'win';
 
 export interface Pose {
   rootX: number;
@@ -282,8 +282,36 @@ function winPose(t: number, ph: number): Pose {
   return p;
 }
 
+/** шаг: маятник ног и рук, покачивание корпуса */
+function walkPose(t: number): Pose {
+  const p = idlePose(t * 0.5);
+  const c = Math.sin(t * 7.4);
+  const c2 = Math.cos(t * 7.4);
+  p.rootY += Math.abs(c2) * 5 - 3;
+  p.rootX += c * 2;
+  p.rootRot += c * 0.012;
+  add(p, {
+    torso: -0.05 - c * 0.02,
+    head: 0.03 + c * 0.02,
+    legNearThigh: c * 0.5,
+    legNearShin: Math.max(0, -c) * 0.6,
+    legFarThigh: -c * 0.5,
+    legFarShin: Math.max(0, c) * 0.6,
+    armNearUpper: c * 0.42,
+    armNearFore: -0.18 + Math.max(0, c) * 0.3,
+    armFarUpper: -c * 0.42,
+    armFarFore: -0.18 + Math.max(0, -c) * 0.3,
+    backHair: -c * 0.06,
+    cape: -c * 0.08,
+    skirt: -c * 0.06,
+  });
+  return p;
+}
+
 export function poseFor(anim: AnimName, t: number, ph: number): Pose {
   switch (anim) {
+    case 'walk':
+      return walkPose(t);
     case 'attack':
       return attackPose(t, ph);
     case 'cast':

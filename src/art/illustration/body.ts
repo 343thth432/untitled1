@@ -8,9 +8,11 @@ import {
   contour,
   edge,
   edgeSides,
+  fadeJoint,
   gloss,
   metal,
   path,
+  rimPass,
   setBlurScale,
   skin,
   skinFill,
@@ -428,36 +430,83 @@ function drawHand(ctx: CanvasRenderingContext2D, look: Appearance, g: Geom, side
     w[0] + u[0] * fu + n[0] * fn * side,
     w[1] + u[1] * fu + n[1] * fn * side,
   ];
+
+  // пальцы: четыре, слегка подогнуты
+  const finger = (i: number): void => {
+    const base = -11 + i * 8;
+    const len = 30 - Math.abs(i - 1) * 4;
+    const a = at(16, base);
+    const b = at(16 + len * 0.62, base + 3 + i * 0.6);
+    const c2 = at(16 + len, base + 7 + i * 1.4);
+    const wdt = 6.4 - i * 0.5;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]);
+    ctx.quadraticCurveTo(b[0], b[1], c2[0], c2[1]);
+    ctx.strokeStyle = t.mid;
+    ctx.lineWidth = wdt * 2;
+    ctx.stroke();
+    ctx.strokeStyle = rgba(t.shade, 0.55);
+    ctx.lineWidth = wdt * 2;
+    ctx.setLineDash([]);
+    ctx.stroke();
+    ctx.restore();
+    stroke(ctx, [a, b, c2], t.mid, wdt * 1.9, 1, 0.6);
+    stroke(
+      ctx,
+      [
+        [a[0] - n[0] * wdt * 0.5 * side, a[1] - n[1] * wdt * 0.5 * side],
+        [c2[0] - n[0] * wdt * 0.4 * side, c2[1] - n[1] * wdt * 0.4 * side],
+      ],
+      t.spec,
+      wdt * 0.7,
+      0.3,
+      1.4,
+    );
+    stroke(ctx, [a, b, c2], rgba(t.line, 0.3), wdt * 2.1, 0.35, 2.4);
+  };
+  for (let i = 3; i >= 0; i--) finger(i);
+
+  // ладонь
   const palm: P[] = [
-    at(-6, -14),
-    at(12, -17),
-    at(33, -13),
-    at(43, 1),
-    at(37, 17),
-    at(14, 22),
-    at(-6, 15),
+    at(-8, -14),
+    at(10, -18),
+    at(24, -14),
+    at(28, 2),
+    at(24, 17),
+    at(8, 22),
+    at(-8, 15),
   ];
   path(ctx, palm, 10);
-  ctx.fillStyle = skinFill(ctx, t, at(-8, -18)[0], at(-8, -18)[1], at(44, 20)[0], at(44, 20)[1]);
+  ctx.fillStyle = skinFill(ctx, t, at(-10, -18)[0], at(-10, -18)[1], at(30, 22)[0], at(30, 22)[1]);
   ctx.fill();
   ctx.save();
   path(ctx, palm, 10);
   ctx.clip();
-  smudge(ctx, [at(6, 2), at(34, 4), at(43, 17), at(4, 20)], t.shade, 0.6, 7);
-  gloss(ctx, at(12, -6), 12, 7, 0.3, t.spec, 0.3, 6);
-  // пальцы
-  for (let i = 0; i < 3; i++) {
-    stroke(ctx, [at(22 + i * 6, -8 + i * 9), at(40 + i * 2, -3 + i * 9)], t.shade, 2.4, 0.4, 1.4);
-  }
+  smudge(ctx, [at(4, 4), at(26, 6), at(28, 18), at(2, 20)], t.shade, 0.55, 7);
+  gloss(ctx, at(8, -5), 11, 6, 0.3, t.spec, 0.32, 6);
   ctx.restore();
-  edge(ctx, palm, t.line, 6, 0.32, 4, 10);
-  contour(ctx, palm, rgba(t.line, 0.24), 1.3, 1, 10);
+  edge(ctx, palm, t.line, 6, 0.3, 4, 10);
+
   // большой палец
-  const thumb: P[] = [at(0, -14), at(17, -25), at(30, -19), at(21, -7)];
-  path(ctx, thumb, 10);
-  ctx.fillStyle = t.mid;
-  ctx.fill();
-  edge(ctx, thumb, t.line, 5, 0.3, 3, 10);
+  const th0 = at(-2, -13);
+  const th1 = at(12, -24);
+  const th2 = at(26, -22);
+  stroke(ctx, [th0, th1, th2], t.mid, 13, 1, 0.8);
+  stroke(
+    ctx,
+    [
+      [th0[0] - n[0] * 3 * side, th0[1] - n[1] * 3 * side],
+      [th2[0] - n[0] * 2 * side, th2[1] - n[1] * 2 * side],
+    ],
+    t.spec,
+    4,
+    0.32,
+    1.6,
+  );
+  stroke(ctx, [th0, th1, th2], rgba(t.line, 0.3), 14, 0.35, 2.6);
 }
 
 // ── стопа ────────────────────────────────────────────────────
@@ -581,6 +630,30 @@ function drawTorso(ctx: CanvasRenderingContext2D, look: Appearance): void {
   stroke(ctx, [[CX - 70, SK.shoulderY - 9], [CX - 32, SK.shoulderY + 1], [CX - 6, SK.shoulderY - 7]], t.spec, 3.4, 0.4, 3);
   stroke(ctx, [[CX + 70, SK.shoulderY - 9], [CX + 32, SK.shoulderY + 1], [CX + 6, SK.shoulderY - 7]], t.spec, 3.4, 0.34, 3);
   smudge(ctx, [[CX - 12, SK.shoulderY - 8], [CX + 12, SK.shoulderY - 8], [CX + 8, SK.shoulderY + 8], [CX - 8, SK.shoulderY + 8]], t.deep, 0.4, 6);
+  // дельтовидные: объём плеча, чтобы рука росла из тела
+  for (const s2 of [-1, 1] as const) {
+    gloss(ctx, [CX + s2 * 70, SK.shoulderY + 14], 26, 20, s2 * 0.3, t.spec, 0.34, 14);
+    smudge(
+      ctx,
+      [
+        [CX + s2 * 46, SK.shoulderY + 32],
+        [CX + s2 * 84, SK.shoulderY + 26],
+        [CX + s2 * 80, 322],
+        [CX + s2 * 50, 314],
+      ],
+      t.shade,
+      0.4,
+      14,
+    );
+    stroke(
+      ctx,
+      [[CX + s2 * 44, SK.shoulderY + 6], [CX + s2 * 74, SK.shoulderY + 40], [CX + s2 * 62, 320]],
+      t.shade,
+      6,
+      0.3,
+      6,
+    );
+  }
 
   // грудная клетка и рёбра
   stroke(ctx, [[CX - 56, 386], [CX - 34, 400]], t.shade, 5, 0.22, 5);
@@ -762,8 +835,8 @@ function drawOutfit(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => 
         c,
         8,
       );
-      stroke(ctx, [[CX + s * 20, SK.bustY - br * 0.8], [CX + s * 48, SK.neckBase + 34], [CX + s * 58, SK.shoulderY]], tr, 11, 0.95, 2);
-      stroke(ctx, [[CX + s * 20, SK.bustY - br * 0.82], [CX + s * 48, SK.neckBase + 32], [CX + s * 58, SK.shoulderY - 2]], light(tr, 0.45), 3.4, 0.6, 1.4);
+      stroke(ctx, [[CX + s * 30, SK.bustY - br * 0.78], [CX + s * 62, SK.shoulderY + 12]], tr, 8, 0.85, 1.6);
+      stroke(ctx, [[CX + s * 30, SK.bustY - br * 0.8], [CX + s * 62, SK.shoulderY + 9]], light(tr, 0.45), 2.4, 0.5, 1.2);
     }
     stroke(ctx, [[CX - 84, SK.bustY - br * 0.16], [CX, SK.bustY - br * 0.02], [CX + 84, SK.bustY - br * 0.16]], tr, 10, 0.95, 2);
   } else if (st === 'plate') {
@@ -912,8 +985,8 @@ function drawOutfit(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => 
     );
     if (st === 'leotard' || st === 'coat') {
       for (const s of [-1, 1] as const) {
-        stroke(ctx, [[CX + s * 28, bustTop + 10], [CX + s * 50, SK.neckBase + 32], [CX + s * 58, SK.shoulderY]], c.mid, 12, 0.95, 2);
-        stroke(ctx, [[CX + s * 28, bustTop + 8], [CX + s * 50, SK.neckBase + 30], [CX + s * 58, SK.shoulderY - 2]], c.spec, 3.4, 0.5, 1.6);
+        stroke(ctx, [[CX + s * 40, bustTop + 20], [CX + s * 62, SK.shoulderY + 10]], c.mid, 8, 0.85, 1.6);
+        stroke(ctx, [[CX + s * 40, bustTop + 17], [CX + s * 62, SK.shoulderY + 7]], c.spec, 2.4, 0.4, 1.2);
       }
     }
     fold(ctx, [CX - 42, bustTop + 32], [CX - 32, bustBot], c, 5);
@@ -950,8 +1023,8 @@ function drawOutfit(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => 
   fold(ctx, [CX + 38, 542], [CX + 20, 606], c, 5);
 
   // пояс
-  stroke(ctx, [[CX - 84, 528], [CX, 516], [CX + 84, 528]], tr, 14, 0.95, 2.4);
-  stroke(ctx, [[CX - 82, 524], [CX, 512], [CX + 82, 524]], light(tr, 0.45), 4.5, 0.6, 2);
+  stroke(ctx, [[CX - 84, 528], [CX, 516], [CX + 84, 528]], tr, 13, 0.85, 2.6);
+  stroke(ctx, [[CX - 82, 524], [CX, 512], [CX + 82, 524]], light(tr, 0.4), 4, 0.45, 2.2);
   const gemPts: P[] = [[CX, 514], [CX + 16, 532], [CX, 554], [CX - 16, 532]];
   path(ctx, gemPts, 6);
   const gg = ctx.createLinearGradient(CX - 16, 512, CX + 16, 554);
@@ -973,7 +1046,7 @@ function drawOutfit(ctx: CanvasRenderingContext2D, look: Appearance, rnd: () => 
   // подвязки
   if (look.stockings) {
     for (const s of [-1, 1] as const) {
-      stroke(ctx, [[CX + s * 34, 588], [CX + s * 64, 618], [CX + s * 70, 652]], tr, 8, 0.9, 1.8);
+      stroke(ctx, [[CX + s * 38, 596], [CX + s * 62, 622], [CX + s * 68, 654]], tr, 6, 0.75, 2.2);
     }
   }
   void rnd;
@@ -1278,10 +1351,18 @@ const JOINT_OF: Record<PartName, P> = {
 
 export const HAND_ANCHOR: P = [CX + SK.wristX + 14, SK.wristY + 14];
 
+interface Fade {
+  at: P;
+  dir: P;
+  len: number;
+}
+
 function makePart(
   name: PartName,
   scale: number,
+  rimColor: string,
   draw: (ctx: CanvasRenderingContext2D) => void,
+  fade?: Fade,
 ): Part {
   const b = BOX[name];
   const res = (b.res ?? 1) * scale;
@@ -1297,6 +1378,10 @@ function makePart(
     blurOff(ctx);
     setBlurScale(1);
   }
+  if (fade) fadeJoint(c, res, b.ox, b.oy, fade.at, fade.dir, fade.len);
+  // ключевой свет сверху-слева и контровой ауры справа
+  rimPass(c, 'rgba(255,248,236,1)', 2.4 * res, 2.6 * res, 0.5, 1.4 * res);
+  rimPass(c, rimColor, -2.6 * res, 1.6 * res, 0.34, 2 * res);
   const j = JOINT_OF[name];
   return {
     canvas: c,
@@ -1309,7 +1394,15 @@ function makePart(
   };
 }
 
+function dirTo(a: P, b: P): P {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const l = Math.hypot(dx, dy) || 1;
+  return [dx / l, dy / l];
+}
+
 export function buildParts(look: Appearance, id: string, scale = 1): Parts {
+  const rim = mix(look.aura, '#ffffff', 0.34);
   const st = look.outfitStyle;
   const sleeved = st === 'coat' || st === 'robe' || st === 'qipao';
   const gloved = st === 'leotard' || st === 'harness' || st === 'plate' || st === 'sarashi';
@@ -1387,9 +1480,9 @@ export function buildParts(look: Appearance, id: string, scale = 1): Parts {
     const g = drawLimb(ctx, look, s, side, { marks: ['elbow', 'wristBone'], occA: true });
     drawHand(ctx, look, g, side);
     if (gloved) {
-      drawSleeve(ctx, subSeg(s, 0.44, 1.08, 2.6), st === 'plate' ? cloth(look.outfitTrim, 0.7) : c, side, look.outfitTrim);
+      drawSleeve(ctx, subSeg(s, 0.4, 0.86, 2.6), st === 'plate' ? cloth(look.outfitTrim, 0.7) : c, side, look.outfitTrim);
     } else if (sleeved) {
-      drawSleeve(ctx, subSeg(s, -0.12, 0.8, 5), c, side, look.outfitTrim);
+      drawSleeve(ctx, subSeg(s, -0.12, 0.68, 5), c, side, look.outfitTrim);
     }
   };
 
@@ -1422,26 +1515,50 @@ export function buildParts(look: Appearance, id: string, scale = 1): Parts {
   };
 
   return {
-    cape: makePart('cape', scale, (ctx) => drawCape(ctx, look, seeded(`${id}cape`))),
-    backHair: makePart('backHair', scale, (ctx) => {
+    cape: makePart('cape', scale, rim, (ctx) => drawCape(ctx, look, seeded(`${id}cape`))),
+    backHair: makePart('backHair', scale, rim, (ctx) => {
       drawHairFall(ctx, look, seeded(`${id}fall`));
       ctx.save();
       headTransform(ctx);
       drawHairBack(ctx, look, seeded(`${id}hb`));
       ctx.restore();
     }),
-    armFarUpper: makePart('armFarUpper', scale, armUpper(-1)),
-    armFarFore: makePart('armFarFore', scale, armFore(-1)),
-    legFarThigh: makePart('legFarThigh', scale, legThigh(-1)),
-    legFarShin: makePart('legFarShin', scale, legShin(-1)),
-    legNearThigh: makePart('legNearThigh', scale, legThigh(1)),
-    legNearShin: makePart('legNearShin', scale, legShin(1)),
-    torso: makePart('torso', scale, (ctx) => {
+    armFarUpper: makePart('armFarUpper', scale, rim, armUpper(-1), {
+      at: [CX - SK.shoulderX, SK.shoulderY] as P,
+      dir: dirTo([CX - SK.shoulderX, SK.shoulderY] as P, [CX - SK.elbowX, SK.elbowY] as P),
+      len: 24,
+    }),
+    armFarFore: makePart('armFarFore', scale, rim, armFore(-1), {
+      at: [CX - SK.elbowX, SK.elbowY] as P,
+      dir: dirTo([CX - SK.elbowX, SK.elbowY] as P, [CX - SK.wristX, SK.wristY] as P),
+      len: 18,
+    }),
+    legFarThigh: makePart('legFarThigh', scale, rim, legThigh(-1), {
+      at: [CX - SK.hipX, SK.hipY] as P,
+      dir: dirTo([CX - SK.hipX, SK.hipY] as P, [CX - SK.kneeX, SK.kneeY] as P),
+      len: 46,
+    }),
+    legFarShin: makePart('legFarShin', scale, rim, legShin(-1), {
+      at: [CX - SK.kneeX, SK.kneeY] as P,
+      dir: dirTo([CX - SK.kneeX, SK.kneeY] as P, [CX - SK.ankleX, SK.ankleY] as P),
+      len: 30,
+    }),
+    legNearThigh: makePart('legNearThigh', scale, rim, legThigh(1), {
+      at: [CX + SK.hipX, SK.hipY] as P,
+      dir: dirTo([CX + SK.hipX, SK.hipY] as P, [CX + SK.kneeX, SK.kneeY] as P),
+      len: 46,
+    }),
+    legNearShin: makePart('legNearShin', scale, rim, legShin(1), {
+      at: [CX + SK.kneeX, SK.kneeY] as P,
+      dir: dirTo([CX + SK.kneeX, SK.kneeY] as P, [CX + SK.ankleX, SK.ankleY] as P),
+      len: 30,
+    }),
+    torso: makePart('torso', scale, rim, (ctx) => {
       drawTorso(ctx, look);
       drawOutfit(ctx, look, seeded(`${id}fit`));
     }),
-    skirt: makePart('skirt', scale, (ctx) => drawSkirt(ctx, look, seeded(`${id}skirt`))),
-    head: makePart('head', scale, (ctx) => {
+    skirt: makePart('skirt', scale, rim, (ctx) => drawSkirt(ctx, look, seeded(`${id}skirt`))),
+    head: makePart('head', scale, rim, (ctx) => {
       ctx.save();
       headTransform(ctx);
       drawFaceBase(ctx, look);
@@ -1454,8 +1571,16 @@ export function buildParts(look: Appearance, id: string, scale = 1): Parts {
       drawAccessory(ctx, look);
       ctx.restore();
     }),
-    armNearUpper: makePart('armNearUpper', scale, armUpper(1)),
-    armNearFore: makePart('armNearFore', scale, armFore(1)),
+    armNearUpper: makePart('armNearUpper', scale, rim, armUpper(1), {
+      at: [CX + SK.shoulderX, SK.shoulderY] as P,
+      dir: dirTo([CX + SK.shoulderX, SK.shoulderY] as P, [CX + SK.elbowX, SK.elbowY] as P),
+      len: 24,
+    }),
+    armNearFore: makePart('armNearFore', scale, rim, armFore(1), {
+      at: [CX + SK.elbowX, SK.elbowY] as P,
+      dir: dirTo([CX + SK.elbowX, SK.elbowY] as P, [CX + SK.wristX, SK.wristY] as P),
+      len: 18,
+    }),
   };
 }
 

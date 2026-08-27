@@ -14,7 +14,7 @@ interface Props {
   showcase?: boolean;
 }
 
-const DUR: Record<AnimName, number> = { idle: 0, attack: 0.66, cast: 0.95, hurt: 0.46, dead: 1.1, win: 1.6 };
+const DUR: Record<AnimName, number> = { idle: 0, walk: 0, attack: 0.66, cast: 0.95, hurt: 0.46, dead: 1.1, win: 1.6 };
 const SHOW: AnimName[] = ['cast', 'attack', 'win'];
 
 /** Живая 2D-героиня: дыхание, покачивание, поза по тапу */

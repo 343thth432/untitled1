@@ -1,68 +1,40 @@
-/**
- * Детерминированный ГПСЧ (mulberry32).
- * Один и тот же seed всегда даёт один и тот же бой — это нужно и для
- * повторов, и для честного расчёта офлайн-наград.
- */
-export class RNG {
-  private s: number;
+/** Детерминированный генератор: один и тот же сид — один и тот же забег. */
+export type Rng = () => number;
 
-  constructor(seed: number | string) {
-    this.s = typeof seed === 'number' ? seed >>> 0 : hashString(seed);
-    if (this.s === 0) this.s = 0x9e3779b9;
+export function rng(seed: string): Rng {
+  let h = 1779033703 ^ seed.length;
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
   }
-
-  next(): number {
-    this.s = (this.s + 0x6d2b79f5) >>> 0;
-    let t = this.s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  let a = h >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  }
-
-  /** случайное целое [0, n) */
-  int(n: number): number {
-    return Math.floor(this.next() * n);
-  }
-
-  range(a: number, b: number): number {
-    return a + this.next() * (b - a);
-  }
-
-  chance(p: number): boolean {
-    return this.next() < p;
-  }
-
-  pick<T>(arr: readonly T[]): T {
-    return arr[this.int(arr.length)];
-  }
-
-  /** выбор нескольких разных элементов */
-  sample<T>(arr: readonly T[], n: number): T[] {
-    const pool = arr.slice();
-    const out: T[] = [];
-    while (out.length < n && pool.length) {
-      out.push(pool.splice(this.int(pool.length), 1)[0]);
-    }
-    return out;
-  }
-
-  /** взвешенный выбор */
-  weighted<T>(entries: readonly [T, number][]): T {
-    const total = entries.reduce((a, e) => a + e[1], 0);
-    let r = this.next() * total;
-    for (const [v, w] of entries) {
-      r -= w;
-      if (r <= 0) return v;
-    }
-    return entries[entries.length - 1][0];
-  }
+  };
 }
 
-export function hashString(str: string): number {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619) >>> 0;
+export function pick<T>(r: Rng, xs: readonly T[]): T {
+  return xs[Math.floor(r() * xs.length) % xs.length];
+}
+
+export function shuffle<T>(r: Rng, xs: T[]): T[] {
+  const a = xs.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  return h >>> 0;
+  return a;
+}
+
+/** n различных элементов */
+export function sample<T>(r: Rng, xs: readonly T[], n: number): T[] {
+  return shuffle(r, xs.slice()).slice(0, Math.min(n, xs.length));
+}
+
+export function range(r: Rng, lo: number, hi: number): number {
+  return lo + Math.floor(r() * (hi - lo + 1));
 }

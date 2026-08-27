@@ -2,7 +2,7 @@
  * Хранилище сейва: IndexedDB, с откатом на localStorage.
  * Сейв целиком помещается в один ключ — игра полностью офлайновая.
  */
-const DB_NAME = 'eclipse-idle';
+const DB_NAME = 'road-of-eclipse';
 const STORE = 'kv';
 const KEY = 'save';
 
