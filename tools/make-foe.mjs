@@ -10,13 +10,19 @@
  *   1. фон срезается по альфе, а если он непрозрачный — заливкой от углов,
  *      чтобы светлые места внутри фигуры не пропали заодно с фоном;
  *   2. кадр обрезается по содержимому;
- *   3. фигура уменьшается до нужной высоты и ставится подошвами на пол,
+ *   3. масштаб берётся один на всю тварь — по кадру анфас в спокойной
+ *      позе. Иначе присевшая или упавшая раздувается во весь рост, и
+ *      тварь скачет в размере между кадрами. Ставится подошвами на пол,
  *      а по горизонтали центруется по стопам, а не по рамке: хвост и
  *      отведённая рука иначе уводят фигуру вбок;
  *   4. цвета сводятся в палитру медианным сечением — иначе после
  *      уменьшения остаётся мыло из тысяч оттенков, а не пиксель-арт;
  *   5. по кромке кладётся кант цветом соседнего пикселя, притемнённым:
  *      сплошная чернота превращает спрайт в наклейку.
+ *
+ * Имена входных файлов: <id>-<ракурс>[-<поза>].png, ракурс 0..4 (анфас,
+ * три четверти, профиль, три четверти со спины, спина). Без позы — кадр
+ * покоя. <id>-0.png обязателен: он задаёт масштаб.
  *
  *   node tools/make-foe.mjs alley
  */
@@ -165,14 +171,17 @@ async function main() {
     process.exit(1);
   }
   const dir = path.resolve('public/art/foes', id);
-  const files = (await fs.readdir(dir)).filter((f) => /-\d+\.png$/.test(f)).sort();
-  if (!files.length) {
-    console.error(`в ${dir} нет файлов вида ${id}-0.png`);
+  const re = new RegExp(`^${id}-(\\d)(?:-([a-z0-9]+))?\\.png$`);
+  const files = (await fs.readdir(dir)).filter((f) => re.test(f)).sort();
+  if (!files.includes(`${id}-0.png`)) {
+    console.error(`в ${dir} нет ${id}-0.png — по нему считается масштаб`);
     process.exit(1);
   }
 
   const views = [];
-  for (const f of files) {
+  let unit = 0;
+  // кадр анфас в покое идёт первым: он задаёт масштаб для остальных
+  for (const f of [`${id}-0.png`, ...files.filter((x) => x !== `${id}-0.png`)]) {
     const src = path.join(dir, f);
     const { data, info } = await sharp(src).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const { width: w, height: h } = info;
@@ -185,9 +194,10 @@ async function main() {
     }
     const fx = feetCenter(data, w, h, b);
 
-    // уменьшаем так, чтобы фигура заняла заданную долю высоты буфера
+    // масштаб общий на тварь: считается по кадру покоя и переиспользуется
     const figH = b.y1 - b.y0 + 1;
-    const scale = (ART_H * FILL) / figH;
+    if (!unit) unit = (ART_H * FILL) / figH;
+    const scale = unit;
     const cropW = b.x1 - b.x0 + 1;
     const smallW = Math.max(1, Math.round(cropW * scale));
     const smallH = Math.max(1, Math.round(figH * scale));
@@ -197,8 +207,11 @@ async function main() {
       .raw()
       .toBuffer();
 
+    const m = re.exec(f);
     views.push({
       name: f,
+      view: Number(m[1]),
+      pose: m[2] ?? 'idle',
       px: cut,
       w: smallW,
       h: smallH,
@@ -259,17 +272,17 @@ async function main() {
         buf[i + 3] = 255;
       }
     }
-    const file = v.name.replace(/-(\d+)\.png$/, '-$1.sprite.png');
+    const file = v.name.replace(/\.png$/, '.sprite.png');
     await sharp(buf, { raw: { width: ART_W, height: ART_H, channels: 4 } })
       .png({ compressionLevel: 9 })
       .toFile(path.join(dir, file));
-    out.push(file);
-    console.log(`${v.name} -> ${file} (${v.w}x${v.h}, стопы на ${v.foot.toFixed(1)})`);
+    out.push({ file, view: v.view, pose: v.pose });
+    console.log(`${v.name} -> ${file}  ракурс ${v.view}, поза ${v.pose}, ${v.w}x${v.h}`);
   }
 
   await fs.writeFile(
     path.join(dir, 'sprite.json'),
-    JSON.stringify({ w: ART_W, h: ART_H, fill: FILL, views: out }, null, 2) + '\n',
+    JSON.stringify({ w: ART_W, h: ART_H, frames: out }, null, 2) + '\n',
   );
   console.log('готово:', dir);
 }

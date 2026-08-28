@@ -1,8 +1,11 @@
 {
   "w": 120,
   "h": 208,
-  "fill": 0.86,
-  "views": [
-    "alley-0.sprite.png"
+  "frames": [
+    {
+      "file": "alley-0.sprite.png",
+      "view": 0,
+      "pose": "idle"
+    }
   ]
 }

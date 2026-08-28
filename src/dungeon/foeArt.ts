@@ -772,28 +772,69 @@ function gibs(b: Paint, s: Skin, k: number): void {
 }
 
 /**
- * Нарисованные кадры из public/art/foes/<id>/. Если для твари положен
- * готовый кадр, движок берёт его, а позу изображает преобразованием
- * всего спрайта: покачивание, наклон, оседание и заваливание набок при
- * смерти. Ракурсов у одной картинки нет — тварь всегда лицом к камере,
- * пока не подложены остальные четыре.
+ * Нарисованные кадры из public/art/foes/<id>/. Их собирает
+ * tools/make-foe.mjs, список лежит в sprite.json рядом. Движок берёт
+ * самый подходящий кадр: точный ракурс и позу, если есть; иначе ракурс
+ * анфас; иначе позу покоя. Недостающую позу дорисовывает преобразованием
+ * всего спрайта — покачивание, наклон, оседание, заваливание набок.
+ *
+ * Если нарисованных кадров нет вовсе, тварь рисует движок.
  */
-const drawn = new Map<FoeId, HTMLImageElement>();
+interface Drawn {
+  frames: Map<string, HTMLImageElement>;
+}
+
+const drawn = new Map<FoeId, Drawn>();
 let started = false;
+
+/** какой нарисованный кадр отвечает за эту позу */
+function poseKey(p: PoseId): string {
+  if (p === 'w1') return 'walk1';
+  if (p === 'w2') return 'walk2';
+  if (p === 'w3') return 'walk3';
+  if (p === 'atk' || p === 'cast' || p === 'pain') return p;
+  if (p === 'd0') return 'pain';
+  if (p === 'd1' || p === 'd2') return 'die1';
+  if (p === 'd3' || p === 'd4') return 'die2';
+  return 'idle';
+}
 
 export function loadFoeArt(): void {
   if (started) return;
   started = true;
   const base = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
   for (const id of FOE_IDS) {
-    const img = new Image();
-    img.onload = () => {
-      drawn.set(id, img);
-      // кадры, собранные до загрузки, пересчитываются заново
-      cache.clear();
-    };
-    img.src = `${base}art/foes/${id}/${id}-0.sprite.png`;
+    const dir = `${base}art/foes/${id}/`;
+    fetch(`${dir}sprite.json`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((man: { frames: { file: string; view: number; pose: string }[] }) => {
+        const d: Drawn = { frames: new Map() };
+        drawn.set(id, d);
+        for (const f of man.frames) {
+          const img = new Image();
+          img.onload = () => {
+            d.frames.set(`${f.view}|${f.pose}`, img);
+            // кадры, собранные до загрузки, пересчитываются заново
+            cache.clear();
+          };
+          img.src = dir + f.file;
+        }
+      })
+      .catch(() => {
+        /* нарисованных кадров нет — рисуем сами */
+      });
   }
+}
+
+/** ближайший нарисованный кадр и точна ли поза */
+function pick(id: FoeId, view: number, pose: PoseId): { img: HTMLImageElement; exact: boolean } | null {
+  const d = drawn.get(id);
+  if (!d) return null;
+  const key = poseKey(pose);
+  const hit = d.frames.get(`${view}|${key}`) ?? d.frames.get(`0|${key}`);
+  if (hit) return { img: hit, exact: true };
+  const idle = d.frames.get(`${view}|idle`) ?? d.frames.get('0|idle');
+  return idle ? { img: idle, exact: false } : null;
 }
 
 /** поза нарисованного кадра: без разрезки на части — преобразованием целиком */
@@ -835,11 +876,13 @@ export function foeSprite(id: FoeId, view: number, pose: PoseId, flip = false): 
   if (hit) return hit;
   if (cache.size > 300) cache.clear();
   const s = FOES[id].skin;
-  const img = drawn.get(id);
+  const shot = pose[0] === 'g' ? null : pick(id, view, pose);
   let c: HTMLCanvasElement;
-  if (img && pose[0] !== 'g') {
-    const fall = pose === 'd4' ? 1 : pose === 'd3' ? 0.9 : pose === 'd2' ? 0.55 : pose === 'd1' ? 0.2 : 0;
-    c = posed(img, posesFor(id)[pose], s.tall / 100, fall);
+  if (shot) {
+    // точный кадр берётся как есть; недостающую позу доигрываем сами
+    const fall = shot.exact ? 0 : pose === 'd4' ? 1 : pose === 'd3' ? 0.9 : pose === 'd2' ? 0.55 : pose === 'd1' ? 0.2 : 0;
+    const p = shot.exact ? posesFor(id).w0 : posesFor(id)[pose];
+    c = posed(shot.img, p, s.tall / 100, fall);
   } else {
     const b = new Paint(ART_W, ART_H);
     if (pose[0] === 'g') gibs(b, s, Number(pose[1]));
