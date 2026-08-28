@@ -34,8 +34,9 @@ export class Mob {
   t = 0;
   /** откат до следующей атаки */
   cd = 0;
-  /** фаза шага, растёт по пройденному пути */
-  step = 0;
+  /** фаза шага, растёт по пройденному пути; стартовый сдвиг свой у
+   *  каждой, иначе стая шагает строем */
+  step = Math.random() * 4;
   readonly id: FoeId;
   readonly tier: Tier;
   readonly name: string;

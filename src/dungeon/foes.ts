@@ -21,6 +21,25 @@ export type Tier = 'foe' | 'elite' | 'boss';
  */
 export type Outfit = 'rags' | 'sailor' | 'robe' | 'harness' | 'armor' | 'gown';
 
+/**
+ * Походка. Поза считается из неё, поэтому тяжёлая переваливается с ноги
+ * на ногу и держит руки враскачку, а ворожея почти плывёт.
+ */
+export interface Gait {
+  /** размах шага */
+  stride: number;
+  /** размах рук при ходьбе */
+  swing: number;
+  /** покачивание таза */
+  bounce: number;
+  /** постоянный наклон корпуса вперёд */
+  stoop: number;
+  /** насколько руки отведены от корпуса */
+  wide: number;
+  /** резкость замаха и отдачи от боли */
+  snap: number;
+}
+
 /** внешность: палитра и телосложение */
 export interface Skin {
   /** базовые цвета материалов: рампу из каждого строит освещение */
@@ -91,6 +110,8 @@ export interface FoeDef {
   where: FloorId[];
   /** сколько таких ставить в стае */
   count: number;
+  /** походка */
+  gait: Gait;
   aura: string;
   skin: Skin;
 }
@@ -113,6 +134,7 @@ const LIST: FoeDef[] = [
     scale: 1.05,
     where: ['crypt', 'catacomb'],
     count: 2,
+    gait: { stride: 1.05, swing: 1.15, bounce: 1, stoop: 3, wide: 0.95, snap: 1 },
     aura: '#9aa4b8',
     skin: {
       skin: '#a67c66',
@@ -155,6 +177,7 @@ const LIST: FoeDef[] = [
     scale: 0.98,
     where: ['crypt', 'catacomb', 'sanctum'],
     count: 3,
+    gait: { stride: 1.2, swing: 1.35, bounce: 1.5, stoop: 1, wide: 0.8, snap: 1.25 },
     aura: '#e08a3c',
     skin: {
       skin: '#ab7a5f',
@@ -197,6 +220,7 @@ const LIST: FoeDef[] = [
     scale: 1.08,
     where: ['crypt', 'catacomb', 'sanctum'],
     count: 1,
+    gait: { stride: 0.68, swing: 0.5, bounce: 0.35, stoop: -1, wide: 0.62, snap: 0.7 },
     aura: '#a06cff',
     skin: {
       skin: '#a67d99',
@@ -239,6 +263,7 @@ const LIST: FoeDef[] = [
     scale: 1.4,
     where: ['crypt', 'catacomb', 'sanctum'],
     count: 1,
+    gait: { stride: 0.85, swing: 0.75, bounce: 1.7, stoop: 5, wide: 1.2, snap: 0.85 },
     aura: '#ff5a48',
     skin: {
       skin: '#bb8c6e',
@@ -281,6 +306,7 @@ const LIST: FoeDef[] = [
     scale: 1.2,
     where: ['catacomb', 'sanctum'],
     count: 1,
+    gait: { stride: 1, swing: 0.7, bounce: 0.55, stoop: 0, wide: 0.72, snap: 1.35 },
     aura: '#5ac8ff',
     skin: {
       skin: '#98807a',
@@ -323,6 +349,7 @@ const LIST: FoeDef[] = [
     scale: 2.05,
     where: ['crypt', 'catacomb', 'sanctum'],
     count: 1,
+    gait: { stride: 0.55, swing: 0.4, bounce: 0.25, stoop: -2, wide: 0.85, snap: 0.75 },
     aura: '#ffb03a',
     skin: {
       skin: '#a67b83',

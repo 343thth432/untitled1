@@ -1,5 +1,5 @@
 import { Paint, type Mat } from './paint';
-import { FOES, type FoeId, type Outfit, type Skin } from './foes';
+import { FOES, type FoeId, type Gait, type Outfit, type Skin } from './foes';
 
 /**
  * Спрайты кошкодевочек: восемь ракурсов и полный набор кадров как в Doom —
@@ -46,41 +46,61 @@ interface Pose {
   roar: number;
 }
 
-function walk(k: number): Pose {
+function walk(k: number, g: Gait): Pose {
   const ph = (k * Math.PI) / 2;
   const s = Math.sin(ph);
   const c = Math.cos(ph);
+  const arm = 5 * g.swing;
   return {
-    bob: Math.abs(c) * 3 - 1.5,
-    lean: 1.5,
-    foot: [s * 10, -s * 10],
-    rise: [Math.max(0, s * 7), Math.max(0, -s * 7)],
-    hand: [-s * 5 - 4, s * 5 + 4],
-    drop: [17 - Math.abs(s) * 3, 17 - Math.abs(s) * 3],
+    bob: (Math.abs(c) * 3 - 1.5) * g.bounce,
+    lean: 1.5 + g.stoop,
+    foot: [s * 10 * g.stride, -s * 10 * g.stride],
+    rise: [Math.max(0, s * 7 * g.stride), Math.max(0, -s * 7 * g.stride)],
+    hand: [-s * arm - 4 * g.wide, s * arm + 4 * g.wide],
+    drop: [17 - Math.abs(s) * 3 * g.swing, 17 - Math.abs(s) * 3 * g.swing],
     squash: 1,
     head: 0,
     roar: 0,
   };
 }
 
-const POSES: Record<PoseId, Pose> = {
-  w0: walk(0),
-  w1: walk(1),
-  w2: walk(2),
-  w3: walk(3),
-  atk: { bob: -1.5, lean: 6, foot: [-6, 7], rise: [0, 0], hand: [-17, 17], drop: [-13, -9], squash: 0.98, head: -1.5, roar: 1 },
-  cast: { bob: 0, lean: 4.5, foot: [-4, 6], rise: [0, 0], hand: [-19, 10], drop: [-3, -12], squash: 1, head: -1.5, roar: 1 },
-  pain: { bob: 1.5, lean: -6, foot: [4, -4], rise: [0, 1.5], hand: [-13, 13], drop: [-7, -6], squash: 0.96, head: 6, roar: 1 },
-  d0: { bob: 0, lean: -7, foot: [6, -6], rise: [0, 3], hand: [-15, 15], drop: [-10, -9], squash: 0.9, head: 9, roar: 1 },
-  d1: { bob: 0, lean: -4, foot: [10, -10], rise: [0, 0], hand: [-19, 18], drop: [0, -3], squash: 0.68, head: 9, roar: 1 },
-  d2: { bob: 0, lean: 0, foot: [16, -16], rise: [0, 0], hand: [-24, 22], drop: [10, 7], squash: 0.44, head: 6, roar: 1 },
-  d3: { bob: 0, lean: 0, foot: [21, -21], rise: [0, 0], hand: [-28, 27], drop: [18, 16], squash: 0.26, head: 3, roar: 0 },
-  d4: { bob: 0, lean: 0, foot: [24, -24], rise: [0, 0], hand: [-31, 30], drop: [21, 19], squash: 0.19, head: 1.5, roar: 0 },
-  g0: walk(0),
-  g1: walk(0),
-  g2: walk(0),
-  g3: walk(0),
-};
+/** раскадровка под конкретную походку; на тварь считается один раз */
+function posesOf(g: Gait): Record<PoseId, Pose> {
+  const up = 9 + 4 * g.snap;
+  const out = 12 + 5 * g.wide;
+  const idle = walk(0, g);
+  return {
+    w0: idle,
+    w1: walk(1, g),
+    w2: walk(2, g),
+    w3: walk(3, g),
+    // замах: корпус вперёд, когти занесены над головой
+    atk: { bob: -1.5 * g.bounce, lean: 4 * g.snap + g.stoop, foot: [-6 * g.stride, 7 * g.stride], rise: [0, 0], hand: [-out, out], drop: [-up, -up * 0.7], squash: 0.98, head: -1.5, roar: 1 },
+    // бросок: одна рука выброшена вперёд, вторая отведена
+    cast: { bob: 0, lean: 3 * g.snap + g.stoop, foot: [-4 * g.stride, 6 * g.stride], rise: [0, 0], hand: [-out * 1.15, out * 0.6], drop: [-3, -up], squash: 1, head: -1.5, roar: 1 },
+    // боль: отброшена назад, руки вскинуты
+    pain: { bob: 1.5, lean: -5 * g.snap, foot: [4 * g.stride, -4 * g.stride], rise: [0, 1.5], hand: [-out * 0.8, out * 0.8], drop: [-up * 0.55, -up * 0.5], squash: 0.96, head: 6, roar: 1 },
+    d0: { bob: 0, lean: -6 * g.snap, foot: [6 * g.stride, -6 * g.stride], rise: [0, 3], hand: [-out * 0.9, out * 0.9], drop: [-up * 0.8, -up * 0.7], squash: 0.9, head: 9, roar: 1 },
+    d1: { bob: 0, lean: -4, foot: [10 * g.stride, -10 * g.stride], rise: [0, 0], hand: [-out * 1.15, out * 1.1], drop: [0, -3], squash: 0.68, head: 9, roar: 1 },
+    d2: { bob: 0, lean: 0, foot: [16 * g.stride, -16 * g.stride], rise: [0, 0], hand: [-out * 1.45, out * 1.35], drop: [10, 7], squash: 0.44, head: 6, roar: 1 },
+    d3: { bob: 0, lean: 0, foot: [21, -21], rise: [0, 0], hand: [-28, 27], drop: [18, 16], squash: 0.26, head: 3, roar: 0 },
+    d4: { bob: 0, lean: 0, foot: [24, -24], rise: [0, 0], hand: [-31, 30], drop: [21, 19], squash: 0.19, head: 1.5, roar: 0 },
+    g0: idle,
+    g1: idle,
+    g2: idle,
+    g3: idle,
+  };
+}
+
+const poseCache = new Map<FoeId, Record<PoseId, Pose>>();
+function posesFor(id: FoeId): Record<PoseId, Pose> {
+  let hit = poseCache.get(id);
+  if (!hit) {
+    hit = posesOf(FOES[id].gait);
+    poseCache.set(id, hit);
+  }
+  return hit;
+}
 
 /** множитель ширины по ракурсу: профиль вдвое уже анфаса */
 const BW = [1, 0.92, 0.6, 0.92, 1];
@@ -367,12 +387,12 @@ const WEAR: Record<Outfit, Wear> = {
       }
       midriff(b, g, hem + tall * 0.01);
       for (let i = -2; i <= 2; i++) {
-        const x = cx + i * hip * 0.5;
+        const x = cx + i * hip * 0.42;
         b.quad([
-          [x - hip * 0.28, hipY - 2],
-          [x + hip * 0.28, hipY - 2],
-          [x + hip * 0.2, hipY + tall * (0.1 + (i % 2 ? 0.03 : 0))],
-          [x - hip * 0.2, hipY + tall * (0.09 + (i % 2 ? 0.03 : 0))],
+          [x - hip * 0.24, hipY - 2],
+          [x + hip * 0.24, hipY - 2],
+          [x + hip * 0.17, hipY + tall * (0.1 + (i % 2 ? 0.03 : 0))],
+          [x - hip * 0.17, hipY + tall * (0.09 + (i % 2 ? 0.03 : 0))],
         ], M.cloth, 'cyly', Z.wear + 2);
       }
       b.limb(cx - hip * 0.95, hipY - 4, cx + hip * 0.95, hipY - 4, 3, 3, M.trim, Z.detail);
@@ -405,14 +425,14 @@ const WEAR: Record<Outfit, Wear> = {
       const hem = waistY + (hipY - waistY) * (1 - s.bare);
       b.taper(waistY, hem, waist, waist * 1.05, cx, M.top, 'cyly', Z.wear);
       midriff(b, g, hem);
-      pleated(b, g, s.skirt, 1.22);
+      pleated(b, g, s.skirt, 1.06);
       b.rect(px(cx - hip * 0.78), px(hipY - 3), px(hip * 1.56), 2, M.trim, 'cylx', Z.detail);
       collar(b, g);
     },
     sleeve(b, g, i) {
       const [sx, sy] = g.arm[i].sh;
       const k = g.k;
-      b.limb(sx, sy - 1, sx + (i ? 1 : -1) * 2 * k, sy + 5 * k, 7.5 * k, 6 * k, M.top, g.arm[i].z + 2);
+      b.limb(sx, sy - 1, sx + (i ? 1 : -1) * 2 * k, sy + 5 * k, 6.4 * k, 5.2 * k, M.top, g.arm[i].z + 2);
       b.rect(px(sx - 4 * k), px(sy + 5 * k), px(8 * k), 1, M.cloth, 'flat', g.arm[i].z + 3);
     },
   },
@@ -492,7 +512,7 @@ const WEAR: Record<Outfit, Wear> = {
       const [hx, hy] = g.arm[i].hand;
       const k = g.k;
       const z = g.arm[i].z + 2;
-      if (i === 1) b.limb(sx, sy - 2 * k, sx + 2 * k, sy + 4 * k, 10 * k, 7 * k, M.metal, z);
+      if (i === 1) b.limb(sx, sy - 2 * k, sx + 2 * k, sy + 4 * k, 8 * k, 6 * k, M.metal, z);
       b.limb((ex + hx) / 2, (ey + hy) / 2, hx, hy, 6 * k, 5 * k, M.top, z);
       b.limb((ex + hx) / 2 - 3 * k, (ey + hy) / 2, (ex + hx) / 2 + 3 * k, (ey + hy) / 2, 1.5, 1.5, M.metal, z + 1);
     },
@@ -516,15 +536,15 @@ const WEAR: Record<Outfit, Wear> = {
       b.taper(shY - 2, shY + r * 0.4, sh * 0.5, sh * 0.8, cx + lean, M.metal, 'cyly', Z.detail + 1);
       midriff(b, g, waistY + (hipY - waistY) * (1 - s.bare));
       for (let i = -2; i <= 2; i++) {
-        const x = cx + i * hip * 0.48;
+        const x = cx + i * hip * 0.4;
         const bot = hipY + tall * (0.13 - Math.abs(i) * 0.012);
         b.quad([
-          [x - hip * 0.2, hipY - 3],
-          [x + hip * 0.2, hipY - 3],
-          [x + hip * 0.22, bot],
-          [x - hip * 0.22, bot],
+          [x - hip * 0.18, hipY - 3],
+          [x + hip * 0.18, hipY - 3],
+          [x + hip * 0.19, bot],
+          [x - hip * 0.19, bot],
         ], M.cloth, 'cyly', Z.wear + (i % 2 ? 0 : 1));
-        b.rect(px(x - hip * 0.22), px(bot - 2), px(hip * 0.44), 2, M.metal, 'flat', Z.detail);
+        b.rect(px(x - hip * 0.19), px(bot - 2), px(hip * 0.38), 2, M.metal, 'flat', Z.detail);
       }
       b.taper(hipY - 5, hipY - 1, hip * 0.98, hip * 0.98, cx, M.metal, 'cylx', Z.detail + 1);
     },
@@ -534,7 +554,7 @@ const WEAR: Record<Outfit, Wear> = {
       const [hx, hy] = g.arm[i].hand;
       const k = g.k;
       const z = g.arm[i].z + 2;
-      b.limb(sx, sy - 2 * k, sx + (i ? 2 : -2) * k, sy + 4 * k, 9 * k, 7 * k, M.metal, z);
+      b.limb(sx, sy - 2 * k, sx + (i ? 2 : -2) * k, sy + 4 * k, 7.5 * k, 6 * k, M.metal, z);
       b.limb((ex + hx) / 2, (ey + hy) / 2, hx, hy, 5 * k, 4 * k, M.metal, z);
     },
     leg(b, g, i) {
@@ -602,9 +622,9 @@ function measure(s: Skin, v: number, p: Pose): Geom {
   const lean = p.lean * k;
   const shY = top + r * 2 + tall * 0.025 - p.bob * k;
   const wide = (f: number): number => Math.max(2, s.broad * f * bw * 0.5);
-  const hip = wide(0.94);
+  const hip = wide(0.86);
   const hipY = top + tall * 0.52;
-  const sh = wide(0.9);
+  const sh = wide(0.84);
   const order = v >= 3 ? [1, 0] : [0, 1];
 
   const joint = [0, 1].map((i) => {
@@ -621,9 +641,12 @@ function measure(s: Skin, v: number, p: Pose): Geom {
     };
   });
 
+  const armHalf = 2.4 * k * bw;
   const arm = [0, 1].map((i) => {
     const d = i ? 1 : -1;
-    const sx = CX + d * (sh - 1) + lean;
+    // плечевой сустав уходит внутрь торса, иначе рука торчит наружу
+    // на половину своей толщины и силуэт становится квадратным
+    const sx = CX + d * Math.max(1, sh - armHalf) + lean;
     const sy = shY + tall * 0.02;
     const hx = sx + p.hand[i] * k * bw;
     const hy = sy + p.drop[i] * k;
@@ -642,8 +665,8 @@ function measure(s: Skin, v: number, p: Pose): Geom {
     waistY: top + tall * 0.44,
     hipY,
     sh,
-    bust: wide(0.86),
-    waist: wide(0.5),
+    bust: wide(0.8),
+    waist: wide(0.58),
     hip,
     joint,
     arm,
@@ -689,7 +712,7 @@ function figure(b: Paint, s: Skin, v: number, p: Pose): void {
   // ── руки ──
   for (const i of g.order) {
     const { sh: a0, elbow, hand: a2, z } = g.arm[i];
-    b.limb(a0[0], a0[1], elbow[0], elbow[1], 5.2 * k * bw + 1, 3.6 * k * bw + 1, M.skin, z);
+    b.limb(a0[0], a0[1], elbow[0], elbow[1], 4.6 * k * bw + 1, 3.4 * k * bw + 1, M.skin, z);
     b.limb(elbow[0], elbow[1], a2[0], a2[1], 3.6 * k * bw + 1, 2.8 * k * bw + 1, M.skin, z);
     wear.sleeve?.(b, g, i);
     hand(b, a2[0], a2[1], i ? 1 : -1, k * (0.6 + bw * 0.4), s.broad > 44 ? 1 : 0, z + 3);
@@ -765,7 +788,7 @@ export function foeSprite(id: FoeId, view: number, pose: PoseId, flip = false): 
   const b = new Paint(ART_W, ART_H);
   if (pose[0] === 'g') gibs(b, s, Number(pose[1]));
   else if (pose === 'd3' || pose === 'd4') heap(b, s, pose === 'd4' ? 1 : 0);
-  else figure(b, s, view, POSES[pose]);
+  else figure(b, s, view, posesFor(id)[pose]);
   b.despeckle();
   let c = b.render(mats(s), s.rim, view >= 3 ? -1 : 1);
   if (flip) {
