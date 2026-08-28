@@ -1,5 +1,5 @@
 import { FOES, type FoeId, type Tier } from './foes';
-import { ART_H, ART_W, figSpan, foeSprite, viewFor, type PoseId } from './foeArt';
+import { ART_H, ART_W, figSpan, foeSprite, loadFoeArt, viewFor, type PoseId } from './foeArt';
 import { solid, type Floor } from './map';
 import type { Player } from './player';
 import type { Board } from './billboard';
@@ -12,6 +12,9 @@ import type { Board } from './billboard';
  */
 
 export type MobState = 'idle' | 'chase' | 'wind' | 'pain' | 'dead' | 'gib';
+
+// нарисованные кадры тянутся один раз, до первого кадра игры
+loadFoeArt();
 
 /** длительность кадра в каждой раскадровке, с */
 const STEP = 0.14;

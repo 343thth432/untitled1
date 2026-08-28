@@ -1,5 +1,5 @@
 import { Paint, type Mat } from './paint';
-import { FOES, type FoeId, type Gait, type Outfit, type Skin } from './foes';
+import { FOES, FOE_IDS, type FoeId, type Gait, type Outfit, type Skin } from './foes';
 
 /**
  * Спрайты кошкодевочек: восемь ракурсов и полный набор кадров как в Doom —
@@ -771,6 +771,56 @@ function gibs(b: Paint, s: Skin, k: number): void {
   b.limb(CX + r * 0.5, base - 6 * u, CX + r - 3 * u, base - 2 * u, 7 * u, 3 * u, M.hair, Z.detail);
 }
 
+/**
+ * Нарисованные кадры из public/art/foes/<id>/. Если для твари положен
+ * готовый кадр, движок берёт его, а позу изображает преобразованием
+ * всего спрайта: покачивание, наклон, оседание и заваливание набок при
+ * смерти. Ракурсов у одной картинки нет — тварь всегда лицом к камере,
+ * пока не подложены остальные четыре.
+ */
+const drawn = new Map<FoeId, HTMLImageElement>();
+let started = false;
+
+export function loadFoeArt(): void {
+  if (started) return;
+  started = true;
+  const base = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
+  for (const id of FOE_IDS) {
+    const img = new Image();
+    img.onload = () => {
+      drawn.set(id, img);
+      // кадры, собранные до загрузки, пересчитываются заново
+      cache.clear();
+    };
+    img.src = `${base}art/foes/${id}/${id}-0.sprite.png`;
+  }
+}
+
+/** поза нарисованного кадра: без разрезки на части — преобразованием целиком */
+function posed(img: HTMLImageElement, p: Pose, k: number, fallen: number): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = ART_W;
+  c.height = ART_H;
+  const ctx = c.getContext('2d');
+  if (!ctx) return c;
+  ctx.imageSmoothingEnabled = false;
+  ctx.save();
+  // опорная точка — середина подошв: от неё считаются и наклон, и оседание
+  ctx.translate(ART_W / 2, ART_H - 1);
+  if (fallen > 0) {
+    // заваливается набок и съезжает к полу
+    ctx.rotate((Math.PI / 2) * fallen);
+    ctx.translate(ART_H * 0.28 * fallen, ART_W * 0.16 * fallen);
+  }
+  ctx.rotate(p.lean * 0.006);
+  ctx.translate(0, -p.bob * k * 0.7);
+  const sy = Math.max(0.12, p.squash);
+  ctx.scale(1 + (1 - sy) * 0.35, sy);
+  ctx.drawImage(img, -ART_W / 2, -(ART_H - 1));
+  ctx.restore();
+  return c;
+}
+
 const cache = new Map<string, HTMLCanvasElement>();
 
 /**
@@ -785,12 +835,19 @@ export function foeSprite(id: FoeId, view: number, pose: PoseId, flip = false): 
   if (hit) return hit;
   if (cache.size > 300) cache.clear();
   const s = FOES[id].skin;
-  const b = new Paint(ART_W, ART_H);
-  if (pose[0] === 'g') gibs(b, s, Number(pose[1]));
-  else if (pose === 'd3' || pose === 'd4') heap(b, s, pose === 'd4' ? 1 : 0);
-  else figure(b, s, view, posesFor(id)[pose]);
-  b.despeckle();
-  let c = b.render(mats(s), s.rim, view >= 3 ? -1 : 1);
+  const img = drawn.get(id);
+  let c: HTMLCanvasElement;
+  if (img && pose[0] !== 'g') {
+    const fall = pose === 'd4' ? 1 : pose === 'd3' ? 0.9 : pose === 'd2' ? 0.55 : pose === 'd1' ? 0.2 : 0;
+    c = posed(img, posesFor(id)[pose], s.tall / 100, fall);
+  } else {
+    const b = new Paint(ART_W, ART_H);
+    if (pose[0] === 'g') gibs(b, s, Number(pose[1]));
+    else if (pose === 'd3' || pose === 'd4') heap(b, s, pose === 'd4' ? 1 : 0);
+    else figure(b, s, view, posesFor(id)[pose]);
+    b.despeckle();
+    c = b.render(mats(s), s.rim, view >= 3 ? -1 : 1);
+  }
   if (flip) {
     const m = document.createElement('canvas');
     m.width = ART_W;
