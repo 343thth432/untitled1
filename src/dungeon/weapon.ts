@@ -63,146 +63,255 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
   },
 };
 
-const W = 104;
-const H = 92;
+const W = 208;
+const H = 184;
 const cache = new Map<string, { body: HTMLCanvasElement; flash: HTMLCanvasElement; muzzle: [number, number] }>();
 
-/** палитра: 0 — прозрачно, дальше сталь, дерево, кожа, руны */
+/**
+ * Палитра оружия: отдельные шкалы для стали, дерева, латуни и перчатки.
+ * Именно шкалы, а не по одному тону на материал — иначе части сливаются
+ * и не видно, где ствол, где ложе, где замок.
+ */
 const PAL = [
   '#00000000',
-  '#0a0b10', // 1 контур
-  '#1b1f29', // 2 сталь тень
-  '#2f3542', // 3 сталь
-  '#454d5e', // 4 сталь свет
-  '#6b7488', // 5 сталь блик
-  '#241a11', // 6 дерево тень
-  '#3d2a19', // 7 дерево
-  '#5a4026', // 8 дерево свет
-  '#171a22', // 9 перчатка тень
-  '#262b38', // 10 перчатка
-  '#39404f', // 11 перчатка свет
-  '#05060a', // 12 жерло
-  '#d8b45c', // 13 руна
-  '#fff0c0', // 14 руна ярко
+  '#07080c', // 1  контур
+  '#14171f', // 2  сталь: глубокая тень
+  '#232833', // 3  сталь: тень
+  '#2e3442', // 4  сталь: тело
+  '#434b5c', // 5  сталь: свет
+  '#616b80', // 6  сталь: блик
+  '#939db2', // 7  сталь: искра
+  '#120e09', // 8  дерево: тень
+  '#20190f', // 9  дерево: тело
+  '#2d2415', // 10 дерево: свет
+  '#3d301c', // 11 дерево: блик
+  '#4e3e26', // 12 дерево: искра
+  '#3d2f10', // 13 латунь: тень
+  '#6a5219', // 14 латунь: тело
+  '#96742a', // 15 латунь: свет
+  '#e2c濃', // 16 (заменяется ниже)
+  '#12141b', // 17 перчатка: тень
+  '#1f2431', // 18 перчатка: тело
+  '#2e3646', // 19 перчатка: свет
+  '#d8b45c', // 20 руна
+  '#fff2c8', // 21 руна: жар
+  '#04050a', // 22 жерло
 ];
+PAL[16] = '#c2a352';
+
 const C = {
   line: 1,
-  dark: 2,
-  steel: 3,
-  lit: 4,
-  spec: 5,
-  woodD: 6,
-  wood: 7,
-  woodL: 8,
-  gloveD: 9,
-  glove: 10,
-  gloveL: 11,
-  bore: 12,
-  rune: 13,
-  runeL: 14,
+  s0: 2,
+  s1: 3,
+  s2: 4,
+  s3: 5,
+  s4: 6,
+  s5: 7,
+  w0: 8,
+  w1: 9,
+  w2: 10,
+  w3: 11,
+  w4: 12,
+  b0: 13,
+  b1: 14,
+  b2: 15,
+  b3: 16,
+  g0: 17,
+  g1: 18,
+  g2: 19,
+  rune: 20,
+  runeHot: 21,
+  bore: 22,
 };
 
-/** кисть в перчатке: скруглённый блок с полосами пальцев */
-function hand(b: PixBuf, x: number, y: number, w: number, h: number): void {
-  b.rect(x + 1, y, w - 2, h, C.glove);
-  b.rect(x, y + 1, w, h - 2, C.glove);
-  b.rect(x + 1, y + 1, w - 2, 2, C.gloveL);
-  b.rect(x + 1, y + h - 3, w - 2, 2, C.gloveD);
-  for (let i = 1; i < 3; i++) {
-    b.rect(x + 2, y + 2 + i * Math.max(2, Math.floor(h / 4)), w - 4, 1, C.gloveD);
+/** шкала для круглых стальных тел: кромка — блик — тело — тень */
+const STEEL = [C.s4, C.s3, C.s2, C.s1, C.s0, C.line];
+const BRASS = [C.b3, C.b2, C.b1, C.b0, C.b0, C.line];
+const WOOD = [C.w4, C.w3, C.w2, C.w1, C.w0, C.line];
+
+function cannon(b: PixBuf, cx: number): [number, number] {
+  // ── ствол: почти параллельный, лёгкое схождение кверху ──
+  const barTop = 30;
+  const barBot = 98;
+  const halfTop = 11;
+  const halfBot = 16;
+  const halfAt = (y: number): number =>
+    Math.round(halfTop + ((halfBot - halfTop) * (y - barTop)) / (barBot - barTop));
+  b.cylinder(barTop, barBot, halfTop, halfBot, cx, STEEL);
+
+  // ── дульный срез: латунный раструб шире ствола, чёрное жерло ──
+  b.cylinder(14, 30, 18, 13, cx, BRASS);
+  b.band(11, 4, () => 18, cx, BRASS);
+  b.ellipse(cx, 16, 11, 5, C.bore);
+  b.ellipse(cx, 15, 8, 3, C.line);
+  b.rect(cx - 10, 14, 5, 1, C.b3);
+  // мушка
+  b.rect(cx - 2, 4, 4, 8, C.s2);
+  b.rect(cx - 2, 4, 1, 8, C.s4);
+  b.rect(cx - 1, 4, 2, 1, C.s5);
+
+  // ── обручи ──
+  b.band(46, 5, halfAt, cx, BRASS);
+  b.band(72, 5, halfAt, cx, BRASS);
+  b.screw(cx - 9, 48, 2, C.s1, C.line, C.s4);
+  b.screw(cx + 9, 48, 2, C.s1, C.line, C.s4);
+
+  // рунная насечка
+  for (let i = 0; i < 4; i++) b.rect(cx - 4 + i, 56 + i * 4, 6 - i, 1, C.rune);
+  b.rect(cx - 3, 86, 6, 1, C.runeHot);
+
+  // ── цевьё под стволом ──
+  b.cylinder(84, 120, 19, 23, cx - 1, WOOD);
+  b.grain(cx - 16, 88, cx + 16, 118, C.w0, 4711);
+  b.band(83, 4, () => 20, cx - 1, BRASS);
+  b.band(116, 4, () => 23, cx - 1, BRASS);
+
+  // ── ствольная коробка ──
+  b.rect(cx - 36, 116, 78, 38, C.s2);
+  b.rect(cx - 36, 116, 78, 3, C.s4);
+  b.rect(cx - 36, 119, 3, 32, C.s3);
+  b.rect(cx + 39, 119, 3, 32, C.s0);
+  b.rect(cx - 36, 150, 78, 4, C.s0);
+  // накладка замка
+  b.rect(cx - 28, 122, 56, 24, C.s3);
+  b.rect(cx - 28, 122, 56, 1, C.s5);
+  b.rect(cx - 28, 145, 56, 1, C.s0);
+  b.screw(cx - 22, 128, 3, C.b1, C.b0, C.b3);
+  b.screw(cx + 22, 141, 3, C.b1, C.b0, C.b3);
+  // курок над коробкой
+  b.rect(cx + 14, 106, 7, 14, C.s1);
+  b.rect(cx + 14, 106, 2, 14, C.s3);
+  b.rect(cx + 11, 103, 12, 5, C.s2);
+  b.rect(cx + 11, 103, 12, 1, C.s4);
+  b.rect(cx + 12, 108, 3, 2, C.s0);
+  // рунная пластина на замке
+  b.rect(cx - 22, 130, 26, 12, C.s1);
+  b.rect(cx - 13, 131, 1, 10, C.rune);
+  b.rect(cx - 17, 134, 9, 1, C.runeHot);
+  b.set(cx - 16, 133, C.rune);
+  b.set(cx - 9, 133, C.rune);
+  b.set(cx - 16, 135, C.rune);
+  b.set(cx - 9, 135, C.rune);
+  b.rect(cx - 15, 139, 5, 1, C.rune);
+
+  // ── спусковая скоба и спуск ──
+  for (let x = -12; x <= 14; x++) {
+    const y = 154 + Math.round((x * x) / 30);
+    b.rect(cx + x, y, 1, 5, C.s2);
+    b.set(cx + x, y, C.s4);
   }
+  b.rect(cx - 12, 154, 3, 7, C.s2);
+  b.rect(cx + 12, 154, 3, 7, C.s2);
+  b.rect(cx + 1, 154, 3, 10, C.s3);
+  b.rect(cx + 1, 154, 1, 10, C.s5);
+
+  // ── приклад уходит вправо-вниз ──
+  b.cylinder(146, H - 1, 22, 34, cx + 52, WOOD);
+  b.grain(cx + 36, 152, cx + 74, H - 2, C.w0, 9931);
+  b.band(146, 4, () => 22, cx + 52, BRASS);
+
+  // ── кисти: левая на цевье, правая на шейке ──
+  b.grip(cx - 30, 90, 26, 30, 1, C.g0, C.g1, C.g2, C.line);
+  b.grip(cx + 14, 152, 26, 28, -1, C.g0, C.g1, C.g2, C.line);
+
+  return [cx, 15];
+}
+
+function crossbow(b: PixBuf, cx: number): [number, number] {
+  // ложе
+  b.cylinder(52, H - 1, 13, 22, cx + 2, WOOD);
+  b.grain(cx - 8, 60, cx + 14, H - 4, C.w0, 3313);
+  // направляющая
+  b.rect(cx - 5, 30, 11, 108, C.s2);
+  b.rect(cx - 5, 30, 3, 108, C.s4);
+  b.rect(cx + 4, 30, 2, 108, C.s0);
+  // плечи дуги
+  for (let x = -78; x <= 78; x++) {
+    const y = 40 + Math.round((x * x) / 96);
+    const th = 6 - Math.floor(Math.abs(x) / 26);
+    b.rect(cx + x, y, 1, th, C.s2);
+    b.set(cx + x, y, C.s4);
+    if (Math.abs(x) > 70) b.set(cx + x, y + th, C.b1);
+  }
+  // тетива
+  for (let x = -76; x <= 76; x++) {
+    const y0 = 46 + Math.round((x * x) / 96);
+    const y = y0 + Math.round((1 - Math.abs(x) / 76) * 16);
+    b.set(cx + x, y, C.s5);
+  }
+  // болт с наконечником
+  b.rect(cx - 2, 8, 5, 54, C.s2);
+  b.rect(cx - 2, 8, 2, 54, C.s4);
+  b.ellipse(cx, 8, 4, 6, C.s3);
+  b.rect(cx - 1, 2, 3, 8, C.s5);
+  // замок и скоба
+  b.rect(cx - 14, 112, 32, 22, C.s2);
+  b.rect(cx - 14, 112, 32, 2, C.s4);
+  b.screw(cx - 8, 120, 3, C.b1, C.b0, C.b3);
+  b.rect(cx - 12, 122, 8, 1, C.rune);
+  for (let x = -8; x <= 10; x++) {
+    const y = 136 + Math.round((x * x) / 22);
+    b.rect(cx + x, y, 1, 3, C.s2);
+  }
+  b.rect(cx, 136, 3, 8, C.s3);
+  // кисти
+  b.grip(cx - 26, 70, 24, 26, 1, C.g0, C.g1, C.g2, C.line);
+  b.grip(cx + 2, 138, 24, 26, -1, C.g0, C.g1, C.g2, C.line);
+  return [cx, 4];
+}
+
+function censer(b: PixBuf, cx: number): [number, number] {
+  // цепь
+  for (let i = 0; i < 12; i++) {
+    const y = 56 + i * 6;
+    const x = cx + 26 + Math.round(Math.sin(i * 0.8) * 4);
+    b.ellipse(x, y, 3, 3, C.s2);
+    b.set(x - 1, y - 1, C.s4);
+  }
+  // чаша
+  b.cylinder(40, 84, 30, 20, cx - 4, BRASS);
+  b.band(36, 6, () => 32, cx - 4, BRASS);
+  b.grain(cx - 26, 48, cx + 18, 80, C.b0, 1777);
+  // прорези с жаром
+  for (let i = 0; i < 3; i++) {
+    const y = 54 + i * 9;
+    b.rect(cx - 16 + i * 3, y, 22 - i * 4, 2, C.rune);
+    b.rect(cx - 14 + i * 3, y, 8, 1, C.runeHot);
+  }
+  // крышка
+  b.cylinder(20, 38, 8, 30, cx - 4, BRASS);
+  b.ellipse(cx - 4, 18, 5, 4, C.b2);
+  // кисть на цепи
+  b.grip(cx + 12, 126, 28, 32, -1, C.g0, C.g1, C.g2, C.line);
+  return [cx - 4, 24];
 }
 
 function build(id: WeaponId): { body: HTMLCanvasElement; flash: HTMLCanvasElement; muzzle: [number, number] } {
   const b = new PixBuf(W, H);
   const cx = W >> 1;
-  let muzzle: [number, number] = [cx, 8];
-  const glowIdx = C.rune;
-
-  if (id === 'crossbow') {
-    muzzle = [cx, 4];
-    // ложе
-    b.taper(30, H - 1, 5, 9, cx + 1, C.wood);
-    b.rect(cx - 3, 30, 2, H - 30, C.woodL);
-    // дуга
-    for (let x = -30; x <= 30; x++) {
-      const y = 34 + Math.round((x * x) / 46);
-      b.rect(cx + x, y, 1, 4, C.steel);
-      b.set(cx + x, y, C.lit);
-    }
-    // тетива
-    for (let x = -29; x <= 29; x++) {
-      const y = 38 + Math.round((x * x) / 46) + Math.round((1 - Math.abs(x) / 29) * 7);
-      b.set(cx + x, y, C.spec);
-    }
-    // болт
-    b.rect(cx - 1, 4, 3, 40, C.steel);
-    b.rect(cx - 1, 4, 1, 40, C.lit);
-    b.ellipse(cx, 5, 2, 3, C.spec);
-    // руны на ложе
-    b.rect(cx - 2, 50, 5, 1, glowIdx);
-    b.rect(cx, 52, 1, 6, glowIdx);
-    hand(b, cx - 14, 52, 13, 12);
-    hand(b, cx + 2, 68, 14, 14);
-  } else if (id === 'censer') {
-    muzzle = [cx - 2, 24];
-    // цепь
-    for (let i = 0; i < 9; i++) b.set(cx + 8 + Math.round(Math.sin(i) * 2), 34 + i * 4, C.steel);
-    // чаша
-    b.taper(24, 40, 13, 8, cx - 2, C.wood);
-    b.rect(cx - 17, 21, 30, 4, C.steel);
-    b.rect(cx - 17, 21, 30, 1, C.lit);
-    b.rect(cx - 8, 30, 3, 1, glowIdx);
-    b.rect(cx - 2, 34, 5, 1, glowIdx);
-    hand(b, cx + 2, 62, 16, 16);
-  } else {
-    muzzle = [cx, 6];
-    // приклад уходит вправо за кадр
-    b.taper(58, H - 1, 8, 15, cx + 22, C.wood);
-    b.rect(cx + 15, 60, 3, H - 60, C.woodL);
-    // ствол сужается кверху
-    b.taper(10, 46, 6, 16, cx, C.steel);
-    b.taper(10, 46, 2, 5, cx - 4, C.lit);
-    b.taper(10, 46, 1, 3, cx + 12, C.dark);
-    // дульное кольцо и жерло
-    b.rect(cx - 8, 5, 17, 6, C.steel);
-    b.rect(cx - 8, 5, 17, 1, C.spec);
-    b.ellipse(cx, 8, 5, 2, C.bore);
-    // обручи
-    b.rect(cx - 10, 20, 20, 3, C.lit);
-    b.rect(cx - 14, 33, 28, 3, C.lit);
-    // руны вдоль ствола
-    for (let i = 0; i < 4; i++) b.rect(cx - 3 + i, 26 + i * 5, 4, 1, glowIdx);
-    // ствольная коробка
-    b.rect(cx - 19, 46, 40, 16, C.steel);
-    b.rect(cx - 19, 46, 40, 2, C.lit);
-    b.rect(cx - 19, 60, 40, 2, C.dark);
-    b.rect(cx - 15, 50, 30, 3, C.dark);
-    // скоба
-    b.rect(cx + 2, 62, 12, 2, C.steel);
-    b.rect(cx + 2, 62, 2, 6, C.steel);
-    b.rect(cx + 12, 62, 2, 6, C.steel);
-    hand(b, cx - 24, 52, 15, 14);
-    hand(b, cx + 1, 66, 16, 16);
-  }
+  const muzzle = id === 'crossbow' ? crossbow(b, cx) : id === 'censer' ? censer(b, cx) : cannon(b, cx);
 
   b.outline(C.line);
   const body = b.toCanvas(PAL);
 
-  // вспышка: те же пиксели, звезда из прямоугольников
+  // вспышка: пиксельная звезда из лучей разной длины
   const fb = new PixBuf(W, H);
   const [mx, my] = muzzle;
-  const FL = ['#00000000', '#00000000', '#ffe9a8', '#ffc453', '#fff8e0'];
-  for (let r = 1; r <= 13; r++) {
-    const c = r < 4 ? 4 : r < 8 ? 2 : 3;
-    for (let a = 0; a < 8; a++) {
-      const ang = (a / 8) * Math.PI * 2;
-      const len = r * (a % 2 ? 0.62 : 1);
-      fb.set(mx + Math.round(Math.cos(ang) * len), my + Math.round(Math.sin(ang) * len * 0.8), c);
+  const FL = ['#00000000', '#00000000', '#ffe9a8', '#ff9c3c', '#fff8e0', '#ffcf6a'];
+  for (let a = 0; a < 12; a++) {
+    const ang = (a / 12) * Math.PI * 2;
+    const len = a % 3 === 0 ? 30 : a % 2 ? 15 : 22;
+    for (let r = 0; r <= len; r++) {
+      const c = r < len * 0.3 ? 4 : r < len * 0.65 ? 2 : 3;
+      const th = r < len * 0.4 ? 1 : 0;
+      for (let o = -th; o <= th; o++) {
+        fb.set(mx + Math.round(Math.cos(ang) * r) + o, my + Math.round(Math.sin(ang) * r * 0.8), c);
+      }
     }
   }
+  fb.ellipse(mx, my, 11, 8, 5);
+  fb.ellipse(mx, my, 8, 6, 2);
   fb.ellipse(mx, my, 5, 4, 4);
-  fb.ellipse(mx, my, 3, 2, 2);
   const flash = fb.toCanvas(FL);
 
   return { body, flash, muzzle };

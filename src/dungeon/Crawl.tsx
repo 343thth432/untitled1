@@ -420,7 +420,7 @@ function drawWeapon(
 ): void {
   const art = weaponArt(id);
   // спрайт крупный и подрезан снизу — так рука ощущается ближе к глазу
-  const sw = Math.min(w * 0.96, h * 0.6);
+  const sw = Math.min(w * 1.02, h * 0.66);
   const sh = (sw * WEAPON_ART.H) / WEAPON_ART.W;
   const bobX = p.bob * w * 0.022;
   const bobY = Math.abs(p.bob) * h * 0.02;
