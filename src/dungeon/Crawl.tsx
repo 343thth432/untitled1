@@ -511,13 +511,13 @@ function drawWeapon(
   const def = WEAPONS[id];
   const frame = art.frames[Math.min(art.frames.length - 1, frameAt(def, fireT))];
   // спрайт крупный и подрезан снизу — так рука ощущается ближе к глазу
-  const sw = Math.min(w * 1.02, h * 0.66);
+  const sw = Math.min(w * 1.06, h * 0.62);
   const sh = (sw * WEAPON_ART.H) / WEAPON_ART.W;
   const bobX = p.bob * w * 0.022;
   const bobY = Math.abs(p.bob) * h * 0.02;
   const kick = p.kick * h * 0.055;
   const x = w / 2 - sw / 2 + bobX;
-  const y = h - sh * 0.88 + bobY + kick;
+  const y = h - sh * 0.8 + bobY + kick;
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(frame, x, y, sw, sh);

@@ -96,6 +96,77 @@ export class PixBuf {
     }
   }
 
+  /**
+   * Тело с наклонной осью и сильным схождением: ближний конец широкий,
+   * дальний узкий. Именно это даёт ощущение, что ствол уходит от глаза,
+   * а не стоит вертикально.
+   */
+  perspTube(
+    yTop: number,
+    yBot: number,
+    halfTop: number,
+    halfBot: number,
+    cxTop: number,
+    cxBot: number,
+    ramp: number[],
+    /** сдвиг блика: 0.3 — свет сверху-слева */
+    litAt = 0.26,
+  ): void {
+    const n = ramp.length;
+    for (let y = Math.round(yTop); y <= Math.round(yBot); y++) {
+      const t = (y - yTop) / Math.max(1, yBot - yTop);
+      const half = halfTop + (halfBot - halfTop) * t;
+      const cx = cxTop + (cxBot - cxTop) * t;
+      if (half < 0.5) continue;
+      for (let x = Math.round(cx - half); x <= Math.round(cx + half); x++) {
+        const u = (x - (cx - half)) / (2 * half);
+        const d = Math.abs(u - litAt);
+        const k =
+          u < 0.04 || u > 0.96
+            ? n - 2
+            : d < 0.05
+              ? 0
+              : d < 0.13
+                ? 1
+                : u < 0.5
+                  ? 1
+                  : u < 0.7
+                    ? 2
+                    : u < 0.88
+                      ? 3
+                      : n - 2;
+        this.set(x, y, ramp[Math.min(n - 1, k)]);
+      }
+    }
+  }
+
+  /** верхняя грань: узкая светлая полоса вдоль оси — взгляд сверху */
+  topPlane(yTop: number, yBot: number, halfTop: number, halfBot: number, cxTop: number, cxBot: number, c: number): void {
+    for (let y = Math.round(yTop); y <= Math.round(yBot); y++) {
+      const t = (y - yTop) / Math.max(1, yBot - yTop);
+      const half = halfTop + (halfBot - halfTop) * t;
+      const cx = cxTop + (cxBot - cxTop) * t;
+      const x0 = Math.round(cx - half * 0.5);
+      const x1 = Math.round(cx - half * 0.26);
+      for (let x = x0; x <= x1; x++) if (this.get(x, y)) this.set(x, y, c);
+    }
+  }
+
+  /**
+   * Предплечье, уходящее за нижнюю кромку кадра: рука растёт из корпуса
+   * игрока, а не висит в воздухе.
+   */
+  forearm(x0: number, y0: number, x1: number, y1: number, w0: number, w1: number, ramp: number[], cuff: number): void {
+    this.thickLine(x0, y0, x1, y1, w0, w1, ramp);
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+    // раструб краги у запястья
+    this.thickLine(x0 + ux * 4, y0 + uy * 4, x0 + ux * 16, y0 + uy * 16, w0 + 7, w0 + 3, [cuff, cuff, cuff, cuff, cuff, cuff]);
+  }
+
   /** горизонтальный поясок на теле: обруч, накладка, кольцо */
   band(y: number, h: number, halfAt: (yy: number) => number, cx: number, ramp: number[]): void {
     for (let j = 0; j < h; j++) {
@@ -133,57 +204,82 @@ export class PixBuf {
   }
 
   /**
-   * Кисть в перчатке, обхватывающая деталь: ладонь, четыре пальца с
-   * костяшками, большой палец и раструб краги. dir = 1 — пальцы уходят
-   * вправо, −1 — влево.
+   * Голая кисть видом с тыльной стороны, как в спрайтах старых шутеров:
+   * крупная ладонь лежит на оружии, четыре пальца загибаются за дальнюю
+   * кромку, большой палец крупный и идёт вдоль ближней. Запястье срезано
+   * краем кадра — предплечья в кадре нет.
+   *
+   * @param dir 1 — пальцы уходят вправо, −1 — влево
+   * @param over насколько кончики выступают за дальнюю кромку
    */
-  grip(
+  handBack(
     x: number,
     y: number,
     w: number,
     h: number,
     dir: 1 | -1,
-    dark: number,
-    mid: number,
+    over: number,
+    shade: number,
+    half: number,
+    body: number,
     lit: number,
+    hi: number,
     line: number,
   ): void {
-    const palmW = Math.max(6, Math.round(w * 0.46));
-    const px = dir > 0 ? x : x + w - palmW;
-    // ладонь
-    this.rect(px, y + 2, palmW, h - 4, mid);
-    this.rect(px, y + 2, palmW, 2, lit);
-    this.rect(px, y + h - 4, palmW, 2, dark);
+    const far = dir > 0 ? x + w : x;
+    const near = dir > 0 ? x : x + w;
 
-    // пальцы: четыре валика, каждый со своим бликом и складкой
-    const n = 4;
-    const fh = Math.max(3, Math.floor((h - 6) / n));
-    const fw = w - palmW;
-    for (let i = 0; i < n; i++) {
-      const fy = y + 3 + i * fh;
-      const short = i === 0 || i === n - 1 ? 2 : 0;
-      const fx = dir > 0 ? px + palmW : px - fw + short;
-      const len = fw - short;
-      this.rect(fx, fy, len, fh - 1, mid);
-      this.rect(fx, fy, len, 1, lit);
-      this.rect(fx, fy + fh - 2, len, 1, dark);
-      // костяшка на кончике
-      const kx = dir > 0 ? fx + len - 2 : fx;
-      this.rect(kx, fy, 2, fh - 1, lit);
-      this.set(kx + (dir > 0 ? 1 : 0), fy + fh - 2, dark);
-      this.rect(fx, fy + fh - 1, len, 1, line);
+    // ладонь: скруглённая масса, свет сверху
+    for (let j = 0; j < h; j++) {
+      const t = j / Math.max(1, h - 1);
+      const round = t < 0.1 ? 3 : t < 0.2 ? 1 : t > 0.9 ? 3 : t > 0.8 ? 1 : 0;
+      const c = t < 0.16 ? lit : t < 0.5 ? body : t < 0.78 ? half : shade;
+      this.rect(x + round, y + j, w - round * 2, 1, c);
+    }
+    // свод кисти и тень у запястья
+    for (let j = 2; j < Math.floor(h * 0.28); j++) {
+      const inset = 5 + Math.floor((j / h) * 6);
+      this.rect(dir > 0 ? x + inset : x + inset - 2, y + j, Math.floor(w * 0.5), 1, hi);
     }
 
-    // большой палец поверх детали
-    const tx = dir > 0 ? px + palmW - 2 : px - Math.round(w * 0.34) + 2;
-    this.rect(tx, y - 3, Math.round(w * 0.34), 6, mid);
-    this.rect(tx, y - 3, Math.round(w * 0.34), 1, lit);
-    this.rect(tx, y + 2, Math.round(w * 0.34), 1, dark);
+    // четыре пальца, загнутые за дальнюю кромку
+    const n = 4;
+    const fh = Math.max(4, Math.floor((h - 6) / n));
+    for (let i = 0; i < n; i++) {
+      const fy = y + 3 + i * fh;
+      const bulge = i === 0 ? 1 : i === n - 1 ? 0 : 2;
+      const len = over + bulge;
+      const tipX = dir > 0 ? far - 2 : far - len + 2;
+      this.rect(tipX, fy, len, fh - 1, body);
+      this.rect(tipX, fy, len, 1, lit);
+      this.rect(tipX, fy + fh - 2, len, 1, shade);
+      // сустав у основания пальца
+      const kx = dir > 0 ? far - 8 : far + 5;
+      this.rect(kx, fy + 1, 3, fh - 3, lit);
+      this.rect(dir > 0 ? kx + 2 : kx - 1, fy + fh - 2, 3, 1, half);
+      // ноготь на кончике
+      this.rect(dir > 0 ? tipX + len - 2 : tipX, fy + 1, 2, Math.max(1, fh - 3), half);
+    }
 
-    // крага на запястье
-    const cy = y + h - 3;
-    this.rect(px - 1, cy, palmW + 2, 5, dark);
-    this.rect(px - 1, cy, palmW + 2, 1, mid);
+    // большой палец: крупный валик вдоль ближней кромки
+    const tw = Math.round(w * 0.5);
+    const th = Math.round(h * 0.4);
+    const tx = dir > 0 ? near - 4 : near - tw + 4;
+    const ty = y + Math.round(h * 0.1);
+    for (let j = 0; j < th; j++) {
+      const t = j / Math.max(1, th - 1);
+      const round = t < 0.14 || t > 0.86 ? 2 : 0;
+      const c = t < 0.3 ? lit : t < 0.7 ? body : half;
+      this.rect(tx + round, ty + j, tw - round * 2, 1, c);
+    }
+    this.rect(tx + 2, ty + 1, tw - 6, 1, hi);
+    this.rect(tx + 1, ty + th - 1, tw - 2, 1, shade);
+    // складка между большим пальцем и ладонью
+    this.rect(dir > 0 ? tx + tw - 1 : tx, ty + 2, 1, th - 4, shade);
+
+    // срез запястья у нижней кромки
+    this.rect(x + 3, y + h - 3, w - 6, 3, shade);
+    this.rect(x + 4, y + h - 2, w - 8, 1, line);
   }
 
   /** толстая линия с сужением: клинок, топорище, ствол под углом */
@@ -207,7 +303,7 @@ export class PixBuf {
     }
   }
 
-  /** повёрнутый прямоугольник — лопасть топора, приклад под углом */
+  /** повёрнутый многоугольник — лопасть топора, приклад под углом */
   quad(pts: [number, number][], c: number): void {
     const xs = pts.map((p) => p[0]);
     const ys = pts.map((p) => p[1]);
