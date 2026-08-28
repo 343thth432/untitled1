@@ -14,6 +14,13 @@ import type { FloorId } from '../game/types';
 export type FoeId = 'stray' | 'alley' | 'hex' | 'brute' | 'lance' | 'matron';
 export type Tier = 'foe' | 'elite' | 'boss';
 
+/**
+ * Покрой наряда. Каждый кроится своим набором деталей, а не перекраской:
+ * лохмотья с голым плечом, матроска, мантия с разрезом, повязки бойца,
+ * доспех с наплечниками, платье в пол.
+ */
+export type Outfit = 'rags' | 'sailor' | 'robe' | 'wraps' | 'armor' | 'gown';
+
 /** внешность: палитра и телосложение */
 export interface Skin {
   /** тень, тон, свет кожи */
@@ -32,6 +39,12 @@ export interface Skin {
   bare: number;
   /** длина юбки в долях бедра */
   skirt: number;
+  /** покрой */
+  outfit: Outfit;
+  /** тень и блик металла: пряжки, наплечники, украшения */
+  metal: [string, string];
+  /** белок глаза и блики на ткани */
+  lite: string;
   /** кант, пояс, ленты */
   trim: string;
   /** светящиеся глаза */
@@ -114,14 +127,17 @@ const LIST: FoeDef[] = [
       sockH: 0.35,
       bare: 0.55,
       skirt: 0.95,
+      outfit: 'rags',
+      metal: ['#4a4038', '#9a8e78'],
+      lite: '#efe6d6',
       trim: '#8d6b3f',
       eye: '#ffe27a',
       ear: '#c47b84',
       claw: ['#6d6f78', '#c6cad4'],
       rim: '#4d5871',
       boot: ['#241f1c', '#3f3730'],
-      tall: 68,
-      broad: 20,
+      tall: 102,
+      broad: 30,
       mane: 0.35,
       tail: 0.8,
     },
@@ -153,14 +169,17 @@ const LIST: FoeDef[] = [
       sockH: 0.75,
       bare: 0.7,
       skirt: 0.85,
+      outfit: 'sailor',
+      metal: ['#6a5a2c', '#e0c874'],
+      lite: '#f4f2ee',
       trim: '#c9b070',
       eye: '#8affc4',
       ear: '#d08a8a',
       claw: ['#6d6f78', '#d6dae4'],
       rim: '#8f5726',
       boot: ['#241f1c', '#40382f'],
-      tall: 62,
-      broad: 18,
+      tall: 94,
+      broad: 27,
       mane: 0.15,
       tail: 1,
     },
@@ -192,14 +211,17 @@ const LIST: FoeDef[] = [
       sockH: 0.9,
       bare: 0.5,
       skirt: 1.05,
+      outfit: 'robe',
+      metal: ['#3a2a58', '#c0a0f0'],
+      lite: '#efe4ff',
       trim: '#a06cff',
       eye: '#d0a4ff',
       ear: '#b06f9a',
       claw: ['#4a3a6a', '#a88cd8'],
       rim: '#63419a',
       boot: ['#120e20', '#231a36'],
-      tall: 72,
-      broad: 20,
+      tall: 108,
+      broad: 30,
       mane: 0.9,
       tail: 0.7,
     },
@@ -231,14 +253,17 @@ const LIST: FoeDef[] = [
       sockH: 0.5,
       bare: 0.6,
       skirt: 0.8,
+      outfit: 'wraps',
+      metal: ['#5c4420', '#e8c268'],
+      lite: '#f6ece0',
       trim: '#e0b048',
       eye: '#ff6a52',
       ear: '#cf8288',
       claw: ['#5c5f68', '#e2e6ee'],
       rim: '#95392e',
       boot: ['#2a1416', '#4a2422'],
-      tall: 86,
-      broad: 30,
+      tall: 128,
+      broad: 45,
       mane: 0.55,
       tail: 1,
     },
@@ -270,14 +295,17 @@ const LIST: FoeDef[] = [
       sockH: 0.8,
       bare: 0.85,
       skirt: 0.9,
+      outfit: 'armor',
+      metal: ['#43596e', '#cfe6f6'],
+      lite: '#eef6ff',
       trim: '#5ac8ff',
       eye: '#9be4ff',
       ear: '#bb8090',
       claw: ['#3c5a6e', '#bfeaff'],
       rim: '#35789c',
       boot: ['#1a2029', '#2e3948'],
-      tall: 76,
-      broad: 22,
+      tall: 114,
+      broad: 33,
       mane: 0.6,
       tail: 0.9,
     },
@@ -309,14 +337,17 @@ const LIST: FoeDef[] = [
       sockH: 0.85,
       bare: 0.75,
       skirt: 1.35,
+      outfit: 'gown',
+      metal: ['#6a4c14', '#ffd479'],
+      lite: '#f6e8ff',
       trim: '#ffb03a',
       eye: '#ffcf5a',
       ear: '#c07a86',
       claw: ['#6a5220', '#ffd88a'],
       rim: '#6a4a1c',
       boot: ['#141018', '#2a2130'],
-      tall: 90,
-      broad: 28,
+      tall: 136,
+      broad: 42,
       mane: 1,
       tail: 1,
     },
