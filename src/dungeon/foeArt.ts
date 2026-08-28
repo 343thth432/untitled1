@@ -826,15 +826,32 @@ export function loadFoeArt(): void {
   }
 }
 
+/** ракурсы по близости к запрошенному: чем раньше, тем меньше разворот */
+const NEAR = [
+  [0, 1, 2, 3, 4],
+  [1, 0, 2, 3, 4],
+  [2, 1, 3, 0, 4],
+  [3, 4, 2, 1, 0],
+  [4, 3, 2, 1, 0],
+];
+
 /** ближайший нарисованный кадр и точна ли поза */
 function pick(id: FoeId, view: number, pose: PoseId): { img: HTMLImageElement; exact: boolean } | null {
   const d = drawn.get(id);
   if (!d) return null;
+  const near = NEAR[view] ?? NEAR[0];
   const key = poseKey(pose);
-  const hit = d.frames.get(`${view}|${key}`) ?? d.frames.get(`0|${key}`);
-  if (hit) return { img: hit, exact: true };
-  const idle = d.frames.get(`${view}|idle`) ?? d.frames.get('0|idle');
-  return idle ? { img: idle, exact: false } : null;
+  if (key !== 'idle') {
+    for (const v of near) {
+      const hit = d.frames.get(`${v}|${key}`);
+      if (hit) return { img: hit, exact: true };
+    }
+  }
+  for (const v of near) {
+    const idle = d.frames.get(`${v}|idle`);
+    if (idle) return { img: idle, exact: key === 'idle' };
+  }
+  return null;
 }
 
 /** поза нарисованного кадра: без разрезки на части — преобразованием целиком */
