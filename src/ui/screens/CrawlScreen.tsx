@@ -1,7 +1,7 @@
-import { useCallback, useMemo } from 'react';
-import Crawl, { type CrawlState } from '../../dungeon/Crawl';
+import { useCallback, useMemo, useRef } from 'react';
+import Crawl, { type CrawlApi, type CrawlState } from '../../dungeon/Crawl';
 import { buildFloor, CELL, type Cell } from '../../dungeon/map';
-import { WEAPONS } from '../../dungeon/weapon';
+import { ORDER, WEAPONS } from '../../dungeon/weapon';
 import { HERO_BY_ID } from '../../game/data/heroes';
 import { ELEMENTS } from '../../game/data/elements';
 import { currentLeg, foeScale, useGame } from '../../game/state/store';
@@ -31,6 +31,7 @@ export default function CrawlScreen() {
     [run],
   );
 
+  const apiRef = useRef<CrawlApi | null>(null);
   const onState = useCallback((s: CrawlState) => sync(s), [sync]);
   const onDescend = useCallback((s: CrawlState) => goDown(s), [goDown]);
   const onDeath = useCallback(() => die(), [die]);
@@ -42,7 +43,10 @@ export default function CrawlScreen() {
   const hp = live?.hp ?? run.hp;
   const maxHp = live?.maxHp ?? run.maxHp;
   const ammo = live?.ammo ?? run.ammo;
-  const gun = WEAPONS[live?.weapon ?? run.weapon];
+  const cur = live?.weapon ?? run.weapon;
+  const gun = WEAPONS[cur];
+  const guns = live?.guns ?? run.guns;
+  const shots = gun.ammo ? ammo[gun.ammo] : null;
   const left = live?.left ?? 0;
   const pct = Math.round((hp / maxHp) * 100);
 
@@ -54,6 +58,7 @@ export default function CrawlScreen() {
         floorName={leg.name}
         scale={foeScale(run)}
         start={start}
+        apiRef={apiRef}
         onState={onState}
         onDescend={onDescend}
         onDeath={onDeath}
@@ -88,9 +93,31 @@ export default function CrawlScreen() {
               {hp}<span className="text-ink-500">/{maxHp}</span>
             </div>
             <div className="text-[11px] font-semibold" style={{ color: el.color }}>
-              {ammo} ⁘ · {gun.name}
+              {shots === null ? '∞' : shots} · {gun.short}
             </div>
           </div>
+        </div>
+
+        {/* выбор оружия: подобранное становится доступным */}
+        <div className="mt-1.5 flex gap-1.5">
+          {ORDER.filter((id) => guns.includes(id)).map((id) => {
+            const d = WEAPONS[id];
+            const n = d.ammo ? ammo[d.ammo] : null;
+            const empty = n !== null && n < d.cost;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => apiRef.current?.pick(id)}
+                className={`flex-1 rounded-lg border px-1.5 py-1 text-[10px] font-semibold transition-transform active:scale-95
+                  ${id === cur ? 'border-white/30 bg-white/[0.09] text-ink-900' : 'border-white/10 bg-white/[0.04] text-ink-500'}
+                  ${empty ? 'opacity-40' : ''}`}
+              >
+                <div className="truncate">{d.short}</div>
+                <div className="text-[9px] opacity-70">{n === null ? '∞' : n}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

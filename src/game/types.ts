@@ -182,8 +182,8 @@ export interface RunState {
   heroId: string;
   hp: number;
   maxHp: number;
-  /** заряды к оружию */
-  ammo: number;
+  /** заряды по видам */
+  ammo: import('../dungeon/Crawl').Ammo;
   weapon: import('../dungeon/weapon').WeaponId;
   guns: import('../dungeon/weapon').WeaponId[];
   legs: Leg[];

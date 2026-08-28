@@ -7,19 +7,25 @@ import { Player } from './player';
 import { drawBoards, type Board } from './billboard';
 import { PALETTES, Raycaster, type Cam, type Palette } from './render';
 import { loadAll, type TexName } from './textures';
-import { WEAPONS, weaponArt, WEAPON_ART, type WeaponId } from './weapon';
+import { ORDER, WEAPONS, frameAt, weaponArt, WEAPON_ART, type AmmoId, type WeaponId } from './weapon';
+import { Rocket, blastBoard, splash, splashOn, type Blast } from './projectile';
 
 const TEXES: TexName[] = ['wallBrick', 'wallRock', 'wallMoss', 'floorCobble', 'ceilRock', 'doorWood'];
+
+export type Ammo = Record<AmmoId, number>;
 
 export interface CrawlState {
   hp: number;
   maxHp: number;
-  ammo: number;
-  maxAmmo: number;
+  ammo: Ammo;
   weapon: WeaponId;
   guns: WeaponId[];
   left: number;
   name: string;
+}
+
+export interface CrawlApi {
+  pick(id: WeaponId): void;
 }
 
 interface Props {
@@ -28,7 +34,8 @@ interface Props {
   floorName: string;
   /** множитель силы противников */
   scale: number;
-  start: { hp: number; maxHp: number; ammo: number; weapon: WeaponId; guns: WeaponId[] };
+  start: { hp: number; maxHp: number; ammo: Ammo; weapon: WeaponId; guns: WeaponId[] };
+  apiRef?: { current: CrawlApi | null };
   onState: (s: CrawlState) => void;
   onDescend: (s: CrawlState) => void;
   onDeath: () => void;
@@ -45,7 +52,9 @@ interface Stick {
 
 const MAP = { cell: 5, r: 9, pad: 10 };
 
-export default function Crawl({ floor, palette, floorName, scale, start, onState, onDescend, onDeath, className }: Props) {
+const MAX_AMMO: Ammo = { shells: 40, bullets: 200, rockets: 20 };
+
+export default function Crawl({ floor, palette, floorName, scale, start, apiRef, onState, onDescend, onDeath, className }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cbRef = useRef({ onState, onDescend, onDeath });
@@ -62,29 +71,38 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
     const player = new Player(floor);
     player.hp = start.hp;
     player.maxHp = start.maxHp;
-    let ammo = start.ammo;
+    const ammo: Ammo = { ...start.ammo };
     let weapon: WeaponId = start.weapon;
     let guns = start.guns.slice();
     const mobs = spawnMobs(floor, scale);
-    let cool = 0;
+    const rockets: Rocket[] = [];
+    const blasts: Blast[] = [];
+    // fireT < 0 — оружие в покое, иначе доля цикла выстрела
+    let fireT = -1;
+    let struck = false;
     let flash = 0;
     let over = false;
     let hurtFlash = 0;
     let pickMsg = '';
     let pickT = 0;
 
-    const maxAmmo = 60;
     const state = (): CrawlState => ({
       hp: Math.round(player.hp),
       maxHp: player.maxHp,
-      ammo,
-      maxAmmo,
+      ammo: { ...ammo },
       weapon,
       guns,
       left: mobs.filter((m) => m.state !== 'dead').length,
       name: floorName,
     });
     cbRef.current.onState(state());
+
+    const swap = (id: WeaponId): void => {
+      if (!guns.includes(id) || fireT >= 0 || weapon === id) return;
+      weapon = id;
+      cbRef.current.onState(state());
+    };
+    if (apiRef) apiRef.current = { pick: swap };
 
     // ── управление пальцами ────────────────────────────────
     let stick: Stick | null = null;
@@ -140,6 +158,8 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         e.preventDefault();
         firing = true;
       }
+      const n = Number(e.key);
+      if (n >= 1 && n <= ORDER.length) swap(ORDER[n - 1]);
     };
     const ku = (e: KeyboardEvent): void => {
       keys.delete(e.key.toLowerCase());
@@ -149,18 +169,44 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
     window.addEventListener('keyup', ku);
 
     // ── выстрел ────────────────────────────────────────────
-    const shoot = (): void => {
-      const def = WEAPONS[weapon];
-      if (cool > 0 || ammo < def.cost || over) return;
-      ammo -= def.cost;
-      cool = def.cool;
-      flash = 1;
-      player.kick = def.kick;
-      for (let i = 0; i < def.pellets; i++) {
-        const a = player.a + (Math.random() - 0.5) * def.spread * 2;
-        hit(a, def.dmg);
-      }
+    const begin = (): void => {
+      const d = WEAPONS[weapon];
+      if (fireT >= 0 || over) return;
+      if (d.ammo && ammo[d.ammo] < d.cost) return;
+      if (d.ammo) ammo[d.ammo] -= d.cost;
+      fireT = 0;
+      struck = false;
       cbRef.current.onState(state());
+    };
+
+    /** момент, когда выстрел или замах действительно наносит урон */
+    const strike = (): void => {
+      const d = WEAPONS[weapon];
+      flash = d.kind === 'melee' ? 0 : 1;
+      player.kick = d.kick;
+      if (d.kind === 'melee') {
+        const reach = d.reach ?? 1.6;
+        for (const m of mobs) {
+          if (m.state === 'dead') continue;
+          const dist = Math.hypot(m.x - player.x, m.y - player.y);
+          if (dist > reach) continue;
+          let diff = Math.atan2(m.y - player.y, m.x - player.x) - player.a;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          // замах бьёт по дуге перед собой, а не в точку
+          if (Math.abs(diff) < 0.75) m.hurtBy(d.dmg);
+        }
+        return;
+      }
+      if (d.kind === 'projectile') {
+        rockets.push(
+          new Rocket(player.x + Math.cos(player.a) * 0.45, player.y + Math.sin(player.a) * 0.45, player.a),
+        );
+        return;
+      }
+      for (let i = 0; i < d.pellets; i++) {
+        hit(player.a + (Math.random() - 0.5) * d.spread * 2, d.dmg);
+      }
     };
 
     const hit = (a: number, dmg: number): void => {
@@ -172,14 +218,12 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         .sort((x, y) => x.d - y.d);
       for (const { m, d } of live) {
         if (d > 22) break;
-        const ang = Math.atan2(m.y - player.y, m.x - player.x);
-        let diff = ang - a;
+        let diff = Math.atan2(m.y - player.y, m.x - player.x) - a;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         // помощь прицеливанию: на телефоне пиксельная точность недостижима
         const half = Math.atan2(0.42, Math.max(0.5, d)) + 0.035;
         if (Math.abs(diff) > half) continue;
-        // стена между нами?
         let blocked = false;
         const n = Math.ceil(d * 3);
         for (let i = 1; i < n; i++) {
@@ -222,7 +266,20 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
     void loadAll(TEXES).then(() => {
       ready = true;
     });
-    (window as unknown as { __dbg?: unknown }).__dbg = { floor, player, mobs };
+    (window as unknown as { __dbg?: unknown }).__dbg = {
+      floor,
+      player,
+      mobs,
+      // отладочная выдача арсенала — нужна автотестам
+      give: () => {
+        guns = ORDER.slice();
+        ammo.shells = 40;
+        ammo.bullets = 200;
+        ammo.rockets = 20;
+        cbRef.current.onState(state());
+      },
+      use: (id: WeaponId) => swap(id),
+    };
 
     let raf = 0;
     let last = performance.now();
@@ -235,8 +292,16 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       clock += dt;
-      cool = Math.max(0, cool - dt);
       flash = Math.max(0, flash - dt * 6.5);
+      const def = WEAPONS[weapon];
+      if (fireT >= 0) {
+        fireT += dt / def.cool;
+        if (!struck && fireT >= def.strike) {
+          struck = true;
+          strike();
+        }
+        if (fireT >= 1) fireT = -1;
+      }
       hurtFlash = Math.max(0, hurtFlash - dt * 2.4);
       pickT = Math.max(0, pickT - dt);
 
@@ -261,7 +326,24 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
           player.a += d * 0.0055;
         }
         player.move(floor, dt, fwd, side, turn);
-        if (firing) shoot();
+        if (firing) begin();
+
+        // ракеты в полёте
+        for (const r of rockets) {
+          const at2 = r.update(dt, floor, mobs);
+          if (!at2) continue;
+          splash(mobs, at2[0], at2[1], WEAPONS.launcher.dmg);
+          blasts.push({ x: at2[0], y: at2[1], t: 0 });
+          const self = splashOn(player.x, player.y, at2[0], at2[1], WEAPONS.launcher.dmg);
+          if (self > 0) {
+            player.hurt(self);
+            hurtFlash = 1;
+          }
+          flash = Math.max(flash, 0.8);
+        }
+        for (let i = rockets.length - 1; i >= 0; i--) if (rockets[i].dead) rockets.splice(i, 1);
+        for (const bl of blasts) bl.t += dt;
+        for (let i = blasts.length - 1; i >= 0; i--) if (blasts[i].t > 0.4) blasts.splice(i, 1);
 
         // твари
         let taken = 0;
@@ -295,8 +377,10 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
             player.heal(mk.amount);
             pickMsg = `+${mk.amount} здоровья`;
           } else if (mk.kind === 'ammo') {
-            ammo = Math.min(maxAmmo, ammo + mk.amount);
-            pickMsg = `+${mk.amount} зарядов`;
+            const kind = (mk.give ?? 'shells') as AmmoId;
+            ammo[kind] = Math.min(MAX_AMMO[kind], ammo[kind] + mk.amount);
+            const label = kind === 'shells' ? 'патронов' : kind === 'bullets' ? 'пуль' : 'ракет';
+            pickMsg = `+${mk.amount} ${label}`;
           } else if (mk.kind === 'weapon' && mk.give) {
             const g = mk.give as WeaponId;
             if (!guns.includes(g)) guns = [...guns, g];
@@ -353,11 +437,16 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
           if (m.dead) continue;
           boards.push(m.board(clock));
         }
+        for (const r of rockets) boards.push(r.board());
+        for (const bl of blasts) {
+          const bb = blastBoard(bl);
+          if (bb) boards.push(bb);
+        }
         drawBoards(rc, cam, boards);
 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         rc.present(ctx, w, h);
-        drawWeapon(ctx, w, h, weapon, player, cool, flash);
+        drawWeapon(ctx, w, h, weapon, player, fireT, flash);
         overlay(ctx, w, h, hurtFlash, flash, pal.torch);
         minimap(ctx, floor, player, mobs, w);
         if (pickT > 0) {
@@ -371,7 +460,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
           ctx.fillText(pickMsg, w / 2, h * 0.36);
           ctx.restore();
         }
-        controls(ctx, w, h, stick, cool, WEAPONS[weapon].cool);
+        controls(ctx, w, h, stick, fireT);
       }
       // подстройка разрешения: реагируем не на отдельный кадр, а на среднее
       avg += (dt * 1000 - avg) * 0.08;
@@ -399,7 +488,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
     };
-  }, [floor, palette, floorName, scale, start]);
+  }, [floor, palette, floorName, scale, start, apiRef]);
 
   return (
     <div ref={hostRef} className={className}>
@@ -408,17 +497,19 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
   );
 }
 
-/** оружие в руках: покачивание, отдача, вспышка */
+/** оружие в руках: кадр по фазе выстрела, покачивание, отдача, вспышка */
 function drawWeapon(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
   id: WeaponId,
   p: Player,
-  cool: number,
+  fireT: number,
   flash: number,
 ): void {
   const art = weaponArt(id);
+  const def = WEAPONS[id];
+  const frame = art.frames[Math.min(art.frames.length - 1, frameAt(def, fireT))];
   // спрайт крупный и подрезан снизу — так рука ощущается ближе к глазу
   const sw = Math.min(w * 1.02, h * 0.66);
   const sh = (sw * WEAPON_ART.H) / WEAPON_ART.W;
@@ -429,14 +520,13 @@ function drawWeapon(
   const y = h - sh * 0.88 + bobY + kick;
   ctx.save();
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(art.body, x, y, sw, sh);
-  if (flash > 0.05) {
+  ctx.drawImage(frame, x, y, sw, sh);
+  if (flash > 0.05 && art.muzzles.length) {
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = Math.min(1, flash * 1.3);
     ctx.drawImage(art.flash, x, y, sw, sh);
   }
   ctx.restore();
-  void cool;
 }
 
 /** копоть по краям, вспышка выстрела и красная засветка от урона */
@@ -485,8 +575,7 @@ function controls(
   w: number,
   h: number,
   stick: Stick | null,
-  cool: number,
-  full: number,
+  fireT: number,
 ): void {
   ctx.save();
   const fx = w * 0.84;
@@ -499,9 +588,9 @@ function controls(
   ctx.strokeStyle = 'rgba(255,255,255,0.22)';
   ctx.lineWidth = 2;
   ctx.stroke();
-  if (cool > 0) {
+  if (fireT >= 0) {
     ctx.beginPath();
-    ctx.arc(fx, fy, r - 4, -Math.PI / 2, -Math.PI / 2 + (1 - cool / full) * Math.PI * 2);
+    ctx.arc(fx, fy, r - 4, -Math.PI / 2, -Math.PI / 2 + fireT * Math.PI * 2);
     ctx.strokeStyle = 'rgba(255,210,140,0.7)';
     ctx.lineWidth = 4;
     ctx.stroke();

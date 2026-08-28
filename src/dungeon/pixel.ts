@@ -186,6 +186,47 @@ export class PixBuf {
     this.rect(px - 1, cy, palmW + 2, 1, mid);
   }
 
+  /** толстая линия с сужением: клинок, топорище, ствол под углом */
+  thickLine(x0: number, y0: number, x1: number, y1: number, w0: number, w1: number, ramp: number[]): void {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const len = Math.max(1, Math.round(Math.hypot(dx, dy)));
+    const nx = -dy / len;
+    const ny = dx / len;
+    const n = ramp.length;
+    for (let i = 0; i <= len; i++) {
+      const t = i / len;
+      const cxp = x0 + dx * t;
+      const cyp = y0 + dy * t;
+      const half = (w0 + (w1 - w0) * t) / 2;
+      for (let o = -half; o <= half; o += 0.5) {
+        const u = (o + half) / (2 * half || 1);
+        const k = u < 0.1 ? n - 2 : u < 0.28 ? 0 : u < 0.55 ? 1 : u < 0.8 ? 2 : n - 2;
+        this.set(Math.round(cxp + nx * o), Math.round(cyp + ny * o), ramp[Math.min(n - 1, k)]);
+      }
+    }
+  }
+
+  /** повёрнутый прямоугольник — лопасть топора, приклад под углом */
+  quad(pts: [number, number][], c: number): void {
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    const x0 = Math.min(...xs) | 0;
+    const x1 = Math.ceil(Math.max(...xs));
+    const y0 = Math.min(...ys) | 0;
+    const y1 = Math.ceil(Math.max(...ys));
+    const inside = (px: number, py: number): boolean => {
+      let hit = false;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const [xi, yi] = pts[i];
+        const [xj, yj] = pts[j];
+        if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) hit = !hit;
+      }
+      return hit;
+    };
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (inside(x + 0.5, y + 0.5)) this.set(x, y, c);
+  }
+
   toCanvas(palette: string[]): HTMLCanvasElement {
     const c = document.createElement('canvas');
     c.width = this.w;
