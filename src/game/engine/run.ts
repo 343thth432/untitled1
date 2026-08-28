@@ -1,5 +1,5 @@
 import type { FloorId, Leg, RunState } from '../types';
-import { bossFor, foePool } from '../data/foes';
+import { FOES, bossFor, foePool } from '../../dungeon/foes';
 import { HERO_BY_ID } from '../data/heroes';
 import { pick, range, rng, type Rng } from './rng';
 import type { FloorPlan } from '../../dungeon/map';
@@ -18,7 +18,11 @@ function plan(r: Rng, i: number): FloorPlan {
   const foes: FloorPlan['foes'] = [];
   const pool = foePool('foe', f.tier);
   const elite = foePool('elite', f.tier);
-  for (let k = 0; k < f.foes; k++) foes.push({ id: pick(r, pool), tier: 'foe' });
+  // мелочь ставится стаями: у каждой твари свой размер выводка
+  while (foes.length < f.foes) {
+    const id = pick(r, pool);
+    for (let k = 0; k < FOES[id].count; k++) foes.push({ id, tier: 'foe' });
+  }
   for (let k = 0; k < f.elites; k++) foes.push({ id: pick(r, elite), tier: 'elite' });
   foes.push({ id: bossFor(f.tier), tier: 'boss' });
 

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { CELL, at, solid, type Floor, type Mark } from './map';
 import { lootArt } from './loot';
 import { propArt } from './props';
-import { Mob, spawnMobs } from './mob';
+import { Mob, alert, spawnMobs } from './mob';
 import { Player } from './player';
 import { drawBoards, type Board } from './billboard';
 import { PALETTES, Raycaster, type Cam, type Palette } from './render';
@@ -12,7 +12,7 @@ import { loadSheets, weaponSheet } from './sheet';
 
 // ленты кадров тянутся один раз, до первого кадра игры
 loadSheets();
-import { Rocket, blastBoard, splash, splashOn, type Blast } from './projectile';
+import { Bolt, Rocket, blastBoard, puffBoard, splash, splashOn, type Blast, type Puff } from './projectile';
 
 const TEXES: TexName[] = ['wallBrick', 'wallRock', 'wallMoss', 'floorCobble', 'ceilRock', 'doorWood'];
 
@@ -81,6 +81,8 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
     const mobs = spawnMobs(floor, scale);
     const rockets: Rocket[] = [];
     const blasts: Blast[] = [];
+    const bolts: Bolt[] = [];
+    const puffs: Puff[] = [];
     // fireT < 0 — оружие в покое, иначе доля цикла выстрела
     let fireT = -1;
     let struck = false;
@@ -96,7 +98,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
       ammo: { ...ammo },
       weapon,
       guns,
-      left: mobs.filter((m) => m.state !== 'dead').length,
+      left: mobs.filter((m) => m.alive).length,
       name: floorName,
     });
     cbRef.current.onState(state());
@@ -188,17 +190,22 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
       const d = WEAPONS[weapon];
       flash = d.kind === 'melee' ? 0 : 1;
       player.kick = d.kick;
+      // выстрел слышно — ближние твари просыпаются, как в оригинале
+      if (d.kind !== 'melee') alert(mobs, player.x, player.y, 13);
       if (d.kind === 'melee') {
         const reach = d.reach ?? 1.6;
         for (const m of mobs) {
-          if (m.state === 'dead') continue;
+          if (!m.alive) continue;
           const dist = Math.hypot(m.x - player.x, m.y - player.y);
           if (dist > reach) continue;
           let diff = Math.atan2(m.y - player.y, m.x - player.x) - player.a;
           while (diff > Math.PI) diff -= Math.PI * 2;
           while (diff < -Math.PI) diff += Math.PI * 2;
           // замах бьёт по дуге перед собой, а не в точку
-          if (Math.abs(diff) < 0.75) m.hurtBy(d.dmg);
+          if (Math.abs(diff) < 0.75) {
+            m.hurtBy(d.dmg);
+            puffs.push({ x: m.x, y: m.y, h: 0.35, t: 0 });
+          }
         }
         return;
       }
@@ -217,7 +224,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
       const dx = Math.cos(a);
       const dy = Math.sin(a);
       const live = mobs
-        .filter((m) => m.state !== 'dead')
+        .filter((m) => m.alive)
         .map((m) => ({ m, d: Math.hypot(m.x - player.x, m.y - player.y) }))
         .sort((x, y) => x.d - y.d);
       for (const { m, d } of live) {
@@ -239,6 +246,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
         }
         if (blocked) continue;
         m.hurtBy(dmg);
+        puffs.push({ x: m.x, y: m.y, h: 0.3 + Math.random() * 0.25, t: 0 });
         return;
       }
     };
@@ -293,7 +301,8 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
     const boards: Board[] = [];
 
     const loop = (now: number): void => {
-      const dt = Math.min(0.05, (now - last) / 1000);
+      // время иногда идёт назад: часы вкладки, возврат из фона
+      const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
       last = now;
       clock += dt;
       flash = Math.max(0, flash - dt * 6.5);
@@ -351,7 +360,28 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
 
         // твари
         let taken = 0;
-        for (const m of mobs) taken += m.update(dt, floor, player, mobs);
+        for (const m of mobs) {
+          taken += m.update(dt, floor, player, mobs);
+          if (m.fired) {
+            const f = m.fired;
+            m.fired = null;
+            // залп веером, чтобы от нескольких шаров можно было уйти вбок
+            for (let i = 0; i < f.n; i++) {
+              const off = (i - (f.n - 1) / 2) * 0.16;
+              bolts.push(
+                new Bolt(f.x + Math.cos(f.a) * 0.4, f.y + Math.sin(f.a) * 0.4, f.a + off, f.speed, f.dmg, m.aura),
+              );
+            }
+          }
+        }
+        for (let i = bolts.length - 1; i >= 0; i--) {
+          taken += bolts[i].update(dt, floor, player.x, player.y);
+          if (!bolts[i].alive) bolts.splice(i, 1);
+        }
+        for (let i = puffs.length - 1; i >= 0; i--) {
+          puffs[i].t += dt;
+          if (puffs[i].t > 0.3) puffs.splice(i, 1);
+        }
         if (taken > 0) {
           player.hurt(taken);
           hurtFlash = 1;
@@ -367,7 +397,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
           if (mk.taken) continue;
           if (Math.hypot(mk.x + 0.5 - player.x, mk.y + 0.5 - player.y) > 0.62) continue;
           if (mk.kind === 'stairs') {
-            if (mobs.some((m) => m.state !== 'dead' && m.tier === 'boss')) {
+            if (mobs.some((m) => m.alive && m.tier === 'boss')) {
               pickMsg = 'Хранитель ещё жив';
               pickT = 1.6;
               continue;
@@ -437,11 +467,13 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
             lift: mk.kind === 'stairs' ? 0 : 0.06 + Math.sin(clock * 2 + mk.x) * 0.03,
           });
         }
-        for (const m of mobs) {
-          if (m.dead) continue;
-          boards.push(m.board(clock));
-        }
+        for (const m of mobs) boards.push(m.board(player.x, player.y));
         for (const r of rockets) boards.push(r.board());
+        for (const bo of bolts) boards.push(bo.board());
+        for (const pf of puffs) {
+          const pb = puffBoard(pf);
+          if (pb) boards.push(pb);
+        }
         for (const bl of blasts) {
           const bb = blastBoard(bl);
           if (bb) boards.push(bb);
@@ -677,7 +709,7 @@ function minimap(ctx: CanvasRenderingContext2D, f: Floor, p: Player, mobs: Mob[]
     ctx.fillRect(x0 + (dx + r) * c, y0 + (dy + r) * c, c, c);
   }
   for (const m of mobs) {
-    if (m.state === 'dead') continue;
+    if (!m.alive) continue;
     const dx = Math.floor(m.x) - px;
     const dy = Math.floor(m.y) - py;
     if (Math.abs(dx) > r || Math.abs(dy) > r) continue;

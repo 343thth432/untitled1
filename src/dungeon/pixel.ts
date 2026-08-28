@@ -60,6 +60,23 @@ export class PixBuf {
     }
   }
 
+  /**
+   * Контровой свет по одной кромке силуэта: пиксели, за которыми уже
+   * пусто, перекрашиваются в светлый. Без него тёмная фигура сливается
+   * с мглой подземелья.
+   */
+  rim(c: number, dir: 1 | -1): void {
+    const copy = this.idx.slice();
+    const at = (x: number, y: number): number =>
+      x < 0 || y < 0 || x >= this.w || y >= this.h ? 0 : copy[y * this.w + x];
+    for (let y = 0; y < this.h; y++) {
+      for (let x = 0; x < this.w; x++) {
+        if (!at(x, y)) continue;
+        if (!at(x - dir, y)) this.set(x, y, c);
+      }
+    }
+  }
+
   /** блик по левой кромке каждой горизонтальной полосы */
   edgeLight(from: number, to: number): void {
     for (let y = 0; y < this.h; y++) {

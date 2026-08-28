@@ -104,7 +104,7 @@ export class Rocket {
         return [this.x - (this.dx * step) / n, this.y - (this.dy * step) / n];
       }
       for (const m of mobs) {
-        if (m.state === 'dead') continue;
+        if (!m.alive) continue;
         if ((m.x - this.x) ** 2 + (m.y - this.y) ** 2 < 0.16) {
           this.dead = true;
           return [this.x, this.y];
@@ -133,7 +133,7 @@ export class Rocket {
 /** урон по площади: ближе к центру — сильнее */
 export function splash(mobs: Mob[], x: number, y: number, dmg: number): void {
   for (const m of mobs) {
-    if (m.state === 'dead') continue;
+    if (!m.alive) continue;
     const d = Math.hypot(m.x - x, m.y - y);
     if (d > SPLASH) continue;
     m.hurtBy(Math.round(dmg * (1 - d / SPLASH) ** 1.4));
@@ -161,5 +161,138 @@ export function blastBoard(b: Blast): Board | null {
     emissive: 1,
     glow: 'rgba(255,170,70,0.7)',
     lift: 0.4,
+  };
+}
+
+/** ------- снаряды тварей и кровь ------- */
+
+const BW = 24;
+const BOLT_PAL_BASE = ['#00000000', '#0a0710'];
+const boltArt = new Map<string, HTMLCanvasElement>();
+
+/** светящийся шар цвета твари */
+function makeBolt(tint: string): HTMLCanvasElement {
+  const hit = boltArt.get(tint);
+  if (hit) return hit;
+  const b = new PixBuf(BW, BW);
+  const c = BW >> 1;
+  b.ellipse(c, c, 9, 9, 2);
+  b.ellipse(c, c, 7, 7, 3);
+  b.ellipse(c - 1, c - 1, 4, 4, 4);
+  b.ellipse(c - 1, c - 1, 2, 2, 5);
+  // рваные протуберанцы, чтобы шар не был идеальным кругом
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2;
+    b.rect(c + Math.round(Math.cos(a) * 9) - 1, c + Math.round(Math.sin(a) * 9) - 1, 2, 2, 3);
+  }
+  // k > 0 — к белому, k < 0 — к чёрному
+  const mix = (k: number): string => {
+    const n = parseInt(tint.slice(1), 16);
+    const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) =>
+      Math.round(k >= 0 ? v + (255 - v) * k : v * (1 + k)),
+    );
+    return `#${((1 << 24) + (ch[0] << 16) + (ch[1] << 8) + ch[2]).toString(16).slice(1)}`;
+  };
+  const cv = b.toCanvas([...BOLT_PAL_BASE, mix(-0.45), mix(0), mix(0.5), mix(0.9)]);
+  boltArt.set(tint, cv);
+  return cv;
+}
+
+/** снаряд твари: летит по прямой, гаснет о стену или об игрока */
+export class Bolt {
+  x: number;
+  y: number;
+  private vx: number;
+  private vy: number;
+  readonly dmg: number;
+  private tint: string;
+  alive = true;
+  /** прожитое время — по нему шар мигает */
+  t = 0;
+
+  constructor(x: number, y: number, a: number, speed: number, dmg: number, tint: string) {
+    this.x = x;
+    this.y = y;
+    this.vx = Math.cos(a) * speed;
+    this.vy = Math.sin(a) * speed;
+    this.dmg = dmg;
+    this.tint = tint;
+  }
+
+  /** @returns урон игроку в этот кадр */
+  update(dt: number, f: Floor, px: number, py: number): number {
+    this.t += dt;
+    const n = Math.max(1, Math.ceil(Math.hypot(this.vx, this.vy) * dt * 4));
+    for (let i = 0; i < n; i++) {
+      this.x += (this.vx * dt) / n;
+      this.y += (this.vy * dt) / n;
+      if (solid(f, Math.floor(this.x), Math.floor(this.y))) {
+        this.alive = false;
+        return 0;
+      }
+      if ((this.x - px) ** 2 + (this.y - py) ** 2 < 0.16) {
+        this.alive = false;
+        return this.dmg;
+      }
+    }
+    if (this.t > 6) this.alive = false;
+    return 0;
+  }
+
+  board(): Board {
+    return {
+      x: this.x,
+      y: this.y,
+      src: makeBolt(this.tint),
+      aspect: 1,
+      scale: 0.42 + Math.sin(this.t * 22) * 0.03,
+      hang: 0,
+      emissive: 1,
+      glow: `${this.tint}88`,
+    };
+  }
+}
+
+/** брызги крови в точке попадания */
+export interface Puff {
+  x: number;
+  y: number;
+  h: number;
+  t: number;
+}
+
+const PW = 40;
+const PPAL = ['#00000000', '#2c0508', '#6d0d13', '#a8151d', '#d63a34', '#ff8a6a'];
+const puffArt: HTMLCanvasElement[] = [];
+
+function makePuff(k: number): HTMLCanvasElement {
+  const b = new PixBuf(PW, PW);
+  const c = PW >> 1;
+  const r = 4 + k * 5;
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + k;
+    const d = r * (0.4 + ((i * 23) % 9) / 14);
+    b.ellipse(c + Math.round(Math.cos(a) * d), c + Math.round(Math.sin(a) * d), 3 - k, 3 - k, 2 + (i % 2));
+  }
+  b.ellipse(c, c, Math.max(1, r - 2 - k * 2), Math.max(1, r - 3 - k * 2), 3);
+  b.ellipse(c, c - 1, Math.max(1, r - 5), Math.max(1, r - 5), 4);
+  return b.toCanvas(PPAL);
+}
+
+/** брызги живут четверть секунды и растворяются */
+export function puffBoard(p: Puff): Board | null {
+  const k = Math.floor(p.t / 0.06);
+  if (k > 3) return null;
+  if (!puffArt.length) for (let i = 0; i < 4; i++) puffArt.push(makePuff(i));
+  return {
+    x: p.x,
+    y: p.y,
+    src: puffArt[k],
+    aspect: 1,
+    scale: 0.45 + k * 0.12,
+    hang: 0,
+    emissive: 0.9,
+    alpha: 1 - k * 0.22,
+    lift: p.h,
   };
 }

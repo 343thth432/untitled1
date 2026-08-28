@@ -38,7 +38,8 @@ let started = false;
 export function loadSheets(): void {
   if (started) return;
   started = true;
-  const root = `${import.meta.env.BASE_URL}art/weapons/`;
+  const base = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
+  const root = `${base}art/weapons/`;
   fetch(`${root}weapons.json`)
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
     .then((man: Record<string, Entry>) => {

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Element, Portrait } from '../game/types';
 import { Sparks, buildBackdrop, stageGlow, tintOf, type Tint } from './scene/backdrop';
-import { charImage, foeSilhouette, FOE_ART } from '../dungeon/foeArt';
+import { charImage, foeSilhouette, FOE_ART } from './silhouette';
 
 interface Props {
   id: string;
