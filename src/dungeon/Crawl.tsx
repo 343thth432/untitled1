@@ -7,7 +7,11 @@ import { Player } from './player';
 import { drawBoards, type Board } from './billboard';
 import { PALETTES, Raycaster, type Cam, type Palette } from './render';
 import { loadAll, type TexName } from './textures';
-import { ORDER, WEAPONS, frameAt, weaponArt, WEAPON_ART, type AmmoId, type WeaponId } from './weapon';
+import { ORDER, WEAPONS, frameAt, seqFrame, weaponArt, WEAPON_ART, type AmmoId, type WeaponId } from './weapon';
+import { loadSheets, weaponSheet } from './sheet';
+
+// ленты кадров тянутся один раз, до первого кадра игры
+loadSheets();
 import { Rocket, blastBoard, splash, splashOn, type Blast } from './projectile';
 
 const TEXES: TexName[] = ['wallBrick', 'wallRock', 'wallMoss', 'floorCobble', 'ceilRock', 'doorWood'];
@@ -507,15 +511,38 @@ function drawWeapon(
   fireT: number,
   flash: number,
 ): void {
-  const art = weaponArt(id);
   const def = WEAPONS[id];
+  const bobX = p.bob * w * 0.022;
+  const bobY = Math.abs(p.bob) * h * 0.02;
+  const kick = p.kick * h * 0.055;
+
+  const sheet = weaponSheet(id);
+  if (sheet) {
+    // лента нарисована в координатах экрана 320x200, как в Doom: ставим её
+    // от низа кадра и растягиваем целыми пикселями под ширину телефона
+    const s = Math.min((w / 320) * 2.3, (h / 200) * 1.6);
+    const cell = Math.min(sheet.n - 1, seqFrame(sheet.seq, fireT));
+    const dx = w / 2 + (sheet.ox - 160) * s + bobX;
+    const dy = h - (200 - sheet.oy) * s + bobY + kick;
+    const dw = sheet.cw * s;
+    const dh = sheet.ch * s;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(sheet.img, cell * sheet.cw, 0, sheet.cw, sheet.ch, dx, dy, dw, dh);
+    if (flash > 0.12 && sheet.flash > 0) {
+      const k = sheet.n + Math.min(sheet.flash - 1, Math.floor((1 - flash) * sheet.flash));
+      ctx.globalAlpha = Math.min(1, flash * 1.7);
+      ctx.drawImage(sheet.img, k * sheet.cw, 0, sheet.cw, sheet.ch, dx, dy, dw, dh);
+    }
+    ctx.restore();
+    return;
+  }
+
+  const art = weaponArt(id);
   const frame = art.frames[Math.min(art.frames.length - 1, frameAt(def, fireT))];
   // спрайт крупный и подрезан снизу — так рука ощущается ближе к глазу
   const sw = Math.min(w * 1.06, h * 0.62);
   const sh = (sw * WEAPON_ART.H) / WEAPON_ART.W;
-  const bobX = p.bob * w * 0.022;
-  const bobY = Math.abs(p.bob) * h * 0.02;
-  const kick = p.kick * h * 0.055;
   const x = w / 2 - sw / 2 + bobX;
   const y = h - sh * 0.8 + bobY + kick;
   ctx.save();

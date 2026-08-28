@@ -1,9 +1,12 @@
 import { PixBuf } from './pixel';
 
 /**
- * Арсенал: двухстволка, пулемёт, ракетница, меч и топор. Спрайты
- * нарисованы здесь пиксель за пикселем — брать чужие из Doom нельзя,
- * а свободные паки заметно грубее.
+ * Арсенал: двухстволка, пулемёт, ракетница, меч и топор.
+ *
+ * Спрайты здесь нарисованы пиксель за пикселем и служат запасным
+ * вариантом: если в public/art/weapons лежит готовая лента кадров
+ * (см. sheet.ts), рисуется она. Графику из WAD'ов Doom брать нельзя —
+ * id Software открыли исходники движка, но не данные игры.
  */
 
 export type WeaponId = 'ssg' | 'chaingun' | 'launcher' | 'sword' | 'axe';
@@ -581,14 +584,19 @@ export function weaponArt(id: WeaponId): Art {
   return hit;
 }
 
-/** кадр по доле цикла выстрела; ph < 0 — покой */
-export function frameAt(def: WeaponDef, ph: number): number {
+/** кадр по раскадровке и доле цикла выстрела; ph < 0 — покой */
+export function seqFrame(seq: [number, number][], ph: number): number {
   if (ph < 0) return 0;
-  let f = def.seq[0][1];
-  for (const [t, i] of def.seq) {
+  let f = seq[0][1];
+  for (const [t, i] of seq) {
     if (ph >= t) f = i;
   }
   return f;
+}
+
+/** кадр по доле цикла выстрела; ph < 0 — покой */
+export function frameAt(def: WeaponDef, ph: number): number {
+  return seqFrame(def.seq, ph);
 }
 
 export const WEAPON_ART = { W, H };
