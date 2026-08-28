@@ -23,16 +23,12 @@ export type Outfit = 'rags' | 'sailor' | 'robe' | 'harness' | 'armor' | 'gown';
 
 /** внешность: палитра и телосложение */
 export interface Skin {
-  /** тень, тон, свет кожи */
-  skin: [string, string, string];
-  /** тень, тон, свет волос */
-  hair: [string, string, string];
-  /** тень, тон, свет юбки */
-  cloth: [string, string, string];
-  /** тень, тон, свет верха — блузка, топ, лиф */
-  top: [string, string, string];
-  /** тень и тон чулок */
-  sock: [string, string];
+  /** базовые цвета материалов: рампу из каждого строит освещение */
+  skin: string;
+  hair: string;
+  cloth: string;
+  top: string;
+  sock: string;
   /** докуда натянуты чулки: 0 — нет, 1 — под самую юбку */
   sockH: number;
   /** полоса живота между верхом и юбкой, 0..1 */
@@ -41,9 +37,9 @@ export interface Skin {
   skirt: number;
   /** покрой */
   outfit: Outfit;
-  /** тень и блик металла: пряжки, наплечники, украшения */
-  metal: [string, string];
-  /** белок глаза и блики на ткани */
+  /** металл: пряжки, наплечники, украшения */
+  metal: string;
+  /** белок глаза */
   lite: string;
   /** кант, пояс, ленты */
   trim: string;
@@ -52,9 +48,9 @@ export interface Skin {
   /** розовая изнанка уха */
   ear: string;
   /** когти или клинок */
-  claw: [string, string];
+  claw: string;
   /** сапоги и перчатки */
-  boot: [string, string];
+  boot: string;
   /** контровой свет по кромке — по нему тварь видно во мгле */
   rim: string;
   /** рост фигуры в пикселях буфера */
@@ -119,23 +115,23 @@ const LIST: FoeDef[] = [
     count: 2,
     aura: '#9aa4b8',
     skin: {
-      skin: ['#7a5a4c', '#a67c66', '#c99b80'],
-      hair: ['#2b2b33', '#474753', '#6a6a78'],
-      cloth: ['#3a2f28', '#5b4838', '#7d6449'],
-      top: ['#8a7a63', '#b8a686', '#e2d4b6'],
-      sock: ['#3a3038', '#5e5060'],
+      skin: '#a67c66',
+      hair: '#474753',
+      cloth: '#5b4838',
+      top: '#b8a686',
+      sock: '#5e5060',
       sockH: 0.35,
       bare: 0.55,
       skirt: 0.95,
       outfit: 'rags',
-      metal: ['#4a4038', '#9a8e78'],
+      metal: '#9a8e78',
       lite: '#efe6d6',
       trim: '#8d6b3f',
       eye: '#ffe27a',
       ear: '#c47b84',
-      claw: ['#6d6f78', '#c6cad4'],
+      claw: '#c6cad4',
       rim: '#4d5871',
-      boot: ['#241f1c', '#3f3730'],
+      boot: '#3f3730',
       tall: 126,
       broad: 38,
       mane: 0.3,
@@ -161,23 +157,23 @@ const LIST: FoeDef[] = [
     count: 3,
     aura: '#e08a3c',
     skin: {
-      skin: ['#7d5546', '#ab7a5f', '#d09b78'],
-      hair: ['#7a3510', '#b25a1c', '#e08a3c'],
-      cloth: ['#1f3a2c', '#2f5a41', '#437a58'],
-      top: ['#8a8a92', '#c2c2ca', '#f0f0f4'],
-      sock: ['#2e3a34', '#4a5c50'],
+      skin: '#ab7a5f',
+      hair: '#b25a1c',
+      cloth: '#2f5a41',
+      top: '#c2c2ca',
+      sock: '#4a5c50',
       sockH: 0.75,
       bare: 0.35,
       skirt: 0.85,
       outfit: 'sailor',
-      metal: ['#6a5a2c', '#e0c874'],
+      metal: '#e0c874',
       lite: '#f4f2ee',
       trim: '#c9b070',
       eye: '#8affc4',
       ear: '#d08a8a',
-      claw: ['#6d6f78', '#d6dae4'],
+      claw: '#d6dae4',
       rim: '#8f5726',
-      boot: ['#241f1c', '#40382f'],
+      boot: '#40382f',
       tall: 116,
       broad: 34,
       mane: 0.14,
@@ -203,23 +199,23 @@ const LIST: FoeDef[] = [
     count: 1,
     aura: '#a06cff',
     skin: {
-      skin: ['#7a5a70', '#a67d99', '#cd9fbc'],
-      hair: ['#3a1c5c', '#5c2e8c', '#8a52c6'],
-      cloth: ['#1b1430', '#2e2050', '#4a3378'],
-      top: ['#4a3670', '#6d4fa8', '#9a78d8'],
-      sock: ['#1d1630', '#33264f'],
+      skin: '#a67d99',
+      hair: '#5c2e8c',
+      cloth: '#2e2050',
+      top: '#6d4fa8',
+      sock: '#33264f',
       sockH: 0.9,
       bare: 0.5,
       skirt: 1.05,
       outfit: 'robe',
-      metal: ['#3a2a58', '#c0a0f0'],
+      metal: '#c0a0f0',
       lite: '#efe4ff',
       trim: '#a06cff',
       eye: '#d0a4ff',
       ear: '#b06f9a',
-      claw: ['#4a3a6a', '#a88cd8'],
+      claw: '#a88cd8',
       rim: '#63419a',
-      boot: ['#120e20', '#231a36'],
+      boot: '#231a36',
       tall: 134,
       broad: 38,
       mane: 0.62,
@@ -245,23 +241,23 @@ const LIST: FoeDef[] = [
     count: 1,
     aura: '#ff5a48',
     skin: {
-      skin: ['#8a6350', '#bb8c6e', '#e0b28c'],
-      hair: ['#5a4642', '#8a6a62', '#bfa096'],
-      cloth: ['#5a1418', '#8e2a24', '#c4553c'],
-      top: ['#2a1e26', '#463442', '#68505f'],
-      sock: ['#3a1c1e', '#5e2e2c'],
+      skin: '#bb8c6e',
+      hair: '#8a6a62',
+      cloth: '#8e2a24',
+      top: '#463442',
+      sock: '#5e2e2c',
       sockH: 0.22,
       bare: 0.85,
       skirt: 0.8,
       outfit: 'harness',
-      metal: ['#5c4420', '#e8c268'],
+      metal: '#8e97a6',
       lite: '#f6ece0',
       trim: '#e0b048',
       eye: '#ff6a52',
       ear: '#cf8288',
-      claw: ['#5c5f68', '#e2e6ee'],
+      claw: '#b9c2ce',
       rim: '#95392e',
-      boot: ['#2a1416', '#4a2422'],
+      boot: '#4a2422',
       tall: 158,
       broad: 48,
       mane: 0.28,
@@ -287,23 +283,23 @@ const LIST: FoeDef[] = [
     count: 1,
     aura: '#5ac8ff',
     skin: {
-      skin: ['#6d5a55', '#98807a', '#c0a49b'],
-      hair: ['#123a5c', '#1f5f92', '#3d92cc'],
-      cloth: ['#26303e', '#3d4c62', '#5f748f'],
-      top: ['#5a6a80', '#93aac4', '#d6e8f6'],
-      sock: ['#1e2a36', '#33485c'],
+      skin: '#98807a',
+      hair: '#1f5f92',
+      cloth: '#3d4c62',
+      top: '#5d7085',
+      sock: '#33485c',
       sockH: 0.8,
       bare: 0.85,
       skirt: 0.9,
       outfit: 'armor',
-      metal: ['#43596e', '#cfe6f6'],
+      metal: '#cfe6f6',
       lite: '#eef6ff',
       trim: '#5ac8ff',
       eye: '#9be4ff',
       ear: '#bb8090',
-      claw: ['#3c5a6e', '#bfeaff'],
+      claw: '#bfeaff',
       rim: '#35789c',
-      boot: ['#1a2029', '#2e3948'],
+      boot: '#2e3948',
       tall: 141,
       broad: 43,
       mane: 0.48,
@@ -329,23 +325,23 @@ const LIST: FoeDef[] = [
     count: 1,
     aura: '#ffb03a',
     skin: {
-      skin: ['#7a5860', '#a67b83', '#cfa0a6'],
-      hair: ['#1c1826', '#332c44', '#554a68'],
-      cloth: ['#2a1c38', '#463060', '#6b4a8c'],
-      top: ['#3a2a44', '#5c4268', '#8a6a96'],
-      sock: ['#241a2c', '#3e2e46'],
+      skin: '#a67b83',
+      hair: '#332c44',
+      cloth: '#463060',
+      top: '#5c4268',
+      sock: '#3e2e46',
       sockH: 0.85,
       bare: 0.75,
       skirt: 1.35,
       outfit: 'gown',
-      metal: ['#6a4c14', '#ffd479'],
+      metal: '#ffd479',
       lite: '#f6e8ff',
       trim: '#ffb03a',
       eye: '#ffcf5a',
       ear: '#c07a86',
-      claw: ['#6a5220', '#ffd88a'],
+      claw: '#ffd88a',
       rim: '#6a4a1c',
-      boot: ['#141018', '#2a2130'],
+      boot: '#2a2130',
       tall: 168,
       broad: 52,
       mane: 0.66,

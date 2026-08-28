@@ -1,23 +1,23 @@
-import { PixBuf } from './pixel';
+import { Paint, type Mat } from './paint';
 import { FOES, type FoeId, type Outfit, type Skin } from './foes';
 
 /**
  * Спрайты кошкодевочек: восемь ракурсов и полный набор кадров как в Doom —
  * шаг, замах, боль, смерть и разрыв в клочья.
  *
- * Фигура не рисуется покадрово, а собирается из скелета: поза задаёт стопы,
- * кисти, наклон и оседание, рисовальщик наращивает на это тело по четырём
- * обхватам (плечи, грудь, талия, бёдра), а сверху надевает наряд. Все
- * размеры считаются долями роста, поэтому мелкая и хозяйка этажа сложены
- * одинаково правильно.
+ * Фигура собирается из скелета: поза задаёт стопы, кисти, наклон и
+ * оседание, рисовальщик наращивает на это тело по четырём обхватам
+ * (плечи, грудь, талия, бёдра), а сверху надевает наряд. Все размеры —
+ * доли роста, поэтому мелкая и хозяйка этажа сложены одинаково правильно.
  *
- * Наряды кроятся по-разному, а не перекрашиваются: лохмотья с голым плечом,
- * матроска, мантия с разрезом, повязки бойца, доспех, платье в пол.
+ * Рисуется не цветом, а формой: каждая операция кладёт материал и нормаль
+ * поверхности (см. paint.ts). Рука — цилиндр, голова — шар, пола одежды —
+ * плоскость. Цвет считается в конце: свет, контровой по кромке и
+ * квантование в рампу с дизерингом. Поэтому объём здесь настоящий, а не
+ * нарисованный фигурой поменьше поверх большей.
  *
  * Ракурсов рисуется пять — анфас, три четверти, профиль, три четверти со
- * спины и спина. Остальные три получаются отражением, ровно как в оригинале.
- * Экран телефона плотнее монитора девяносто третьего года, поэтому буфер
- * заметно крупнее оригинальных спрайтов Doom.
+ * спины и спина. Остальные три получаются отражением, как в оригинале.
  */
 
 export const ART_W = 120;
@@ -35,23 +35,14 @@ export type PoseId =
 
 /** Смещения позы заданы для роста в сто пикселей и масштабируются с ним. */
 interface Pose {
-  /** подъём таза */
   bob: number;
-  /** наклон плеч вперёд */
   lean: number;
-  /** стопы: сдвиг по X от бедра */
   foot: [number, number];
-  /** подъём стопы над полом */
   rise: [number, number];
-  /** кисти: сдвиг по X от плеча */
   hand: [number, number];
-  /** кисти: высота относительно плеча, вниз положительная */
   drop: [number, number];
-  /** сжатие фигуры по вертикали */
   squash: number;
-  /** запрокидывание головы */
   head: number;
-  /** пасть раскрыта */
   roar: number;
 }
 
@@ -77,11 +68,8 @@ const POSES: Record<PoseId, Pose> = {
   w1: walk(1),
   w2: walk(2),
   w3: walk(3),
-  // замах: корпус вперёд, когти занесены над головой
   atk: { bob: -1.5, lean: 6, foot: [-6, 7], rise: [0, 0], hand: [-17, 17], drop: [-13, -9], squash: 0.98, head: -1.5, roar: 1 },
-  // бросок: одна рука выброшена вперёд, вторая отведена
   cast: { bob: 0, lean: 4.5, foot: [-4, 6], rise: [0, 0], hand: [-19, 10], drop: [-3, -12], squash: 1, head: -1.5, roar: 1 },
-  // боль: отброшена назад, руки вскинуты
   pain: { bob: 1.5, lean: -6, foot: [4, -4], rise: [0, 1.5], hand: [-13, 13], drop: [-7, -6], squash: 0.96, head: 6, roar: 1 },
   d0: { bob: 0, lean: -7, foot: [6, -6], rise: [0, 3], hand: [-15, 15], drop: [-10, -9], squash: 0.9, head: 9, roar: 1 },
   d1: { bob: 0, lean: -4, foot: [10, -10], rise: [0, 0], hand: [-19, 18], drop: [0, -3], squash: 0.68, head: 9, roar: 1 },
@@ -103,70 +91,60 @@ const EYES = [2, 2, 1, 0, 0];
 /** насколько грива закрывает голову */
 const BACK = [0.3, 0.55, 0.75, 1, 1];
 
-/** индексы палитры */
-const C = {
-  clear: 0,
-  line: 1,
-  sk0: 2, sk1: 3, sk2: 4,
-  hr0: 5, hr1: 6, hr2: 7,
-  cl0: 8, cl1: 9, cl2: 10,
-  trim: 11,
-  eye: 12,
-  cw0: 13, cw1: 14,
-  bl0: 15, bl1: 16,
-  ear: 17,
-  bt0: 18, bt1: 19,
-  rim: 20,
-  tp0: 21, tp1: 22, tp2: 23,
-  so0: 24, so1: 25,
-  mt0: 26, mt1: 27,
-  lite: 28,
+/** материалы; 0 — пусто */
+const M = {
+  skin: 1,
+  hair: 2,
+  top: 3,
+  cloth: 4,
+  trim: 5,
+  metal: 6,
+  sock: 7,
+  boot: 8,
+  eye: 9,
+  ear: 10,
+  claw: 11,
+  blood: 12,
+  lite: 13,
+  dark: 14,
 } as const;
 
-function palette(s: Skin): string[] {
-  const p: string[] = [];
-  p[C.clear] = '#00000000';
-  p[C.line] = '#0a0812';
-  p[C.sk0] = s.skin[0];
-  p[C.sk1] = s.skin[1];
-  p[C.sk2] = s.skin[2];
-  p[C.hr0] = s.hair[0];
-  p[C.hr1] = s.hair[1];
-  p[C.hr2] = s.hair[2];
-  p[C.cl0] = s.cloth[0];
-  p[C.cl1] = s.cloth[1];
-  p[C.cl2] = s.cloth[2];
-  p[C.trim] = s.trim;
-  p[C.eye] = s.eye;
-  p[C.cw0] = s.claw[0];
-  p[C.cw1] = s.claw[1];
-  p[C.bl0] = '#4d0a10';
-  p[C.bl1] = '#9c1119';
-  p[C.ear] = s.ear;
-  p[C.bt0] = s.boot[0];
-  p[C.bt1] = s.boot[1];
-  p[C.rim] = s.rim;
-  p[C.tp0] = s.top[0];
-  p[C.tp1] = s.top[1];
-  p[C.tp2] = s.top[2];
-  p[C.so0] = s.sock[0];
-  p[C.so1] = s.sock[1];
-  p[C.mt0] = s.metal[0];
-  p[C.mt1] = s.metal[1];
-  p[C.lite] = s.lite;
-  return p;
+function mats(s: Skin): Mat[] {
+  const m: Mat[] = [];
+  m[M.skin] = { base: s.skin };
+  m[M.hair] = { base: s.hair, gloss: 0.22 };
+  m[M.top] = { base: s.top, gloss: 0.1 };
+  m[M.cloth] = { base: s.cloth, gloss: 0.08 };
+  m[M.trim] = { base: s.trim, gloss: 0.15 };
+  m[M.metal] = { base: s.metal, gloss: 0.5 };
+  m[M.sock] = { base: s.sock, gloss: 0.12 };
+  m[M.boot] = { base: s.boot, gloss: 0.3 };
+  m[M.eye] = { base: s.eye, glow: 1 };
+  m[M.ear] = { base: s.ear };
+  m[M.claw] = { base: s.claw, gloss: 0.25 };
+  m[M.blood] = { base: '#8d1018', gloss: 0.5 };
+  m[M.lite] = { base: s.lite };
+  m[M.dark] = { base: '#171320' };
+  return m;
 }
 
-const SKN = [C.sk2, C.sk1, C.sk0];
-const SOK = [C.so1, C.so1, C.so0];
-const TOP = [C.tp2, C.tp1, C.tp0];
-const CLO = [C.cl2, C.cl1, C.cl0];
-const MET = [C.mt1, C.mt0, C.line];
-const BTS = [C.bt1, C.bt0, C.line];
+/** слои по глубине: что ближе к зрителю, то и поверх */
+const Z = {
+  tailBack: -60,
+  hairBack: -40,
+  farLimb: -20,
+  leg: -6,
+  body: 0,
+  wear: 12,
+  detail: 20,
+  head: 30,
+  face: 40,
+  nearLimb: 46,
+  tailFront: 52,
+} as const;
 
 /** мерки фигуры в пикселях буфера — на них опираются и тело, и наряд */
 interface Geom {
-  /** множитель ширины по ракурсу */
   bw: number;
   /** доля от роста в сто пикселей: ей кратны все мелкие размеры */
   k: number;
@@ -175,43 +153,34 @@ interface Geom {
   lean: number;
   tall: number;
   top: number;
-  /** радиус головы */
   r: number;
   shY: number;
   bustY: number;
   waistY: number;
   hipY: number;
-  /** полуширины: плечи, грудь, талия, бёдра */
   sh: number;
   bust: number;
   waist: number;
   hip: number;
-  /** бедро, колено, стопа каждой ноги */
-  joint: { hip: [number, number]; knee: [number, number]; foot: [number, number] }[];
-  /** плечо, локоть, кисть каждой руки */
-  arm: { sh: [number, number]; elbow: [number, number]; hand: [number, number] }[];
-  /** порядок отрисовки конечностей: дальняя первой */
+  joint: { hip: [number, number]; knee: [number, number]; foot: [number, number]; z: number }[];
+  arm: { sh: [number, number]; elbow: [number, number]; hand: [number, number]; z: number }[];
   order: number[];
 }
 
 const px = (v: number): number => Math.round(v);
 
-/** ухо: конус с кантом, розовой изнанкой и клоком шерсти у основания */
-function ear(b: PixBuf, x: number, y: number, dir: 1 | -1, h: number, s: Skin): void {
+/** ухо: конус с розовой изнанкой и клоком шерсти у основания */
+function ear(b: Paint, x: number, y: number, dir: 1 | -1, h: number, z: number): void {
   const w = h * 0.6;
   const tx = x + dir * h * 0.42;
   const ty = y - h;
-  b.quad([[x - dir * w * 0.62, y + 5], [x + dir * w * 0.84, y + 3], [tx + dir * 2, ty - 2]], C.line);
-  b.quad([[x - dir * w * 0.46, y + 4], [x + dir * w * 0.66, y + 2], [tx, ty + 1]], C.hr1);
-  b.quad([[x + dir * w * 0.08, y + 3], [x + dir * w * 0.52, y + 1], [tx - dir, ty + 5]], C.ear);
-  b.quad([[x - dir * w * 0.32, y + 3], [x + dir * w * 0.04, y + 1], [tx - dir * 3, ty + 5]], s.mane > 0.6 ? C.hr2 : C.hr1);
-  // шерсть у основания скругляет посадку уха
-  b.ellipse(px(x - dir * w * 0.25), px(y + 2), px(w * 0.3), px(w * 0.22), C.hr1);
-  b.ellipse(px(x + dir * w * 0.35), px(y + 1), px(w * 0.22), px(w * 0.18), C.hr2);
+  b.quad([[x - dir * w * 0.46, y + 4], [x + dir * w * 0.66, y + 2], [tx, ty + 1]], M.hair, 'cyly', z);
+  b.quad([[x + dir * w * 0.06, y + 3], [x + dir * w * 0.5, y + 1], [tx - dir * 2, ty + 6]], M.ear, 'cyly', z + 1);
+  b.ellipse(x - dir * w * 0.2, y + 2, w * 0.3, w * 0.24, M.hair, 'sphere', z + 2);
 }
 
-/** пушистый хвост дугой за спиной */
-function tail(b: PixBuf, x: number, y: number, dir: 1 | -1, len: number, fluff: number, k: number): void {
+/** пушистый хвост дугой */
+function tail(b: Paint, x: number, y: number, dir: 1 | -1, len: number, fluff: number, k: number, z: number): void {
   let ax = x;
   let ay = y;
   const n = 12;
@@ -219,131 +188,114 @@ function tail(b: PixBuf, x: number, y: number, dir: 1 | -1, len: number, fluff: 
     const t = i / n;
     const nx = x + dir * len * (0.25 + Math.sin(t * 2.4) * 0.75);
     const ny = y - len * (t * 0.9) + Math.sin(t * 2.8) * 3 * k;
-    const w = (1.4 + fluff * 1.6) * Math.sqrt(k) * (0.7 + (1 - t) * 0.6);
-    b.thickLine(ax, ay, nx, ny, w, w, [C.hr2, C.hr1, C.hr0]);
+    const w = (1.6 + fluff * 1.8) * Math.sqrt(k) * (0.75 + (1 - t) * 0.55);
+    b.limb(ax, ay, nx, ny, w, w, M.hair, z);
     ax = nx;
     ay = ny;
   }
-  b.ellipse(px(ax), px(ay), px(2 * k), px(2 * k), C.hr2);
+  b.ellipse(ax, ay, 2.2 * k, 2.2 * k, M.hair, 'sphere', z);
 }
 
-/** кисть: ладонь, пальцы и когти */
-function hand(b: PixBuf, x: number, y: number, dir: 1 | -1, k: number, big: number): void {
+/** кисть: ладонь, пальцы, большой палец и когти */
+function hand(b: Paint, x: number, y: number, dir: 1 | -1, k: number, big: number, z: number): void {
   const r = 3.4 * k;
-  b.ellipse(px(x), px(y), px(r), px(r * 1.05), C.sk1);
-  b.ellipse(px(x - dir * 0.4), px(y - r * 0.35), px(r * 0.66), px(r * 0.68), C.sk2);
+  b.ellipse(x, y, r, r * 1.05, M.skin, 'sphere', z);
   for (let i = -1; i <= 1; i++) {
     const fy = y + i * r * 0.7;
-    b.thickLine(x + dir * r * 0.4, fy, x + dir * r * 1.35, fy - r * 0.35, 2.2 * k, 1.7 * k, SKN);
-    b.thickLine(x + dir * r * 1.3, fy - r * 0.3, x + dir * r * (1.75 + big * 0.35), fy - r * (0.6 + big * 0.25), 1.5 * k, 1, [C.cw1, C.cw0, C.cw0]);
+    b.limb(x + dir * r * 0.4, fy, x + dir * r * 1.35, fy - r * 0.35, 2.2 * k, 1.7 * k, M.skin, z);
+    b.limb(x + dir * r * 1.25, fy - r * 0.28, x + dir * r * (1.6 + big * 0.3), fy - r * (0.5 + big * 0.25), 1.3 * k, 0.9, M.claw, z + 1);
   }
-  // большой палец
-  b.thickLine(x - dir * r * 0.2, y + r * 0.5, x + dir * r * 0.5, y + r * 1.15, 2.4 * k, 1.8 * k, SKN);
+  b.limb(x - dir * r * 0.2, y + r * 0.5, x + dir * r * 0.5, y + r * 1.15, 2.4 * k, 1.8 * k, M.skin, z);
 }
 
-/** прядь волос дугой: наружу и внутрь к кончику, кончик скруглён */
-function lock(b: PixBuf, x0: number, y0: number, dir: 1 | -1, len: number, bow: number, w0: number, w1: number): void {
-  const n = 9;
-  for (let i = 0; i <= n; i++) {
+/** прядь волос дугой с сужением к кончику */
+function lock(b: Paint, x0: number, y0: number, dir: 1 | -1, len: number, bow: number, w0: number, w1: number, z: number): void {
+  const n = 10;
+  let ax = x0;
+  let ay = y0;
+  for (let i = 1; i <= n; i++) {
     const t = i / n;
     const x = x0 + dir * bow * Math.sin(t * Math.PI * 0.85);
     const y = y0 + len * t;
-    const rr = w0 + (w1 - w0) * t;
-    b.ellipse(px(x), px(y), px(rr), px(rr * 1.15), C.hr1);
-    b.ellipse(px(x - dir * rr * 0.3), px(y - rr * 0.25), px(rr * 0.55), px(rr * 0.7), t < 0.5 ? C.hr2 : C.hr1);
+    b.limb(ax, ay, x, y, (w0 + (w1 - w0) * (t - 1 / n)) * 2, (w0 + (w1 - w0) * t) * 2, M.hair, z);
+    ax = x;
+    ay = y;
   }
+  b.ellipse(ax, ay, w1, w1 * 1.2, M.hair, 'sphere', z);
 }
 
-/** череп: лоб, скулы, подбородок — овалами, поэтому голова круглая */
-function skull(b: PixBuf, cx: number, hy: number, r: number): void {
-  b.ellipse(px(cx), px(hy - r * 0.1), px(r * 0.92), px(r * 0.9), C.sk1);
-  b.ellipse(px(cx), px(hy + r * 0.3), px(r * 0.78), px(r * 0.62), C.sk1);
-  b.ellipse(px(cx), px(hy + r * 0.62), px(r * 0.48), px(r * 0.38), C.sk1);
-  b.ellipse(px(cx + r * 0.06), px(hy - r * 0.22), px(r * 0.68), px(r * 0.62), C.sk2);
-  b.ellipse(px(cx - r * 0.58), px(hy + r * 0.16), px(r * 0.2), px(r * 0.18), C.sk0);
-  b.ellipse(px(cx + r * 0.58), px(hy + r * 0.16), px(r * 0.18), px(r * 0.16), C.sk0);
-}
-
-/** голова: шапка волос, лицо, чёлка, уши, светящиеся глаза */
-function head(b: PixBuf, s: Skin, v: number, hx: number, hy: number, r: number, p: Pose): void {
+/** голова: шар черепа, шапка волос, уши, глаза */
+function head(b: Paint, s: Skin, v: number, hx: number, hy: number, r: number, p: Pose): void {
   const back = BACK[v];
   const fx = r * FACE[v];
   const mane = r * (0.55 + s.mane * 2.0);
+  const zh = Z.head;
 
-  // объём волос сзади: овал, а не трапеция
-  b.ellipse(px(hx - fx * 0.45), px(hy - r * 0.18), px(r * 1.05), px(r * 0.96), C.hr0);
-  b.ellipse(px(hx - fx * 0.45), px(hy + r * 0.25), px(r * 0.9), px(r * 0.7), C.hr0);
-  // пряди по бокам дугой
+  // объём волос сзади
+  b.ellipse(hx - fx * 0.45, hy - r * 0.16, r * 1.06, r * 0.98, M.hair, 'sphere', Z.hairBack);
+  b.ellipse(hx - fx * 0.45, hy + r * 0.28, r * 0.9, r * 0.7, M.hair, 'sphere', Z.hairBack);
   for (const d of [-1, 1] as const) {
-    lock(b, hx + d * r * 0.86 - fx * 0.35, hy - r * 0.1, d, mane, r * 0.16, r * 0.3, r * 0.12);
+    lock(b, hx + d * r * 0.86 - fx * 0.35, hy - r * 0.1, d, mane, r * 0.16, r * 0.3, r * 0.12, Z.hairBack + 4);
   }
   if (back > 0.7) {
-    b.ellipse(px(hx), px(hy + mane * 0.45), px(r * 0.9), px(mane * 0.55), C.hr0);
-    b.ellipse(px(hx - r * 0.2), px(hy + mane * 0.3), px(r * 0.55), px(mane * 0.34), C.hr1);
+    b.ellipse(hx, hy + mane * 0.45, r * 0.9, mane * 0.55, M.hair, 'cyly', Z.hairBack + 2);
   }
 
-  // уши
   const eh = r * 1.35;
-  ear(b, hx - r * 0.58 + fx * 0.5, hy - r * 0.62, -1, eh, s);
-  ear(b, hx + r * 0.64 + fx * 0.5, hy - r * 0.62, 1, eh, s);
+  ear(b, hx - r * 0.58 + fx * 0.5, hy - r * 0.62, -1, eh, zh - 2);
+  ear(b, hx + r * 0.64 + fx * 0.5, hy - r * 0.62, 1, eh, zh - 2);
 
   if (back >= 1) {
-    // затылок: волосы с бликом по макушке
-    b.ellipse(px(hx), px(hy - r * 0.05), px(r * 0.92), px(r * 0.95), C.hr1);
-    b.ellipse(px(hx - r * 0.18), px(hy - r * 0.32), px(r * 0.52), px(r * 0.44), C.hr2);
+    b.ellipse(hx, hy - r * 0.04, r * 0.94, r * 0.98, M.hair, 'sphere', zh);
     return;
   }
 
+  // череп: лоб, скулы, подбородок
   const cx = hx + fx;
-  skull(b, cx, hy, r);
+  b.ellipse(cx, hy - r * 0.08, r * 0.92, r * 0.9, M.skin, 'sphere', zh);
+  b.ellipse(cx, hy + r * 0.3, r * 0.76, r * 0.62, M.skin, 'sphere', zh);
+  b.ellipse(cx, hy + r * 0.62, r * 0.46, r * 0.36, M.skin, 'sphere', zh);
 
   // шапка волос поверх лба
-  b.ellipse(px(cx - fx * 0.3), px(hy - r * 0.55), px(r * 0.98), px(r * 0.6), C.hr1);
-  b.ellipse(px(cx - fx * 0.3 - r * 0.1), px(hy - r * 0.72), px(r * 0.72), px(r * 0.38), C.hr2);
-  // чёлка клиньями, между ними виден лоб
+  b.ellipse(cx - fx * 0.3, hy - r * 0.52, r * 0.98, r * 0.62, M.hair, 'sphere', zh + 2);
   for (let i = -2; i <= 2; i++) {
     const bx = cx + i * r * 0.42 - fx * 0.25;
-    const tip = hy - r * (0.16 + Math.abs(i) * 0.06);
+    const tip = hy - r * (0.14 + Math.abs(i) * 0.07);
     b.quad([
-      [bx - r * 0.26, hy - r * 0.72],
-      [bx + r * 0.26, hy - r * 0.72],
+      [bx - r * 0.26, hy - r * 0.68],
+      [bx + r * 0.26, hy - r * 0.68],
       [bx + (i > 0 ? r * 0.14 : -r * 0.14), tip],
-    ], i % 2 ? C.hr1 : C.hr0);
+    ], M.hair, 'cyly', zh + 3);
   }
-  b.ellipse(px(cx - r * 0.2 - fx * 0.2), px(hy - r * 0.62), px(r * 0.4), px(r * 0.18), C.hr2);
 
-  // глаза: оправа, белок, радужка со зрачком и бликом
+  // глаза
   const n = EYES[v];
   const ey = hy + r * 0.2;
   const gap = Math.max(3, r * 0.48);
-  const ew = Math.max(2, px(r * 0.25));
-  const eh2 = Math.max(2, px(r * 0.26));
+  const ew = Math.max(2, r * 0.24);
+  const eh2 = Math.max(2, r * 0.22);
   const xs = n === 2 ? [cx - gap, cx + gap] : n === 1 ? [cx + r * 0.24] : [];
-  for (const exf of xs) {
-    const ex = px(exf);
-    const inner = ex < cx ? 1 : -1;
-    b.ellipse(ex, px(ey), ew, eh2, C.line);
-    b.ellipse(ex, px(ey), ew - 1, eh2 - 1, C.lite);
-    b.rect(ex - ew, px(ey) - eh2, ew * 2 + 1, Math.max(1, px(r * 0.1)), C.line);
-    b.ellipse(ex - px(ew * 0.25), px(ey) + 1, Math.max(1, px(ew * 0.72)), Math.max(1, eh2 - 1), C.eye);
-    b.ellipse(ex - px(ew * 0.25), px(ey) + 1, Math.max(1, px(ew * 0.3)), Math.max(1, px(eh2 * 0.55)), C.line);
-    b.ellipse(ex - px(ew * 0.6), px(ey) - px(eh2 * 0.3), Math.max(1, px(ew * 0.25)), Math.max(1, px(ew * 0.25)), C.lite);
-    // бровь
-    b.rect(ex - ew, px(ey - r * 0.5), ew * 2, Math.max(1, px(r * 0.08)), C.hr0);
-    b.set(ex + inner * ew, px(ey) - eh2 + 1, C.line);
+  for (const ex of xs) {
+    b.ellipse(ex, ey, ew, eh2, M.lite, 'flat', Z.face);
+    b.ellipse(ex - ew * 0.22, ey + eh2 * 0.15, ew * 0.7, eh2 * 0.82, M.eye, 'flat', Z.face + 1);
+    b.ellipse(ex - ew * 0.22, ey + eh2 * 0.15, ew * 0.3, eh2 * 0.42, M.dark, 'flat', Z.face + 2);
+    b.ellipse(ex - ew * 0.6, ey - eh2 * 0.32, ew * 0.22, ew * 0.22, M.lite, 'flat', Z.face + 3);
+    // ресница сверху и бровь
+    b.rect(px(ex - ew), px(ey - eh2), px(ew * 2) + 1, Math.max(1, px(r * 0.1)), M.dark, 'flat', Z.face + 4);
+    b.rect(px(ex - ew), px(ey - r * 0.5), px(ew * 2), Math.max(1, px(r * 0.08)), M.hair, 'flat', Z.face + 1);
   }
   if (n > 0) {
-    b.rect(px(cx + (n === 1 ? r * 0.2 : 0)), px(ey + r * 0.44), 1, 1, C.sk0);
-    const my = px(ey + r * 0.6);
+    b.ellipse(cx + (n === 1 ? r * 0.2 : 0), ey + r * 0.42, r * 0.09, r * 0.07, M.dark, 'flat', Z.face);
+    const my = ey + r * 0.62;
     if (p.roar > 0) {
-      const mw = Math.max(2, px(r * 0.3));
-      b.ellipse(px(cx), my + px(r * 0.12), mw, Math.max(2, px(r * 0.22)), C.line);
-      b.ellipse(px(cx), my + px(r * 0.2), mw - 1, Math.max(1, px(r * 0.12)), C.bl1);
-      b.rect(px(cx) - mw + 1, my - 1, 1, 2, C.cw1);
-      b.rect(px(cx) + mw - 2, my - 1, 1, 2, C.cw1);
+      const mw = Math.max(2, r * 0.3);
+      b.ellipse(cx, my, mw, Math.max(2, r * 0.24), M.dark, 'flat', Z.face);
+      b.ellipse(cx, my + r * 0.08, mw - 1, Math.max(1, r * 0.13), M.blood, 'cylx', Z.face + 1);
+      b.rect(px(cx - mw + 1), px(my - r * 0.2), 1, 2, M.claw, 'flat', Z.face + 2);
+      b.rect(px(cx + mw - 2), px(my - r * 0.2), 1, 2, M.claw, 'flat', Z.face + 2);
     } else {
-      b.rect(px(cx - r * 0.14), my, Math.max(2, px(r * 0.28)), 1, C.sk0);
-      b.set(px(cx - r * 0.2), my - 1, C.sk0);
+      b.ellipse(cx, my, r * 0.17, r * 0.06, M.dark, 'flat', Z.face);
+      b.ellipse(cx + r * 0.03, my + r * 0.09, r * 0.1, r * 0.05, M.blood, 'flat', Z.face);
     }
   }
 }
@@ -351,62 +303,48 @@ function head(b: PixBuf, s: Skin, v: number, hx: number, hy: number, r: number, 
 /** ------- наряды ------- */
 
 interface Wear {
-  /** корпус и бёдра */
-  body(b: PixBuf, s: Skin, g: Geom): void;
-  /** плечо и предплечье */
-  sleeve?(b: PixBuf, g: Geom, i: number): void;
-  /** голень поверх чулка */
-  leg?(b: PixBuf, g: Geom, i: number): void;
+  body(b: Paint, s: Skin, g: Geom): void;
+  sleeve?(b: Paint, g: Geom, i: number): void;
+  leg?(b: Paint, g: Geom, i: number): void;
+}
+
+/** грудь: два объёма поверх торса */
+function bustOf(b: Paint, g: Geom, m: number, z: number): void {
+  const { cx, lean, bustY, bust: bu } = g;
+  for (const d of [-1, 1] as const) {
+    b.ellipse(cx + lean + d * bu * 0.44, bustY, bu * 0.52, bu * 0.4, m, 'cylx', z);
+  }
+}
+
+/** голый живот между подолом верха и поясом */
+function midriff(b: Paint, g: Geom, hem: number): void {
+  const { cx, hipY, waist, hip } = g;
+  b.taper(hem, hipY - 2, waist * 0.95, hip * 0.78, cx, M.skin, 'cyly', Z.body);
+}
+
+/** юбка в складку */
+function pleated(b: Paint, g: Geom, len: number, flare: number): void {
+  const { cx, hipY, hip, tall } = g;
+  const bot = hipY + tall * 0.13 * len;
+  b.taper(hipY - 3, bot, hip * 0.92, hip * flare, cx, M.cloth, 'cyly', Z.wear);
+  for (let i = -2; i <= 2; i++) {
+    const x = cx + i * hip * 0.5;
+    b.limb(x, hipY - 2, x + i * hip * (flare - 0.9) * 0.5, bot - 2, hip * 0.22, hip * 0.26, M.cloth, Z.wear + 1);
+  }
+  b.ellipse(cx, bot - 2, hip * flare, tall * 0.02, M.cloth, 'cylx', Z.wear + 2);
 }
 
 /** матросский воротник с платком */
-function collar(b: PixBuf, g: Geom): void {
+function collar(b: Paint, g: Geom): void {
   const { cx, lean, shY, sh, r } = g;
-  b.taper(px(shY - 1), px(shY + r * 0.75), px(sh), px(sh * 0.5), px(cx + lean), C.cl1);
-  b.taper(px(shY - 1), px(shY + r * 0.9), px(sh * 0.9), px(sh * 0.3), px(cx + lean), C.cl0);
-  b.rect(px(cx + lean - sh * 0.95), px(shY + r * 0.5), px(sh * 1.9), 1, C.lite);
-  b.taper(px(shY - 1), px(shY + r * 0.55), px(sh * 0.42), 1, px(cx + lean), C.sk1);
+  b.taper(shY - 1, shY + r * 0.8, sh, sh * 0.46, cx + lean, M.cloth, 'cyly', Z.detail);
+  b.rect(px(cx + lean - sh * 0.95), px(shY + r * 0.52), px(sh * 1.9), 1, M.lite, 'flat', Z.detail + 1);
+  b.taper(shY - 1, shY + r * 0.55, sh * 0.4, 1, cx + lean, M.skin, 'cyly', Z.detail + 2);
   b.quad([
     [cx + lean - sh * 0.3, shY + r * 0.35],
     [cx + lean + sh * 0.3, shY + r * 0.35],
     [cx + lean, shY + r * 0.95],
-  ], C.trim);
-}
-
-/** юбка в складку, расходится книзу */
-function pleated(b: PixBuf, g: Geom, len: number, flare: number): void {
-  const { cx, hipY, hip, tall } = g;
-  const bot = hipY + tall * 0.13 * len;
-  b.taper(px(hipY - 3), px(bot), px(hip * 0.92), px(hip * flare), px(cx), C.cl1);
-  b.taper(px(hipY - 3), px(bot - 2), px(hip * 0.72), px(hip * flare * 0.62), px(cx - 1), C.cl2);
-  for (let i = -2; i <= 2; i++) {
-    const x = cx + i * hip * 0.5;
-    b.thickLine(x, hipY - 2, x + i * hip * (flare - 0.9) * 0.5, bot - 1, 2, 2, [C.cl0, C.cl0, C.cl0]);
-  }
-  // подол скруглён, а не отрезан по линейке
-  b.ellipse(px(cx), px(bot - 2), px(hip * flare), px(tall * 0.022), C.cl1);
-  b.ellipse(px(cx), px(bot - 1), px(hip * flare), px(tall * 0.014), C.cl0);
-}
-
-/** голый живот между подолом верха и поясом */
-function midriff(b: PixBuf, g: Geom, hem: number): void {
-  const { cx, hipY, waist, hip } = g;
-  b.taper(px(hem), px(hipY - 2), px(waist * 0.95), px(hip * 0.76), px(cx), C.sk1);
-  b.taper(px(hem), px(hipY - 3), px(waist * 0.62), px(hip * 0.5), px(cx - 1), C.sk2);
-  // подвздошные складки — по ним читается таз
-  b.rect(px(cx - hip * 0.5), px(hipY - 5), px(hip * 0.24), 1, C.sk0);
-  b.rect(px(cx + hip * 0.28), px(hipY - 5), px(hip * 0.24), 1, C.sk0);
-}
-
-/** грудь: два объёма с бликом и тень под ними */
-function bustOf(b: PixBuf, g: Geom, ramp: number[], lit: number): void {
-  const { cx, lean, bustY, bust: bu } = g;
-  for (const d of [-1, 1] as const) {
-    b.ellipse(px(cx + lean + d * bu * 0.45), px(bustY - 1), px(bu * 0.5), px(bu * 0.44), ramp[0]);
-    b.ellipse(px(cx + lean + d * bu * 0.5), px(bustY - 2), px(bu * 0.32), px(bu * 0.28), lit);
-    b.rect(px(cx + lean + d * bu * 0.9 - 1), px(bustY + bu * 0.3), 2, px(bu * 0.3), ramp[2]);
-  }
-  b.thickLine(cx + lean, bustY - 2, cx + lean, bustY + bu * 0.35, 2, 2, [ramp[2], ramp[2], ramp[2]]);
+  ], M.trim, 'cyly', Z.detail + 3);
 }
 
 const WEAR: Record<Outfit, Wear> = {
@@ -414,28 +352,20 @@ const WEAR: Record<Outfit, Wear> = {
   rags: {
     body(b, _s, g) {
       const { cx, lean, shY, bustY, waistY, hipY, sh, waist, hip, tall } = g;
-      bustOf(b, g, SKN, C.sk2);
+      bustOf(b, g, M.skin, Z.body + 2);
       b.quad([
         [cx + lean - sh * 0.15, shY - 1],
         [cx + lean + sh, shY + tall * 0.02],
         [cx + waist * 1.1, waistY + tall * 0.05],
         [cx - waist * 1.1, waistY + tall * 0.05],
         [cx + lean - sh * 0.8, bustY],
-      ], C.tp1);
-      b.quad([
-        [cx + lean - sh * 0.1, shY],
-        [cx + lean + sh * 0.7, shY + tall * 0.03],
-        [cx + waist * 0.5, waistY],
-        [cx + lean - sh * 0.4, bustY + 1],
-      ], C.tp2);
-      // рваный подол
+      ], M.top, 'cyly', Z.wear);
       const hem = waistY + tall * 0.05;
       for (let i = -3; i <= 3; i++) {
         const x = cx + i * waist * 0.36;
-        b.quad([[x - waist * 0.2, hem - 2], [x + waist * 0.2, hem - 2], [x, hem + tall * (i % 2 ? 0.035 : 0.015)]], C.tp0);
+        b.quad([[x - waist * 0.2, hem - 2], [x + waist * 0.2, hem - 2], [x, hem + tall * (i % 2 ? 0.035 : 0.015)]], M.top, 'cyly', Z.wear + 1);
       }
       midriff(b, g, hem + tall * 0.01);
-      // набедренные лоскуты вместо юбки
       for (let i = -2; i <= 2; i++) {
         const x = cx + i * hip * 0.5;
         b.quad([
@@ -443,26 +373,24 @@ const WEAR: Record<Outfit, Wear> = {
           [x + hip * 0.28, hipY - 2],
           [x + hip * 0.2, hipY + tall * (0.1 + (i % 2 ? 0.03 : 0))],
           [x - hip * 0.2, hipY + tall * (0.09 + (i % 2 ? 0.03 : 0))],
-        ], i % 2 ? C.cl1 : C.cl0);
+        ], M.cloth, 'cyly', Z.wear + 2);
       }
-      b.rect(px(cx - hip * 0.95), px(hipY - 4), px(hip * 1.9), 2, C.trim);
-      b.ellipse(px(cx + hip * 0.3), px(hipY - 3), 2, 3, C.trim);
+      b.limb(cx - hip * 0.95, hipY - 4, cx + hip * 0.95, hipY - 4, 3, 3, M.trim, Z.detail);
+      b.ellipse(cx + hip * 0.3, hipY - 3, 2.5, 3, M.trim, 'sphere', Z.detail + 1);
     },
     sleeve(b, g, i) {
       const [sx, sy] = g.arm[i].sh;
       const k = g.k;
-      // рукав только на закрытом плече, на голом — наручная повязка
-      if (i === 1) b.thickLine(sx, sy - 1, sx + 3 * k, sy + 5 * k, 9 * k, 7 * k, TOP);
-      else b.thickLine(sx, sy + 2 * k, sx - 1, sy + 5 * k, 7 * k, 6 * k, [C.trim, C.trim, C.cl0]);
+      if (i === 1) b.limb(sx, sy - 1, sx + 3 * k, sy + 5 * k, 9 * k, 7 * k, M.top, g.arm[i].z + 2);
+      else b.limb(sx, sy + 2 * k, sx - 1, sy + 5 * k, 7 * k, 6 * k, M.trim, g.arm[i].z + 2);
     },
     leg(b, g, i) {
-      // обмотки на голени
-      const { knee, foot } = g.joint[i];
+      const { knee, foot, z } = g.joint[i];
       const k = g.k;
       for (let t = 0.25; t < 0.95; t += 0.22) {
         const x = knee[0] + (foot[0] - knee[0]) * t;
         const y = knee[1] + (foot[1] - knee[1]) * t;
-        b.thickLine(x - 1, y, x + 1, y + 1.5 * k, 6 * k, 6 * k, [C.tp2, C.tp1, C.tp0]);
+        b.limb(x - 1, y, x + 1, y + 1.5 * k, 6 * k, 6 * k, M.top, z + 2);
       }
     },
   },
@@ -471,36 +399,32 @@ const WEAR: Record<Outfit, Wear> = {
   sailor: {
     body(b, s, g) {
       const { cx, lean, shY, bustY, waistY, hipY, sh, bust: bu, waist, hip } = g;
-      b.taper(px(shY), px(bustY), px(sh), px(bu), px(cx + lean), C.tp1);
-      b.taper(px(bustY), px(waistY), px(bu), px(waist), px(cx + lean * 0.6), C.tp1);
-      b.taper(px(shY), px(bustY + 2), px(sh * 0.72), px(bu * 0.66), px(cx + lean - 1), C.tp2);
-      bustOf(b, g, TOP, C.tp2);
+      b.taper(shY, bustY, sh, bu, cx + lean, M.top, 'cyly', Z.wear);
+      b.taper(bustY, waistY, bu, waist, cx + lean * 0.6, M.top, 'cyly', Z.wear);
+      bustOf(b, g, M.top, Z.wear + 2);
       const hem = waistY + (hipY - waistY) * (1 - s.bare);
-      b.taper(px(waistY), px(hem), px(waist), px(waist * 1.05), px(cx), C.tp1);
-      b.ellipse(px(cx), px(hem - 1), px(waist * 1.05), 2, C.tp0);
+      b.taper(waistY, hem, waist, waist * 1.05, cx, M.top, 'cyly', Z.wear);
       midriff(b, g, hem);
       pleated(b, g, s.skirt, 1.22);
-      b.rect(px(cx - hip * 0.78), px(hipY - 3), px(hip * 1.56), 2, C.trim);
+      b.rect(px(cx - hip * 0.78), px(hipY - 3), px(hip * 1.56), 2, M.trim, 'cylx', Z.detail);
       collar(b, g);
     },
     sleeve(b, g, i) {
       const [sx, sy] = g.arm[i].sh;
       const k = g.k;
-      b.thickLine(sx, sy - 1, sx + (i ? 1 : -1) * 2 * k, sy + 5 * k, 7.5 * k, 6 * k, TOP);
-      b.rect(px(sx - 4 * k), px(sy + 5 * k), px(8 * k), 1, C.cl0);
+      b.limb(sx, sy - 1, sx + (i ? 1 : -1) * 2 * k, sy + 5 * k, 7.5 * k, 6 * k, M.top, g.arm[i].z + 2);
+      b.rect(px(sx - 4 * k), px(sy + 5 * k), px(8 * k), 1, M.cloth, 'flat', g.arm[i].z + 3);
     },
   },
 
   // ── мантия: глубокий вырез, разрез до бедра, широкие рукава ──
   robe: {
     body(b, s, g) {
-      const { cx, lean, shY, bustY, waistY, hipY, sh, waist, hip, tall, r, k } = g;
-      // облегающий низ под мантией
-      b.taper(px(shY + r * 0.4), px(waistY), px(sh * 0.62), px(waist * 0.9), px(cx + lean), C.tp1);
-      bustOf(b, g, TOP, C.tp2);
-      b.taper(px(waistY), px(hipY + tall * 0.06), px(waist * 0.95), px(hip * 0.95), px(cx), C.tp0);
+      const { cx, lean, shY, bustY, waistY, hipY, sh, waist, hip, tall, r } = g;
+      b.taper(shY + r * 0.4, waistY, sh * 0.62, waist * 0.9, cx + lean, M.top, 'cyly', Z.wear);
+      bustOf(b, g, M.top, Z.wear + 2);
+      b.taper(waistY, hipY + tall * 0.06, waist * 0.95, hip * 0.95, cx, M.top, 'cyly', Z.wear);
       midriff(b, g, waistY + (hipY - waistY) * (1 - s.bare));
-      // полы мантии до икр, между ними разрез
       const bot = hipY + tall * 0.34;
       for (const d of [-1, 1] as const) {
         b.quad([
@@ -510,27 +434,26 @@ const WEAR: Record<Outfit, Wear> = {
           [cx + d * hip * 0.45, bot],
           [cx + d * hip * 1.1, bot],
           [cx + lean + d * sh * 1.15, bustY],
-        ], d < 0 ? C.cl0 : C.cl1);
-        b.thickLine(cx + lean + d * sh * 0.9, shY, cx + d * waist * 0.4, waistY - 2, 5 * k, 3 * k, [C.trim, C.trim, C.cl0]);
+        ], M.cloth, 'cyly', Z.wear + 3);
+        b.limb(cx + lean + d * sh * 0.9, shY, cx + d * waist * 0.85, waistY - 2, 3.4 * g.k, 2.2 * g.k, M.cloth, Z.detail);
       }
-      b.rect(px(cx - hip * 1.1), px(bot - 2), px(hip * 2.2), 2, C.cl0);
-      // пояс с камнем
-      b.rect(px(cx - waist * 1.1), px(waistY + 1), px(waist * 2.2), px(tall * 0.03), C.cl0);
-      b.ellipse(px(cx), px(waistY + tall * 0.02), px(waist * 0.3), px(waist * 0.26), C.mt1);
-      b.ellipse(px(cx), px(waistY + tall * 0.02), px(waist * 0.16), px(waist * 0.14), C.eye);
+      b.limb(cx - waist * 1.1, waistY + 2, cx + waist * 1.1, waistY + 2, tall * 0.03, tall * 0.03, M.cloth, Z.detail);
+      b.ellipse(cx, waistY + tall * 0.02, waist * 0.3, waist * 0.26, M.metal, 'sphere', Z.detail + 1);
+      b.ellipse(cx, waistY + tall * 0.02, waist * 0.15, waist * 0.13, M.eye, 'flat', Z.detail + 2);
     },
     sleeve(b, g, i) {
       const [sx, sy] = g.arm[i].sh;
       const [ex, ey] = g.arm[i].elbow;
       const k = g.k;
-      b.thickLine(sx, sy - 1, ex, ey, 8 * k, 6 * k, CLO);
+      const z = g.arm[i].z + 2;
+      b.limb(sx, sy - 1, ex, ey, 8 * k, 6 * k, M.cloth, z);
       b.quad([
         [ex - 5 * k, ey - 3 * k],
         [ex + 5 * k, ey - 3 * k],
         [ex + 8 * k, ey + 9 * k],
         [ex - 8 * k, ey + 9 * k],
-      ], C.cl0);
-      b.rect(px(ex - 8 * k), px(ey + 8 * k), px(16 * k), 2, C.trim);
+      ], M.cloth, 'cyly', z + 1);
+      b.limb(ex - 7 * k, ey + 8 * k, ex + 7 * k, ey + 8 * k, 2.4 * k, 2.4 * k, M.cloth, z + 2);
     },
   },
 
@@ -538,84 +461,60 @@ const WEAR: Record<Outfit, Wear> = {
   harness: {
     body(b, _s, g) {
       const { cx, lean, shY, bustY, waistY, hipY, sh, bust: bu, waist, hip, tall, k } = g;
-      // голый торс с проработкой
-      b.taper(px(shY), px(waistY), px(sh * 0.9), px(waist), px(cx + lean), C.sk1);
-      b.taper(px(shY), px(bustY + 2), px(sh * 0.6), px(bu * 0.6), px(cx + lean - 1), C.sk2);
+      b.taper(shY, waistY, sh * 0.9, waist, cx + lean, M.skin, 'cyly', Z.body);
+      bustOf(b, g, M.skin, Z.body + 2);
       for (const d of [-1, 1] as const) {
-        b.rect(px(cx + lean + d * sh * 0.62 - (d > 0 ? 0 : sh * 0.34)), px(shY + tall * 0.025), px(sh * 0.34), 1, C.sk0);
+        b.ellipse(cx + lean + d * bu * 0.44, bustY, bu * 0.54, bu * 0.42, M.top, 'cylx', Z.wear + 2);
+        b.limb(cx + lean + d * bu * 0.6, bustY - bu * 0.42, cx + lean + d * sh * 0.86, shY + 1, 3.5 * k, 3 * k, M.top, Z.wear + 1);
       }
-      bustOf(b, g, SKN, C.sk2);
-      // лиф: чашки по груди, ремень под ними, бретели через плечи
-      for (const d of [-1, 1] as const) {
-        b.ellipse(px(cx + lean + d * bu * 0.46), px(bustY - 1), px(bu * 0.54), px(bu * 0.48), C.tp1);
-        b.ellipse(px(cx + lean + d * bu * 0.5), px(bustY - 3), px(bu * 0.34), px(bu * 0.28), C.tp2);
-        b.thickLine(cx + lean + d * bu * 0.6, bustY - bu * 0.42, cx + lean + d * sh * 0.86, shY + 1, 3.5 * k, 3 * k, TOP);
-      }
-      b.rect(px(cx + lean - bu * 1.02), px(bustY + bu * 0.42), px(bu * 2.04), px(3 * k), C.tp0);
-      b.rect(px(cx + lean - bu * 1.02), px(bustY + bu * 0.42), px(bu * 2.04), 1, C.tp2);
-      b.ellipse(px(cx + lean), px(bustY + bu * 0.5), px(bu * 0.2), px(bu * 0.16), C.mt1);
+      b.limb(cx + lean - bu * 1.02, bustY + bu * 0.46, cx + lean + bu * 1.02, bustY + bu * 0.46, 3.4 * k, 3.4 * k, M.top, Z.wear + 3);
+      b.ellipse(cx + lean, bustY + bu * 0.5, bu * 0.2, bu * 0.16, M.metal, 'sphere', Z.detail);
       // пресс и пупок
       for (let i = 0; i < 3; i++) {
-        const y = bustY + bu * 0.78 + i * tall * 0.032;
-        b.rect(px(cx - waist * 0.3), px(y), px(waist * 0.28), 1, C.sk0);
-        b.rect(px(cx + waist * 0.02), px(y), px(waist * 0.28), 1, C.sk0);
+        const y = bustY + bu * 0.82 + i * tall * 0.032;
+        b.rect(px(cx - waist * 0.3), px(y), px(waist * 0.26), 1, M.dark, 'flat', Z.detail);
+        b.rect(px(cx + waist * 0.04), px(y), px(waist * 0.26), 1, M.dark, 'flat', Z.detail);
       }
-      b.ellipse(px(cx), px(waistY - tall * 0.012), 1, px(2 * k), C.sk0);
       midriff(b, g, waistY + tall * 0.01);
-      // запашная юбка: одна пола длиннее
       b.quad([
         [cx - hip * 0.98, hipY - 2],
         [cx + hip * 0.98, hipY - 2],
         [cx + hip * 1.12, hipY + tall * 0.15],
         [cx - hip * 0.9, hipY + tall * 0.09],
-      ], C.cl1);
-      b.quad([
-        [cx - hip * 0.98, hipY - 2],
-        [cx + hip * 0.1, hipY - 2],
-        [cx + hip * 0.22, hipY + tall * 0.11],
-        [cx - hip * 0.9, hipY + tall * 0.085],
-      ], C.cl2);
-      b.thickLine(cx + hip * 0.1, hipY - 2, cx + hip * 0.22, hipY + tall * 0.11, 2, 2, [C.cl0, C.cl0, C.cl0]);
-      // широкий пояс с пряжкой
-      b.taper(px(hipY - tall * 0.05), px(hipY), px(hip * 0.88), px(hip * 1), px(cx), C.cl0);
-      b.rect(px(cx - hip), px(hipY - tall * 0.05), px(hip * 2), 1, C.cl2);
-      b.ellipse(px(cx), px(hipY - tall * 0.025), px(hip * 0.2), px(hip * 0.15), C.mt1);
-      b.ellipse(px(cx), px(hipY - tall * 0.025), px(hip * 0.1), px(hip * 0.07), C.cl0);
+      ], M.cloth, 'cyly', Z.wear);
+      b.limb(cx + hip * 0.1, hipY - 2, cx + hip * 0.22, hipY + tall * 0.11, hip * 0.16, hip * 0.16, M.cloth, Z.wear + 1);
+      b.taper(hipY - tall * 0.05, hipY, hip * 0.88, hip, cx, M.cloth, 'cyly', Z.detail);
+      b.ellipse(cx, hipY - tall * 0.025, hip * 0.2, hip * 0.15, M.metal, 'sphere', Z.detail + 1);
     },
     sleeve(b, g, i) {
       const [sx, sy] = g.arm[i].sh;
       const [ex, ey] = g.arm[i].elbow;
       const [hx, hy] = g.arm[i].hand;
       const k = g.k;
-      // наплечник на одной стороне, наручи на обеих
-      if (i === 1) {
-        b.thickLine(sx, sy - 2 * k, sx + 2 * k, sy + 4 * k, 10 * k, 7 * k, [C.mt0, C.mt0, C.line]);
-        b.rect(px(sx - 5 * k), px(sy - 2 * k), px(10 * k), 1, C.mt1);
-      }
-      b.thickLine((ex + hx) / 2, (ey + hy) / 2, hx, hy, 6 * k, 5 * k, [C.tp2, C.tp1, C.tp0]);
-      b.rect(px((ex + hx) / 2 - 3 * k), px((ey + hy) / 2), px(6 * k), 1, C.mt1);
+      const z = g.arm[i].z + 2;
+      if (i === 1) b.limb(sx, sy - 2 * k, sx + 2 * k, sy + 4 * k, 10 * k, 7 * k, M.metal, z);
+      b.limb((ex + hx) / 2, (ey + hy) / 2, hx, hy, 6 * k, 5 * k, M.top, z);
+      b.limb((ex + hx) / 2 - 3 * k, (ey + hy) / 2, (ex + hx) / 2 + 3 * k, (ey + hy) / 2, 1.5, 1.5, M.metal, z + 1);
     },
     leg(b, g, i) {
-      const { knee } = g.joint[i];
+      const { knee, z } = g.joint[i];
       const k = g.k;
-      b.thickLine(knee[0] - 1, knee[1], knee[0] + 1, knee[1] + 2 * k, 8 * k, 8 * k, [C.tp2, C.tp1, C.tp0]);
+      b.limb(knee[0] - 1, knee[1], knee[0] + 1, knee[1] + 2 * k, 8 * k, 8 * k, M.top, z + 2);
     },
   },
 
   // ── доспех: кираса, горжет, наплечники, птеруги, поножи ──
   armor: {
     body(b, s, g) {
-      const { cx, lean, shY, bustY, waistY, hipY, sh, bust: bu, waist, hip, tall, k, r } = g;
-      b.taper(px(shY), px(bustY), px(sh), px(bu), px(cx + lean), C.tp1);
-      b.taper(px(bustY), px(waistY), px(bu), px(waist), px(cx + lean * 0.6), C.tp1);
-      bustOf(b, g, TOP, C.mt1);
+      const { cx, lean, shY, bustY, waistY, hipY, sh, bust: bu, waist, hip, tall, r } = g;
+      b.taper(shY, bustY, sh, bu, cx + lean, M.top, 'cyly', Z.wear);
+      b.taper(bustY, waistY, bu, waist, cx + lean * 0.6, M.top, 'cyly', Z.wear);
+      bustOf(b, g, M.top, Z.wear + 2);
       for (let i = 0; i < 3; i++) {
-        b.rect(px(cx + lean - bu * 0.7), px(bustY + bu * 0.5 + i * tall * 0.03), px(bu * 1.4), 1, C.tp0);
+        b.rect(px(cx + lean - bu * 0.7), px(bustY + bu * 0.55 + i * tall * 0.03), px(bu * 1.4), 1, M.metal, 'flat', Z.detail);
       }
-      b.taper(px(shY - 2), px(shY + r * 0.4), px(sh * 0.5), px(sh * 0.8), px(cx + lean), C.mt0);
-      b.rect(px(cx + lean - sh * 0.5), px(shY - 2), px(sh), 1, C.mt1);
+      b.taper(shY - 2, shY + r * 0.4, sh * 0.5, sh * 0.8, cx + lean, M.metal, 'cyly', Z.detail + 1);
       midriff(b, g, waistY + (hipY - waistY) * (1 - s.bare));
-      // птеруги
       for (let i = -2; i <= 2; i++) {
         const x = cx + i * hip * 0.48;
         const bot = hipY + tall * (0.13 - Math.abs(i) * 0.012);
@@ -624,49 +523,42 @@ const WEAR: Record<Outfit, Wear> = {
           [x + hip * 0.2, hipY - 3],
           [x + hip * 0.22, bot],
           [x - hip * 0.22, bot],
-        ], i % 2 ? C.cl0 : C.cl2);
-        b.rect(px(x - hip * 0.22), px(bot - 2), px(hip * 0.44), 2, C.mt0);
-        b.rect(px(x - hip * 0.2), px(hipY - 1), 1, px(bot - hipY), C.mt1);
+        ], M.cloth, 'cyly', Z.wear + (i % 2 ? 0 : 1));
+        b.rect(px(x - hip * 0.22), px(bot - 2), px(hip * 0.44), 2, M.metal, 'flat', Z.detail);
       }
-      b.rect(px(cx - hip * 0.98), px(hipY - 5), px(hip * 1.96), px(3 * k), C.mt0);
-      b.rect(px(cx - hip * 0.98), px(hipY - 5), px(hip * 1.96), 1, C.mt1);
+      b.taper(hipY - 5, hipY - 1, hip * 0.98, hip * 0.98, cx, M.metal, 'cylx', Z.detail + 1);
     },
     sleeve(b, g, i) {
       const [sx, sy] = g.arm[i].sh;
       const [ex, ey] = g.arm[i].elbow;
       const [hx, hy] = g.arm[i].hand;
       const k = g.k;
-      b.thickLine(sx, sy - 2 * k, sx + (i ? 2 : -2) * k, sy + 4 * k, 9 * k, 7 * k, [C.mt0, C.mt0, C.line]);
-      b.rect(px(sx - 4.5 * k), px(sy - 2 * k), px(9 * k), 1, C.mt1);
-      b.thickLine((ex + hx) / 2, (ey + hy) / 2, hx, hy, 5 * k, 4 * k, [C.mt0, C.mt0, C.line]);
+      const z = g.arm[i].z + 2;
+      b.limb(sx, sy - 2 * k, sx + (i ? 2 : -2) * k, sy + 4 * k, 9 * k, 7 * k, M.metal, z);
+      b.limb((ex + hx) / 2, (ey + hy) / 2, hx, hy, 5 * k, 4 * k, M.metal, z);
     },
     leg(b, g, i) {
-      const { knee, foot } = g.joint[i];
+      const { knee, foot, z } = g.joint[i];
       const k = g.k;
-      b.thickLine(knee[0], knee[1] + 2 * k, foot[0], foot[1] - 4 * k, 6 * k, 5 * k, [C.mt0, C.mt0, C.line]);
-      b.thickLine(knee[0] - 1, knee[1], knee[0] + 1, knee[1] + 2 * k, 7 * k, 7 * k, MET);
+      b.limb(knee[0], knee[1] + 2 * k, foot[0], foot[1] - 4 * k, 6 * k, 5 * k, M.metal, z + 2);
     },
   },
 
   // ── платье в пол с разрезом, воротник-стойка, шнуровка ──
   gown: {
     body(b, _s, g) {
-      const { cx, lean, shY, bustY, waistY, hipY, sh, bust: bu, waist, hip, tall, k, r } = g;
-      b.taper(px(shY), px(bustY), px(sh), px(bu), px(cx + lean), C.tp1);
-      b.taper(px(bustY), px(waistY), px(bu), px(waist), px(cx + lean * 0.6), C.tp1);
-      b.taper(px(shY), px(bustY + 2), px(sh * 0.7), px(bu * 0.62), px(cx + lean - 1), C.tp2);
-      bustOf(b, g, TOP, C.tp2);
-      // глубокий вырез
+      const { cx, lean, shY, bustY, waistY, hipY, sh, bust: bu, waist, hip, tall, r } = g;
+      b.taper(shY, bustY, sh, bu, cx + lean, M.top, 'cyly', Z.wear);
+      b.taper(bustY, waistY, bu, waist, cx + lean * 0.6, M.top, 'cyly', Z.wear);
+      bustOf(b, g, M.top, Z.wear + 2);
       b.quad([
         [cx + lean - bu * 0.5, shY],
         [cx + lean + bu * 0.5, shY],
         [cx + lean, bustY + bu * 0.45],
-      ], C.sk1);
-      // шнуровка корсета
+      ], M.skin, 'cyly', Z.wear + 3);
       for (let i = 0; i < 4; i++) {
-        b.rect(px(cx + lean - waist * 0.4), px(bustY + bu * 0.5 + i * tall * 0.028), px(waist * 0.8), 1, C.trim);
+        b.rect(px(cx + lean - waist * 0.4), px(bustY + bu * 0.55 + i * tall * 0.028), px(waist * 0.8), 1, M.trim, 'flat', Z.detail);
       }
-      // подол до пола с разрезом на одну ногу
       const bot = G - tall * 0.02;
       b.quad([
         [cx - waist * 1.05, waistY],
@@ -676,34 +568,26 @@ const WEAR: Record<Outfit, Wear> = {
         [cx + hip * 0.08, hipY + tall * 0.12],
         [cx - hip * 0.3, hipY + tall * 0.2],
         [cx - hip * 1.15, bot],
-      ], C.cl1);
-      b.quad([
-        [cx - waist * 0.7, waistY + 2],
-        [cx + waist * 0.2, waistY + 2],
-        [cx - hip * 0.4, hipY + tall * 0.22],
-        [cx - hip * 0.85, bot - 2],
-      ], C.cl2);
-      b.rect(px(cx - hip * 1.15), px(bot - 2), px(hip * 2.3), 2, C.cl0);
-      b.rect(px(cx - waist * 1.05), px(waistY), px(waist * 2.1), px(3 * k), C.trim);
-      // воротник-стойка
-      b.taper(px(shY - r * 0.7), px(shY + r * 0.3), px(sh * 0.55), px(sh * 1.05), px(cx + lean), C.cl0);
-      b.taper(px(shY - r * 0.7), px(shY - r * 0.2), px(sh * 0.5), px(sh * 0.75), px(cx + lean), C.trim);
-      b.taper(px(shY - r * 0.62), px(shY - r * 0.25), px(sh * 0.34), px(sh * 0.5), px(cx + lean), C.cl0);
+      ], M.cloth, 'cyly', Z.wear);
+      b.limb(cx - waist * 1.05, waistY + 1, cx + waist * 1.05, waistY + 1, 3.5 * g.k, 3.5 * g.k, M.trim, Z.detail);
+      b.taper(shY - r * 0.7, shY + r * 0.3, sh * 0.55, sh * 1.05, cx + lean, M.cloth, 'cyly', Z.detail);
+      b.taper(shY - r * 0.7, shY - r * 0.2, sh * 0.48, sh * 0.72, cx + lean, M.trim, 'cyly', Z.detail + 1);
     },
     sleeve(b, g, i) {
       const [sx, sy] = g.arm[i].sh;
       const [ex, ey] = g.arm[i].elbow;
       const [hx, hy] = g.arm[i].hand;
       const k = g.k;
-      b.thickLine(sx, sy - 1, ex, ey, 9 * k, 6 * k, CLO);
-      b.thickLine(ex, ey, hx, hy, 6 * k, 5 * k, CLO);
+      const z = g.arm[i].z + 2;
+      b.limb(sx, sy - 1, ex, ey, 8 * k, 5.5 * k, M.cloth, z);
+      b.limb(ex, ey, hx, hy, 5.5 * k, 4.5 * k, M.cloth, z);
       b.quad([
         [hx - 4 * k, hy - 5 * k],
         [hx + 4 * k, hy - 5 * k],
         [hx + 6 * k, hy + 2 * k],
         [hx - 6 * k, hy + 2 * k],
-      ], C.cl0);
-      b.rect(px(hx - 6 * k), px(hy + k), px(12 * k), 1, C.trim);
+      ], M.cloth, 'cyly', z + 1);
+      b.limb(hx - 5 * k, hy + k, hx + 5 * k, hy + k, 2 * k, 2 * k, M.trim, z + 2);
     },
   },
 };
@@ -721,6 +605,7 @@ function measure(s: Skin, v: number, p: Pose): Geom {
   const hip = wide(0.94);
   const hipY = top + tall * 0.52;
   const sh = wide(0.9);
+  const order = v >= 3 ? [1, 0] : [0, 1];
 
   const joint = [0, 1].map((i) => {
     const d = i ? 1 : -1;
@@ -732,6 +617,7 @@ function measure(s: Skin, v: number, p: Pose): Geom {
       hip: [hx, hy] as [number, number],
       knee: [(hx + fx) / 2 - d * 0.6, (hy + fy) / 2 - 1] as [number, number],
       foot: [fx, fy] as [number, number],
+      z: i === order[0] ? Z.farLimb : Z.leg,
     };
   });
 
@@ -745,6 +631,7 @@ function measure(s: Skin, v: number, p: Pose): Geom {
       sh: [sx, sy] as [number, number],
       elbow: [(sx + hx) / 2 + d * 2, (sy + hy) / 2 + 1] as [number, number],
       hand: [hx, hy] as [number, number],
+      z: i === order[0] && v !== 0 ? Z.farLimb : Z.nearLimb,
     };
   });
 
@@ -760,119 +647,105 @@ function measure(s: Skin, v: number, p: Pose): Geom {
     hip,
     joint,
     arm,
-    order: v >= 3 ? [1, 0] : [0, 1],
+    order,
   };
 }
 
 /** стоящая фигура: ноги, тело, наряд, руки, голова, хвост */
-function figure(b: PixBuf, s: Skin, v: number, p: Pose): void {
+function figure(b: Paint, s: Skin, v: number, p: Pose): void {
   const g = measure(s, v, p);
   const { k, bw, tall, hipY, hip } = g;
   const wear = WEAR[s.outfit];
 
-  if (v >= 2) tail(b, CX - hip * 0.95, hipY - 2, -1, tall * 0.2, s.tail, k);
+  if (v >= 2) tail(b, CX - hip * 0.95, hipY - 2, -1, tall * 0.2, s.tail, k, Z.tailBack);
 
   // ── ноги ──
   for (const i of g.order) {
-    const { hip: h, knee, foot } = g.joint[i];
-    const thigh = 6.2 * k * bw + 1;
+    const { hip: h, knee, foot, z } = g.joint[i];
+    const thigh = 6.4 * k * bw + 1;
     const shin = 4.2 * k * bw + 1;
-    b.thickLine(h[0], h[1], knee[0], knee[1], thigh, shin + 1, SKN);
-    b.thickLine(knee[0], knee[1], foot[0], foot[1] - 4 * k, shin + 1, shin, SKN);
+    b.limb(h[0], h[1], knee[0], knee[1], thigh, shin + 1, M.skin, z);
+    b.limb(knee[0], knee[1], foot[0], foot[1] - 4 * k, shin + 1, shin, M.skin, z);
     if (s.sockH > 0.05) {
       const t = Math.min(1, s.sockH);
       const sx = h[0] + (knee[0] - h[0]) * (1 - t);
       const sy = h[1] + (knee[1] - h[1]) * (1 - t);
-      b.thickLine(sx, sy, knee[0], knee[1], thigh - (1 - t) * 2, shin + 1, SOK);
-      b.thickLine(knee[0], knee[1], foot[0], foot[1] - 4 * k, shin + 1, shin, SOK);
-      b.thickLine(sx - 1, sy, sx + 1, sy + 1, thigh + 1, thigh + 1, [C.so1, C.so1, C.so1]);
+      b.limb(sx, sy, knee[0], knee[1], thigh - (1 - t) * 2, shin + 1, M.sock, z + 1);
+      b.limb(knee[0], knee[1], foot[0], foot[1] - 4 * k, shin + 1, shin, M.sock, z + 1);
+      b.limb(sx - 1, sy, sx + 1, sy + 1, thigh + 1, thigh + 1, M.sock, z + 2);
     }
     wear.leg?.(b, g, i);
     // сапог с каблуком
-    b.thickLine((knee[0] + foot[0]) / 2, (knee[1] + foot[1]) / 2, foot[0], foot[1] - 3 * k, shin + 2, shin + 1, BTS);
-    b.rect(px(foot[0] - 3 * k * bw - 1), px(foot[1] - 4 * k), px(6 * k * bw + 3), px(4 * k), C.bt0);
-    b.rect(px(foot[0] - 3 * k * bw - 1), px(foot[1] - 4 * k), px(6 * k * bw + 3), 1, C.bt1);
-    b.rect(px(foot[0] - 1), px(foot[1] - 2 * k), px(3 * k), px(2 * k), C.line);
+    b.limb((knee[0] + foot[0]) / 2, (knee[1] + foot[1]) / 2, foot[0], foot[1] - 3 * k, shin + 2, shin + 1, M.boot, z + 3);
+    b.ellipse(foot[0], foot[1] - 2 * k, 3.4 * k * bw + 1, 2.4 * k, M.boot, 'sphere', z + 4);
   }
 
-  // ── тело под нарядом ──
-  b.taper(px(g.shY - g.r * 0.62), px(g.shY + 1), px(g.r * 0.3), px(g.sh * 0.5), px(CX + g.lean), C.sk1);
-  b.taper(px(g.shY - g.r * 0.62), px(g.shY - g.r * 0.1), px(g.r * 0.22), px(g.r * 0.3), px(CX + g.lean - 1), C.sk2);
-  b.ellipse(px(CX + g.lean), px(g.shY - g.r * 0.55), px(g.r * 0.34), px(g.r * 0.16), C.sk0);
-  b.taper(px(g.shY), px(g.waistY), px(g.sh * 0.92), px(g.waist), px(CX + g.lean), C.sk1);
+  // ── шея и торс под нарядом ──
+  b.limb(CX + g.lean, g.shY - g.r * 0.62, CX + g.lean, g.shY + 1, g.r * 0.6, g.sh * 0.9, M.skin, Z.body);
+  b.taper(g.shY, g.waistY, g.sh * 0.92, g.waist, CX + g.lean, M.skin, 'cyly', Z.body);
 
   wear.body(b, s, g);
 
   // ── руки ──
   for (const i of g.order) {
-    const { sh: a0, elbow, hand: a2 } = g.arm[i];
-    const far = i === g.order[0] && v !== 0;
-    b.thickLine(a0[0], a0[1], elbow[0], elbow[1], 5 * k * bw + 1, 3.6 * k * bw + 1, far ? [C.sk1, C.sk0, C.sk0] : SKN);
-    b.thickLine(elbow[0], elbow[1], a2[0], a2[1], 3.6 * k * bw + 1, 2.8 * k * bw + 1, SKN);
+    const { sh: a0, elbow, hand: a2, z } = g.arm[i];
+    b.limb(a0[0], a0[1], elbow[0], elbow[1], 5.2 * k * bw + 1, 3.6 * k * bw + 1, M.skin, z);
+    b.limb(elbow[0], elbow[1], a2[0], a2[1], 3.6 * k * bw + 1, 2.8 * k * bw + 1, M.skin, z);
     wear.sleeve?.(b, g, i);
-    hand(b, a2[0], a2[1], i ? 1 : -1, k * (0.6 + bw * 0.4), s.broad > 36 ? 1 : 0);
+    hand(b, a2[0], a2[1], i ? 1 : -1, k * (0.6 + bw * 0.4), s.broad > 44 ? 1 : 0, z + 3);
   }
 
   head(b, s, v, CX + g.lean, g.top + g.r + p.head * 0.6 * k, g.r, p);
 
-  if (v < 2) tail(b, CX + hip * 1.1, hipY, 1, tall * 0.19, s.tail, k);
+  if (v < 2) tail(b, CX + hip * 1.1, hipY, 1, tall * 0.19, s.tail, k, Z.tailFront);
 }
 
 /** павшая: тело на боку, разметавшаяся грива и лужа */
-function heap(b: PixBuf, s: Skin, k: number): void {
+function heap(b: Paint, s: Skin, k: number): void {
   const u = s.tall / 100;
-  const w = s.broad * (0.55 + k * 0.1);
+  const w = s.broad * (0.5 + k * 0.1);
   const h = s.tall * (0.17 - k * 0.035);
   const base = G - 2;
   const pw = w * (1.3 + k * 0.3);
-  b.ellipse(CX, base, px(pw), px((4 + k * 3) * u), C.bl0);
-  b.ellipse(px(CX - 3 * u), base - 1, px(pw * 0.7), px((2.5 + k * 2) * u), C.bl1);
+  b.ellipse(CX, base, pw, (4 + k * 3) * u, M.blood, 'flat', Z.tailBack);
   for (const d of [0, 1]) {
-    b.thickLine(CX + w * 0.2, base - h * 0.5 + d * 3 * u, CX + w + 11 * u, base - 1 + d * 1.5 * u, 7 * u, 5.5 * u, s.sockH > 0.3 ? SOK : SKN);
-    b.rect(px(CX + w + 9 * u), px(base - 3 * u + d * 1.5 * u), px(7 * u), px(4 * u), C.bt0);
+    b.limb(CX + w * 0.2, base - h * 0.5 + d * 3 * u, CX + w + 11 * u, base - 1 + d * 1.5 * u, 7 * u, 5.5 * u, s.sockH > 0.3 ? M.sock : M.skin, Z.leg + d);
+    b.ellipse(CX + w + 12 * u, base - 1 + d * 1.5 * u, 4 * u, 3 * u, M.boot, 'sphere', Z.leg + d + 1);
   }
-  b.ellipse(px(CX + w * 0.35), px(base - h * 0.45), px(w * 0.66), px(h * 0.72), C.cl1);
-  b.ellipse(px(CX + w * 0.3), px(base - h * 0.62), px(w * 0.48), px(h * 0.5), C.cl2);
-  b.ellipse(px(CX - w * 0.25), px(base - h * 0.5), px(w * 0.52), px(h * 0.62), C.tp1);
-  b.ellipse(px(CX - w * 0.32), px(base - h * 0.68), px(w * 0.36), px(h * 0.42), C.tp2);
-  b.rect(px(CX - 1), px(base - h * 0.78), px(2 * u), px(h * 0.5), C.trim);
-  b.thickLine(CX - w * 0.3, base - h * 0.72, CX - w - 8 * u, base - 2 * u, 5.5 * u, 4 * u, SKN);
-  hand(b, CX - w - 9 * u, base - 2 * u, -1, u, 0);
-  // голова набок
+  b.ellipse(CX + w * 0.35, base - h * 0.45, w * 0.66, h * 0.72, M.cloth, 'sphere', Z.wear);
+  b.ellipse(CX - w * 0.25, base - h * 0.5, w * 0.52, h * 0.62, M.top, 'sphere', Z.wear + 1);
+  b.limb(CX - w * 0.3, base - h * 0.72, CX - w - 8 * u, base - 2 * u, 5.5 * u, 4 * u, M.skin, Z.nearLimb);
+  hand(b, CX - w - 9 * u, base - 2 * u, -1, u, 0, Z.nearLimb + 1);
   const hx = CX - w * 0.9;
   const hy = base - h * 0.82;
   const r = Math.max(4, s.tall * 0.095);
-  b.ellipse(px(hx - 4 * u), px(hy + u), px(r * (1.4 + s.mane * 0.8)), px(r * 1.05), C.hr0);
-  b.ellipse(px(hx), px(hy), px(r), px(r * 0.85), C.sk1);
-  b.ellipse(px(hx), px(hy - u), px(r * 0.7), px(r * 0.6), C.sk2);
-  b.taper(px(hy - r), px(hy), px(r * 0.85), px(r), px(hx - 1), C.hr1);
-  ear(b, hx - 3 * u, hy - r + 3 * u, -1, r * 1.15, s);
-  ear(b, hx + 6 * u, hy - r + 4 * u, 1, r * 0.85, s);
-  b.rect(px(hx + u), px(hy), px(4 * u), 1, C.line);
-  b.thickLine(CX + w * 0.5, base - 4 * u, CX + w + 16 * u, base - 7 * u, (3 + s.tail * 2) * u, 2, [C.hr1, C.hr1, C.hr0]);
+  b.ellipse(hx - 4 * u, hy + u, r * (1.4 + s.mane * 0.8), r * 1.05, M.hair, 'sphere', Z.hairBack);
+  b.ellipse(hx, hy, r, r * 0.85, M.skin, 'sphere', Z.head);
+  b.ellipse(hx - r * 0.2, hy - r * 0.5, r * 0.9, r * 0.5, M.hair, 'sphere', Z.head + 1);
+  ear(b, hx - 3 * u, hy - r + 3 * u, -1, r * 1.15, Z.head + 2);
+  ear(b, hx + 6 * u, hy - r + 4 * u, 1, r * 0.85, Z.head + 2);
+  b.rect(px(hx + u), px(hy), px(4 * u), 1, M.dark, 'flat', Z.face);
+  b.limb(CX + w * 0.5, base - 4 * u, CX + w + 16 * u, base - 7 * u, (3 + s.tail * 2) * u, 2, M.hair, Z.tailFront);
 }
 
 /** разрыв в клочья: лужа, ошмётки, косточки */
-function gibs(b: PixBuf, s: Skin, k: number): void {
+function gibs(b: Paint, s: Skin, k: number): void {
   const u = s.tall / 100;
   const base = G - 3;
   const r = Math.min(CX - 6, (15 + k * 8) * u);
-  b.ellipse(CX, base, px(r * 1.1), px(4 * u + k * u), C.bl0);
-  b.ellipse(px(CX - 3 * u), base - 1, px(r * 0.7), px(3 * u + k * u), C.bl1);
+  b.ellipse(CX, base, r * 1.1, (4 + k) * u, M.blood, 'flat', Z.body);
   const n = 12 + k * 4;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + k * 0.7;
     const d = r * (0.45 + ((i * 29) % 13) / 26);
     const x = CX + Math.cos(a) * d;
     const y = base - Math.abs(Math.sin(a)) * d * (0.8 - k * 0.2) - (6 - k * 1.5) * u;
-    const sz = (2.5 + ((i * 17) % 3)) * u;
-    b.ellipse(px(x), px(y), px(sz), px(sz), i % 3 === 0 ? C.cl1 : C.bl1);
-    b.ellipse(px(x), px(y - u), px(Math.max(1, sz - u)), px(Math.max(1, sz - u)), i % 3 === 0 ? C.cl2 : C.bl0);
-    if (i % 4 === 0) b.ellipse(px(x), px(y), px(u), px(u), C.sk1);
+    const sz = (2.6 + ((i * 17) % 3)) * u;
+    b.ellipse(x, y, sz, sz, i % 3 === 0 ? M.cloth : M.blood, 'sphere', Z.wear + (i % 5));
+    if (i % 4 === 0) b.ellipse(x, y - u, sz * 0.5, sz * 0.5, M.skin, 'sphere', Z.detail);
   }
-  // уцелевшее ухо и клок гривы — по ним ясно, кого разорвало
-  ear(b, CX - r + 7 * u, base - 7 * u, -1, 11 * u, s);
-  b.thickLine(CX + r * 0.5, base - 6 * u, CX + r - 3 * u, base - 2 * u, 7 * u, 3 * u, [C.hr1, C.hr1, C.hr0]);
+  ear(b, CX - r + 7 * u, base - 7 * u, -1, 11 * u, Z.head);
+  b.limb(CX + r * 0.5, base - 6 * u, CX + r - 3 * u, base - 2 * u, 7 * u, 3 * u, M.hair, Z.detail);
 }
 
 const cache = new Map<string, HTMLCanvasElement>();
@@ -880,8 +753,8 @@ const cache = new Map<string, HTMLCanvasElement>();
 /**
  * Кадр твари: ракурс 0..4 (анфас, три четверти, профиль, три четверти
  * сзади, спина) и поза. Кадры собираются по требованию и оседают в кэше;
- * при переполнении он сбрасывается целиком — на этаже видно немного тварей,
- * и заполнить его заново дешевле, чем держать в памяти всё нарисованное.
+ * при переполнении он сбрасывается целиком — на этаже видно немного
+ * тварей, и заполнить его заново дешевле, чем держать всё в памяти.
  */
 export function foeSprite(id: FoeId, view: number, pose: PoseId, flip = false): HTMLCanvasElement {
   const key = `${id}|${view}|${pose}|${flip ? 1 : 0}`;
@@ -889,13 +762,12 @@ export function foeSprite(id: FoeId, view: number, pose: PoseId, flip = false): 
   if (hit) return hit;
   if (cache.size > 300) cache.clear();
   const s = FOES[id].skin;
-  const b = new PixBuf(ART_W, ART_H);
+  const b = new Paint(ART_W, ART_H);
   if (pose[0] === 'g') gibs(b, s, Number(pose[1]));
   else if (pose === 'd3' || pose === 'd4') heap(b, s, pose === 'd4' ? 1 : 0);
   else figure(b, s, view, POSES[pose]);
-  b.rim(C.rim, view >= 3 ? -1 : 1);
-  b.outline(C.line);
-  let c = b.toCanvas(palette(s));
+  b.despeckle();
+  let c = b.render(mats(s), s.rim, view >= 3 ? -1 : 1);
   if (flip) {
     const m = document.createElement('canvas');
     m.width = ART_W;
