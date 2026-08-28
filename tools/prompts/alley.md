@@ -55,14 +55,35 @@ Transparent background, or plain flat magenta if transparency is unavailable.
 | `alley-0-die1.png` | `Same character, collapsing: dropped to her knees, body slumped forward, head down, arms hanging limp at her sides.` |
 | `alley-0-die2.png` | `Same character, dead on the floor: lying flat on her side, seen from standing eye level, head to the left, limbs slack, a low wide silhouette.` |
 
-## Шаг генерировать не надо
+## Шаг: четыре фазы
 
-Четыре кадра шага я доиграю сам: разрежу эталон на части — голова, уши,
-торс, плечо, предплечье, бедро, голень, хвост — и привяжу к скелету,
-который уже считает движок. Небольшие повороты конечностей от спокойной
-позы оснастка изображает честно. А вот замах и падение оснастке не даются:
-там руки уходят на сто с лишним градусов и меняется ракурс — их лучше
-нарисовать.
+Здесь я ошибся раньше, когда написал, что шаг доиграю оснасткой. Оснастка
+режет фигуру на части и крутит их вокруг суставов — но у Подворотни хвост
+проходит поверх руки, и рамкой их не разделить: нужна ручная маска на
+каждую тварь, а результат всё равно читается бумажной куклой. Дешевле и
+честнее нарисовать четыре фазы.
+
+Отдельным листом из четырёх фигур, анфас, всё тот же хвост промта:
+
+| файл | что просить |
+|---|---|
+| `alley-0-walk0.png` | `Same character, walking towards the viewer, left foot planted forward, right leg trailing back, right arm swung forward and left arm back, weight on the front foot.` |
+| `alley-0-walk1.png` | `Same character, mid-stride passing position: legs close together, right leg swinging forward past the left, both arms close to the body, body at the highest point of the step.` |
+| `alley-0-walk2.png` | `Same character, walking towards the viewer, right foot planted forward, left leg trailing back, left arm swung forward and right arm back, weight on the front foot.` |
+| `alley-0-walk3.png` | `Same character, mid-stride passing position: legs close together, left leg swinging forward past the right, both arms close to the body, body at the highest point of the step.` |
+
+Фазы 0 и 2 — зеркальные по ногам, но отражать картинку нельзя: перекинется
+хвост и пробор в волосах. Рисуй все четыре.
+
+Этих четырёх хватит на все стороны: движок берёт анфас и для остальных
+ракурсов. Захочешь честнее — тот же лист в профиль и со спины, но это уже
+не обязательно.
+
+## Что ещё сгладит анимацию
+
+- `alley-0-atk1.png` — замах перед ударом, когти занесены, вес на задней
+  ноге. Сейчас удар показывается одним кадром.
+- `alley-0-die0.png` — оседает, ноги подгибаются, между болью и коленями.
 
 ## Что уже сделано
 
@@ -76,18 +97,22 @@ Transparent background, or plain flat magenta if transparency is unavailable.
 линии замыливаются, а в четыре держатся. Так что остальных тварей лучше
 сразу листом.
 
+Отдельный кадр тоже годится, но он приходит в своём масштабе: генератор
+вписывает фигуру в кадр, а не держит расстояние до камеры. Поправка
+кладётся в `scale.json` рядом с кадрами.
+
+Чем сейчас играется анимация: шаг — одной картинкой с покачиванием
+(четырёх фаз нет), удар — одним кадром, боль — одним, смерть — тремя
+картинками на пять слотов. Отсюда и ощущение, что тварь не идёт, а
+плывёт.
+
 ## Порядок по важности
 
-Если делать не всё сразу, то в этом порядке:
-
-1. `alley-4.png` — спина. Сейчас тварь разворачивается к тебе лицом даже
-   когда убегает, это видно сразу.
-2. `alley-2.png` — профиль.
-3. `alley-0-atk.png` — замах.
-4. `alley-1.png` и `alley-3.png` — три четверти.
-5. `alley-0-die2.png` — лежит.
-6. `alley-0-die1.png` и `alley-0-pain.png` — эти две оснастка изобразит
-   сносно, так что они последние.
+1. Четыре фазы шага — сейчас тварь плывёт по полу одной картинкой, это
+   заметнее всего.
+2. `alley-1.png` — три четверти анфас, единственный недостающий ракурс.
+3. `alley-0-atk1.png` — замах перед ударом.
+4. `alley-0-die0.png` — промежуточный кадр падения.
 
 ## Куда класть и что запускать
 

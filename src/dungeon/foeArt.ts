@@ -789,6 +789,7 @@ let started = false;
 
 /** какой нарисованный кадр отвечает за эту позу */
 function poseKey(p: PoseId): string {
+  if (p === 'w0') return 'walk0';
   if (p === 'w1') return 'walk1';
   if (p === 'w2') return 'walk2';
   if (p === 'w3') return 'walk3';
