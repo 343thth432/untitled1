@@ -20,8 +20,18 @@ export interface Skin {
   skin: [string, string, string];
   /** тень, тон, свет волос */
   hair: [string, string, string];
-  /** тень, тон, свет одежды */
+  /** тень, тон, свет юбки */
   cloth: [string, string, string];
+  /** тень, тон, свет верха — блузка, топ, лиф */
+  top: [string, string, string];
+  /** тень и тон чулок */
+  sock: [string, string];
+  /** докуда натянуты чулки: 0 — нет, 1 — под самую юбку */
+  sockH: number;
+  /** полоса живота между верхом и юбкой, 0..1 */
+  bare: number;
+  /** длина юбки в долях бедра */
+  skirt: number;
   /** кант, пояс, ленты */
   trim: string;
   /** светящиеся глаза */
@@ -99,6 +109,11 @@ const LIST: FoeDef[] = [
       skin: ['#7a5a4c', '#a67c66', '#c99b80'],
       hair: ['#2b2b33', '#474753', '#6a6a78'],
       cloth: ['#3a2f28', '#5b4838', '#7d6449'],
+      top: ['#8a7a63', '#b8a686', '#e2d4b6'],
+      sock: ['#3a3038', '#5e5060'],
+      sockH: 0.35,
+      bare: 0.55,
+      skirt: 0.95,
       trim: '#8d6b3f',
       eye: '#ffe27a',
       ear: '#c47b84',
@@ -106,7 +121,7 @@ const LIST: FoeDef[] = [
       rim: '#4d5871',
       boot: ['#241f1c', '#3f3730'],
       tall: 68,
-      broad: 17,
+      broad: 20,
       mane: 0.35,
       tail: 0.8,
     },
@@ -133,6 +148,11 @@ const LIST: FoeDef[] = [
       skin: ['#7d5546', '#ab7a5f', '#d09b78'],
       hair: ['#7a3510', '#b25a1c', '#e08a3c'],
       cloth: ['#1f3a2c', '#2f5a41', '#437a58'],
+      top: ['#8a8a92', '#c2c2ca', '#f0f0f4'],
+      sock: ['#2e3a34', '#4a5c50'],
+      sockH: 0.75,
+      bare: 0.7,
+      skirt: 0.85,
       trim: '#c9b070',
       eye: '#8affc4',
       ear: '#d08a8a',
@@ -140,7 +160,7 @@ const LIST: FoeDef[] = [
       rim: '#8f5726',
       boot: ['#241f1c', '#40382f'],
       tall: 62,
-      broad: 15,
+      broad: 18,
       mane: 0.15,
       tail: 1,
     },
@@ -167,6 +187,11 @@ const LIST: FoeDef[] = [
       skin: ['#6e5064', '#96718a', '#bd93ad'],
       hair: ['#3a1c5c', '#5c2e8c', '#8a52c6'],
       cloth: ['#161129', '#241a3f', '#372a5c'],
+      top: ['#4a3670', '#6d4fa8', '#9a78d8'],
+      sock: ['#1d1630', '#33264f'],
+      sockH: 0.9,
+      bare: 0.5,
+      skirt: 1.05,
       trim: '#a06cff',
       eye: '#d0a4ff',
       ear: '#b06f9a',
@@ -174,7 +199,7 @@ const LIST: FoeDef[] = [
       rim: '#63419a',
       boot: ['#120e20', '#231a36'],
       tall: 72,
-      broad: 17,
+      broad: 20,
       mane: 0.9,
       tail: 0.7,
     },
@@ -201,6 +226,11 @@ const LIST: FoeDef[] = [
       skin: ['#8a6350', '#b98a6c', '#dcac86'],
       hair: ['#8d8d96', '#c2c2cc', '#eef0f6'],
       cloth: ['#5a1418', '#8a2226', '#b83a34'],
+      top: ['#4a4038', '#7a6a5c', '#a89684'],
+      sock: ['#3a1c1e', '#5e2e2c'],
+      sockH: 0.5,
+      bare: 0.6,
+      skirt: 0.8,
       trim: '#e0b048',
       eye: '#ff6a52',
       ear: '#cf8288',
@@ -208,7 +238,7 @@ const LIST: FoeDef[] = [
       rim: '#95392e',
       boot: ['#2a1416', '#4a2422'],
       tall: 86,
-      broad: 27,
+      broad: 30,
       mane: 0.55,
       tail: 1,
     },
@@ -235,6 +265,11 @@ const LIST: FoeDef[] = [
       skin: ['#6d5a55', '#98807a', '#c0a49b'],
       hair: ['#123a5c', '#1f5f92', '#3d92cc'],
       cloth: ['#2a3240', '#455168', '#6b7a94'],
+      top: ['#4a5a6e', '#7a90a8', '#b6cee0'],
+      sock: ['#1e2a36', '#33485c'],
+      sockH: 0.8,
+      bare: 0.85,
+      skirt: 0.9,
       trim: '#5ac8ff',
       eye: '#9be4ff',
       ear: '#bb8090',
@@ -242,7 +277,7 @@ const LIST: FoeDef[] = [
       rim: '#35789c',
       boot: ['#1a2029', '#2e3948'],
       tall: 76,
-      broad: 19,
+      broad: 22,
       mane: 0.6,
       tail: 0.9,
     },
@@ -269,14 +304,19 @@ const LIST: FoeDef[] = [
       skin: ['#6a4a52', '#936a72', '#bb8b91'],
       hair: ['#1c1826', '#332c44', '#554a68'],
       cloth: ['#241a30', '#3d2b4e', '#5c4270'],
+      top: ['#3a2a44', '#5c4268', '#8a6a96'],
+      sock: ['#241a2c', '#3e2e46'],
+      sockH: 0.85,
+      bare: 0.75,
+      skirt: 1.35,
       trim: '#ffb03a',
       eye: '#ffcf5a',
       ear: '#c07a86',
       claw: ['#6a5220', '#ffd88a'],
-      rim: '#9c6f2a',
+      rim: '#6a4a1c',
       boot: ['#141018', '#2a2130'],
       tall: 90,
-      broad: 25,
+      broad: 28,
       mane: 1,
       tail: 1,
     },

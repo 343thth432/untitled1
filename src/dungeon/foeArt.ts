@@ -111,6 +111,8 @@ const C = {
   ear: 17,
   bt0: 18, bt1: 19,
   rim: 20,
+  tp0: 21, tp1: 22, tp2: 23,
+  so0: 24, so1: 25,
 } as const;
 
 function palette(s: Skin): string[] {
@@ -136,10 +138,16 @@ function palette(s: Skin): string[] {
   p[C.bt0] = s.boot[0];
   p[C.bt1] = s.boot[1];
   p[C.rim] = s.rim;
+  p[C.tp0] = s.top[0];
+  p[C.tp1] = s.top[1];
+  p[C.tp2] = s.top[2];
+  p[C.so0] = s.sock[0];
+  p[C.so1] = s.sock[1];
   return p;
 }
 
 const SKN = [C.sk2, C.sk1, C.sk0];
+const SOK = [C.so1, C.so1, C.so0];
 const BTS = [C.bt1, C.bt0, C.line];
 
 /** конус уха с тёмным кантом и розовой изнанкой */
@@ -162,7 +170,7 @@ function tail(b: PixBuf, x: number, y: number, dir: 1 | -1, len: number, fluff: 
     // дуга вверх и наружу, к кончику сужается
     const nx = x + dir * len * (0.25 + Math.sin(t * 2.4) * 0.75);
     const ny = y - len * (t * 0.9) + Math.sin(t * 2.8) * 2;
-    const w = (1.4 + fluff * 2) * (0.7 + (1 - t) * 0.6);
+    const w = (1.1 + fluff * 1.5) * (0.7 + (1 - t) * 0.6);
     b.thickLine(px, py, nx, ny, w, w, [C.hr2, C.hr1, C.hr0]);
     px = nx;
     py = ny;
@@ -174,14 +182,14 @@ function tail(b: PixBuf, x: number, y: number, dir: 1 | -1, len: number, fluff: 
 function head(b: PixBuf, s: Skin, v: number, hx: number, hy: number, r: number, p: Pose): void {
   const back = BACK[v];
   const fx = FACE[v];
-  const mane = Math.round(r * (0.35 + s.mane * 2.7));
+  const mane = Math.round(r * (0.2 + s.mane * 2.5));
 
   // затылок
-  b.ellipse(hx - Math.round(fx * 0.5), hy + 1, Math.round(r * 1.12), Math.round(r * 1.1), C.hr0);
+  b.ellipse(hx - Math.round(fx * 0.5), hy + 1, Math.round(r * 1.06), Math.round(r * 1.08), C.hr0);
   // две пряди по бокам: между ними виден наряд
   for (const d of [-1, 1] as const) {
     const x0 = hx + d * Math.round(r * 0.85) - Math.round(fx * 0.4);
-    b.thickLine(x0, hy + Math.round(r * 0.3), x0 + d * 2, hy + mane, r * 0.8, r * 0.5, [C.hr1, C.hr1, C.hr0]);
+    b.thickLine(x0, hy + Math.round(r * 0.2), x0 - d, hy + mane, r * 0.62, r * 0.3, [C.hr1, C.hr1, C.hr0]);
   }
   if (back > 0.7) b.taper(hy, hy + mane, Math.round(r * 1.05), Math.round(r * 0.75), hx, C.hr0);
 
@@ -201,7 +209,7 @@ function head(b: PixBuf, s: Skin, v: number, hx: number, hy: number, r: number, 
   const cx = hx + fx;
   b.ellipse(cx, hy, Math.round(r * 0.95), Math.round(r * 1.02), C.sk1);
   b.ellipse(cx + 1, hy - 1, Math.round(r * 0.74), Math.round(r * 0.8), C.sk2);
-  b.ellipse(cx, hy + Math.round(r * 0.5), Math.round(r * 0.66), Math.round(r * 0.44), C.sk1);
+  b.ellipse(cx, hy + Math.round(r * 0.55), Math.round(r * 0.58), Math.round(r * 0.4), C.sk1);
   b.ellipse(cx - Math.round(r * 0.5), hy + Math.round(r * 0.2), 2, 2, C.sk0);
 
   // чёлка: рваные пряди по лбу
@@ -217,20 +225,20 @@ function head(b: PixBuf, s: Skin, v: number, hx: number, hy: number, r: number, 
     if (v >= 3 && d < 0) continue;
     if (v === 2 && d > 0) continue;
     b.thickLine(
-      hx + d * Math.round(r * 0.98) + Math.round(fx * 0.3), hy - Math.round(r * 0.55),
-      hx + d * Math.round(r * 1.02) + Math.round(fx * 0.1), hy + Math.round(r * (0.9 + s.mane * 1.5)),
-      4, 2, [C.hr1, C.hr1, C.hr0],
+      hx + d * Math.round(r * 0.95) + Math.round(fx * 0.3), hy - Math.round(r * 0.55),
+      hx + d * Math.round(r * 0.75) + Math.round(fx * 0.1), hy + Math.round(r * (0.9 + s.mane * 1.4)),
+      3, 2, [C.hr1, C.hr1, C.hr0],
     );
   }
 
   // глаза: тёмная оправа, белок, светящаяся радужка
   const n = EYES[v];
   const ey = hy + Math.round(r * 0.18);
-  const gap = Math.round(r * 0.44);
+  const gap = Math.max(3, Math.round(r * 0.5));
   const xs = n === 2 ? [cx - gap, cx + gap] : n === 1 ? [cx + Math.round(r * 0.24)] : [];
   for (const ex of xs) {
     const inner = ex < cx ? 1 : -1;
-    b.rect(ex - 2, ey - 1, 5, 3, C.line);
+    b.rect(ex - 2, ey - 1, 4, 3, C.line);
     b.rect(ex - 1, ey, 3, 2, C.eye);
     b.set(ex + inner, ey - 1, C.eye);
     // веко нависает с внутренней стороны — взгляд исподлобья
@@ -265,63 +273,112 @@ function claws(b: PixBuf, x: number, y: number, dir: 1 | -1, big: number): void 
   }
 }
 
-/** стоящая фигура: ноги, корпус, руки, голова, хвост */
+/**
+ * Стоящая фигура. Силуэт строится по четырём обхватам — плечи, грудь,
+ * талия, бёдра, — поэтому получается песочные часы, а не прямоугольник.
+ * Наряд по образцу школьной формы: матроска с воротником и платком,
+ * короткая юбка в складку, чулки выше колена.
+ */
 function figure(b: PixBuf, s: Skin, v: number, p: Pose): void {
   const bw = BW[v];
   const tall = Math.max(14, Math.round(s.tall * p.squash));
   const top = G - tall;
-  const r = Math.round(s.tall * 0.132 * (0.55 + 0.45 * p.squash));
-  const hipY = G - Math.round(tall * 0.44);
-  const shY = top + r * 2 + 2 - p.bob;
-  const half = Math.round((s.broad / 2) * bw);
-  const hipHalf = Math.round(half * 0.82);
+  const r = Math.max(4, Math.round(s.tall * 0.105 * (0.55 + 0.45 * p.squash)));
   const lean = p.lean;
 
-  // хвост позади корпуса
-  if (v >= 2) tail(b, CX - Math.round(half * 0.6), hipY - 2, -1, Math.round(s.tall * 0.26), s.tail);
+  const shY = top + r * 2 + 2 - p.bob;
+  const bustY = shY + Math.round(tall * 0.1);
+  const waistY = top + Math.round(tall * 0.44);
+  const hipY = top + Math.round(tall * 0.52);
 
-  // дальняя нога и рука темнее — уходят за корпус
+  const wide = (k: number): number => Math.max(2, Math.round(s.broad * k * bw));
+  const shHalf = wide(0.4);
+  const bustHalf = wide(0.42);
+  const waistHalf = wide(0.26);
+  const hipHalf = wide(0.48);
+
+  // хвост позади корпуса
+  if (v >= 2) tail(b, CX - Math.round(hipHalf * 0.95), hipY - 2, -1, Math.round(s.tall * 0.26), s.tail);
+
+  // ── ноги ──
   const legs: [number, number][] = [
-    [CX - hipHalf, hipY],
-    [CX + hipHalf, hipY],
+    [CX - Math.round(hipHalf * 0.5), hipY + 2],
+    [CX + Math.round(hipHalf * 0.5), hipY + 2],
   ];
   const order = v >= 3 ? [1, 0] : [0, 1];
   for (const i of order) {
     const [lx, ly] = legs[i];
-    const fx = CX + (i ? hipHalf : -hipHalf) + p.foot[i] * bw;
+    const fx = CX + (i ? 1 : -1) * Math.round(hipHalf * 0.5) + p.foot[i] * bw;
     const fy = G - p.rise[i];
     const kx = (lx + fx) / 2 + (i ? 1 : -1);
     const ky = (ly + fy) / 2 - 1;
-    b.thickLine(lx, ly, kx, ky, 7 * bw + 1, 5 * bw + 1, SKN);
-    b.thickLine(kx, ky, fx, fy - 3, 5 * bw + 1, 4 * bw + 1, SKN);
-    // сапог до середины голени
+    const thigh = 4.2 * bw + 1;
+    const shin = 2.8 * bw + 1;
+    b.thickLine(lx, ly, kx, ky, thigh, shin + 0.6, SKN);
+    b.thickLine(kx, ky, fx, fy - 3, shin + 0.6, shin, SKN);
+    // чулок: от середины бедра или от колена, с манжетой
+    if (s.sockH > 0.05) {
+      const t = Math.min(1, s.sockH);
+      const sx = lx + (kx - lx) * (1 - t);
+      const sy = ly + (ky - ly) * (1 - t);
+      b.thickLine(sx, sy, kx, ky, thigh - (1 - t) * 1.5, shin + 0.6, SOK);
+      b.thickLine(kx, ky, fx, fy - 3, shin + 0.6, shin, SOK);
+      b.thickLine(sx - 1, sy, sx + 1, sy + 1, thigh + 0.6, thigh + 0.6, [C.so1, C.so1, C.so1]);
+    }
+    // ботинок
     const bt = (ky + fy) / 2;
-    b.thickLine((kx + fx) / 2, bt, fx, fy - 2, 5 * bw + 2, 5 * bw + 1, BTS);
-    b.rect(Math.round(fx - 3 * bw - 1), fy - 3, Math.round(6 * bw + 3), 4, C.bt0);
-    b.rect(Math.round(fx - 3 * bw - 1), fy - 3, Math.round(6 * bw + 3), 1, C.bt1);
+    b.thickLine((kx + fx) / 2, bt, fx, fy - 2, shin + 1.6, shin + 1, BTS);
+    b.rect(Math.round(fx - 2.1 * bw - 1), fy - 3, Math.round(4.2 * bw + 3), 4, C.bt0);
+    b.rect(Math.round(fx - 2.1 * bw - 1), fy - 3, Math.round(4.2 * bw + 3), 1, C.bt1);
   }
 
-  // корпус: плечи -> талия, поверх юбка
-  b.taper(shY, hipY, half, Math.round(half * 0.68), CX + lean, C.cl1);
-  b.taper(shY, Math.round((shY + hipY) / 2), half, Math.round(half * 0.8), CX + lean, C.cl2);
-  // вырез и грудь
-  b.taper(shY + 1, shY + Math.round((hipY - shY) * 0.45), Math.round(half * 0.55), Math.round(half * 0.36), CX + lean, C.sk1);
-  b.taper(shY, shY + 3, Math.round(half * 0.5), Math.round(half * 0.62), CX + lean, C.cl0);
-  // юбка с двумя складками
-  b.taper(hipY - 4, hipY + Math.round(tall * 0.17), Math.round(half * 0.72), Math.round(half * 1.2), CX, C.cl0);
-  b.taper(hipY - 4, hipY + Math.round(tall * 0.14), Math.round(half * 0.58), Math.round(half * 0.95), CX - 1, C.cl1);
-  b.rect(CX - Math.round(half * 0.3), hipY - 2, 2, Math.round(tall * 0.15), C.cl0);
-  // пояс
-  b.rect(CX - half, hipY - 4, half * 2, 2, C.trim);
-  b.rect(CX - 2, hipY - 5, 4, 4, C.trim);
-  // ключицы и шея
-  b.taper(shY - 4, shY + 1, Math.round(r * 0.4), Math.round(half * 0.5), CX + lean, C.sk1);
-  b.rect(CX + lean - Math.round(half * 0.4), shY - 1, Math.round(half * 0.8), 2, C.trim);
+  // ── юбка: расширяется книзу, в складку ──
+  const skirtBot = hipY + Math.round(tall * 0.13 * s.skirt);
+  b.taper(hipY - 3, skirtBot, Math.round(hipHalf * 0.9), Math.round(hipHalf * 1.75), CX, C.cl1);
+  b.taper(hipY - 3, skirtBot - 1, Math.round(hipHalf * 0.7), Math.round(hipHalf * 1.15), CX - 1, C.cl2);
+  for (let k = -2; k <= 2; k++) {
+    const px = CX + Math.round(k * hipHalf * 0.55);
+    b.thickLine(px, hipY - 2, px + Math.round(k * hipHalf * 0.22), skirtBot - 1, 1.6, 1.6, [C.cl0, C.cl0, C.cl0]);
+  }
+  b.rect(CX - Math.round(hipHalf * 1.7), skirtBot - 1, Math.round(hipHalf * 3.4), 2, C.cl0);
 
-  // руки
+  // ── корпус: плечи -> грудь -> талия -> бёдра ──
+  const hem = waistY + Math.round((hipY - waistY) * (1 - s.bare));
+  b.taper(shY, bustY, shHalf, bustHalf, CX + lean, C.tp1);
+  b.taper(bustY, waistY, bustHalf, waistHalf, CX + Math.round(lean * 0.6), C.tp1);
+  b.taper(shY, bustY + 2, Math.round(shHalf * 0.72), Math.round(bustHalf * 0.66), CX + lean - 1, C.tp2);
+  // грудь
+  for (const d of [-1, 1] as const) {
+    b.ellipse(CX + lean + d * Math.round(bustHalf * 0.45), bustY - 1, Math.round(bustHalf * 0.5), Math.round(bustHalf * 0.42), C.tp2);
+    b.ellipse(CX + lean + d * Math.round(bustHalf * 0.5), bustY, Math.round(bustHalf * 0.34), Math.round(bustHalf * 0.3), C.tp1);
+  }
+  b.thickLine(CX + lean, bustY - 1, CX + lean, bustY + 2, 1.4, 1.4, [C.tp0, C.tp0, C.tp0]);
+  // подол верха и голый живот до пояса юбки
+  if (hem < waistY + 1) {
+    b.taper(waistY, waistY + 2, waistHalf, waistHalf + 1, CX, C.tp0);
+  } else {
+    b.taper(waistY, hem, waistHalf, Math.round(waistHalf * 1.05), CX, C.tp1);
+    b.ellipse(CX, hem - 1, Math.round(waistHalf * 1.05), 2, C.tp0);
+  }
+  b.taper(hem, hipY - 2, Math.round(waistHalf * 0.95), Math.round(hipHalf * 0.76), CX, C.sk1);
+  b.taper(hem, hipY - 3, Math.round(waistHalf * 0.62), Math.round(hipHalf * 0.5), CX - 1, C.sk2);
+  b.rect(CX - Math.round(hipHalf * 0.78), hipY - 3, Math.round(hipHalf * 1.56), 1, C.trim);
+
+  // ── шея, матросский воротник, платок ──
+  b.taper(shY - 4, shY + 1, Math.round(r * 0.38), Math.round(shHalf * 0.46), CX + lean, C.sk1);
+  b.taper(shY - 1, shY + Math.round(r * 0.75), shHalf, Math.round(shHalf * 0.5), CX + lean, C.cl1);
+  b.taper(shY - 1, shY + Math.round(r * 0.9), Math.round(shHalf * 0.9), Math.round(shHalf * 0.3), CX + lean, C.cl0);
+  b.taper(shY - 1, shY + Math.round(r * 0.55), Math.round(shHalf * 0.42), 1, CX + lean, C.sk1);
+  b.quad([
+    [CX + lean - 3, shY + Math.round(r * 0.35)],
+    [CX + lean + 3, shY + Math.round(r * 0.35)],
+    [CX + lean, shY + Math.round(r * 0.95)],
+  ], C.trim);
+
+  // ── руки ──
   const arms: [number, number][] = [
-    [CX - half + 1 + lean, shY + 2],
-    [CX + half - 1 + lean, shY + 2],
+    [CX - shHalf + 1 + lean, shY + 2],
+    [CX + shHalf - 1 + lean, shY + 2],
   ];
   for (const i of order) {
     const [sx, sy] = arms[i];
@@ -329,50 +386,57 @@ function figure(b: PixBuf, s: Skin, v: number, p: Pose): void {
     const hyp = sy + p.drop[i];
     const ex = (sx + hxp) / 2 + (i ? 2 : -2);
     const ey = (sy + hyp) / 2 + 1;
-    b.thickLine(sx, sy, ex, ey, 6 * bw + 1, 4 * bw + 1, i === order[0] && v !== 0 ? [C.sk1, C.sk0, C.sk0] : SKN);
-    b.thickLine(ex, ey, hxp, hyp, 4 * bw + 1, 3 * bw + 1, SKN);
+    const far = i === order[0] && v !== 0;
+    b.thickLine(sx, sy, ex, ey, 3.4 * bw + 1, 2.4 * bw + 1, far ? [C.sk1, C.sk0, C.sk0] : SKN);
+    b.thickLine(ex, ey, hxp, hyp, 2.4 * bw + 1, 1.8 * bw + 1, SKN);
+    // рукав-фонарик матроски
+    b.thickLine(sx, sy - 1, sx + (i ? 1 : -1) * 2, sy + 3, 4.2 * bw + 1, 3.4 * bw + 1, [C.tp2, C.tp1, C.tp0]);
     claws(b, Math.round(hxp), Math.round(hyp), i ? 1 : -1, s.broad > 20 ? 1 : 0);
   }
 
   // голова
   head(b, s, v, CX + lean, top + r + Math.round(p.head * 0.6), r, p);
 
-  // хвост перед корпусом для видов спереди
-  if (v < 2) tail(b, CX + Math.round(half * 0.8), hipY, 1, Math.round(s.tall * 0.24), s.tail);
+  if (v < 2) tail(b, CX + Math.round(hipHalf * 1.15), hipY, 1, Math.round(s.tall * 0.24), s.tail);
 }
 
-/** павшая: куча на полу, разметавшаяся грива и лужа */
+/** павшая: тело на боку, разметавшаяся грива и лужа */
 function heap(b: PixBuf, s: Skin, k: number): void {
-  const w = Math.round(s.broad * (1.5 + k * 0.35));
-  const h = Math.round(s.tall * (0.22 - k * 0.05));
+  const w = Math.round(s.broad * (1.05 + k * 0.2));
+  const h = Math.round(s.tall * (0.17 - k * 0.035));
   const base = G - 1;
   // лужа
-  const pw = Math.round(w * (1.2 + k * 0.4));
-  b.ellipse(CX, base, pw, Math.round(4 + k * 3), C.bl0);
-  b.ellipse(CX - 2, base - 1, Math.round(pw * 0.7), Math.round(2 + k * 2), C.bl1);
-  // тело
-  b.ellipse(CX, base - Math.round(h * 0.5), w, h, C.cl1);
-  b.ellipse(CX - 2, base - Math.round(h * 0.75), Math.round(w * 0.7), Math.round(h * 0.6), C.cl2);
-  b.rect(CX - w, base - Math.round(h * 0.5), w * 2, 2, C.trim);
-  // раскинутые руки и ноги
-  b.thickLine(CX + Math.round(w * 0.4), base - h, CX + w + 5, base - 2, 6, 4, SKN);
-  claws(b, CX + w + 6, base - 2, 1, 0);
-  b.thickLine(CX - Math.round(w * 0.3), base - Math.round(h * 0.6), CX - w - 6, base - 1, 7, 5, SKN);
-  b.thickLine(CX + Math.round(w * 0.6), base - Math.round(h * 0.4), CX + w + 8, base, 7, 5, BTS);
-  // голова набок с разметавшейся гривой
-  const hx = CX - Math.round(w * 0.75);
-  const hy = base - Math.round(h * 0.75);
-  const r = Math.round(s.tall * 0.1);
-  b.ellipse(hx - 3, hy + 1, Math.round(r * (1.5 + s.mane)), Math.round(r * 1.1), C.hr0);
+  const pw = Math.round(w * (1.3 + k * 0.3));
+  b.ellipse(CX, base, pw, 3 + k * 2, C.bl0);
+  b.ellipse(CX - 2, base - 1, Math.round(pw * 0.7), 2 + k, C.bl1);
+  // ноги в чулках вытянуты вправо
+  for (const d of [0, 1]) {
+    b.thickLine(CX + Math.round(w * 0.2), base - Math.round(h * 0.5) + d * 2, CX + w + 7, base - 1 + d, 5, 4, s.sockH > 0.3 ? SOK : SKN);
+    b.rect(CX + w + 6, base - 2 + d, 5, 3, C.bt0);
+  }
+  // юбка колоколом
+  b.ellipse(CX + Math.round(w * 0.35), base - Math.round(h * 0.45), Math.round(w * 0.62), Math.round(h * 0.7), C.cl1);
+  b.ellipse(CX + Math.round(w * 0.3), base - Math.round(h * 0.6), Math.round(w * 0.45), Math.round(h * 0.5), C.cl2);
+  // корпус
+  b.ellipse(CX - Math.round(w * 0.25), base - Math.round(h * 0.5), Math.round(w * 0.5), Math.round(h * 0.6), C.tp1);
+  b.ellipse(CX - Math.round(w * 0.3), base - Math.round(h * 0.65), Math.round(w * 0.35), Math.round(h * 0.4), C.tp2);
+  b.rect(CX - 1, base - Math.round(h * 0.75), 2, Math.round(h * 0.5), C.trim);
+  // рука откинута
+  b.thickLine(CX - Math.round(w * 0.3), base - Math.round(h * 0.7), CX - w - 5, base - 2, 4, 3, SKN);
+  claws(b, CX - w - 6, base - 2, -1, 0);
+  // голова набок
+  const hx = CX - Math.round(w * 0.85);
+  const hy = base - Math.round(h * 0.8);
+  const r = Math.max(4, Math.round(s.tall * 0.095));
+  b.ellipse(hx - 3, hy + 1, Math.round(r * (1.4 + s.mane * 0.8)), Math.round(r * 1.05), C.hr0);
   b.ellipse(hx, hy, r, Math.round(r * 0.85), C.sk1);
   b.ellipse(hx, hy - 1, Math.round(r * 0.7), Math.round(r * 0.6), C.sk2);
-  b.taper(hy - r, hy, Math.round(r * 0.9), r, hx - 1, C.hr1);
-  ear(b, hx - 2, hy - r + 2, -1, Math.round(r * 1.2), s);
-  ear(b, hx + 4, hy - r + 3, 1, Math.round(r * 0.9), s);
-  // погасшие глаза
+  b.taper(hy - r, hy, Math.round(r * 0.85), r, hx - 1, C.hr1);
+  ear(b, hx - 2, hy - r + 2, -1, Math.round(r * 1.15), s);
+  ear(b, hx + 4, hy - r + 3, 1, Math.round(r * 0.85), s);
   b.rect(hx + 1, hy, 3, 1, C.line);
   // хвост вытянут
-  b.thickLine(CX + Math.round(w * 0.2), base - 3, CX + w + 10, base - 6, 4 + s.tail * 3, 2, [C.hr1, C.hr1, C.hr0]);
+  b.thickLine(CX + Math.round(w * 0.5), base - 3, CX + w + 11, base - 5, 3 + s.tail * 2, 2, [C.hr1, C.hr1, C.hr0]);
 }
 
 /** разрыв в клочья: лужа, ошмётки, косточки */
