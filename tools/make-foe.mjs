@@ -24,6 +24,12 @@
  * три четверти, профиль, три четверти со спины, спина). Без позы — кадр
  * покоя. <id>-0.png обязателен: он задаёт масштаб.
  *
+ * Кадр, нарисованный отдельно от остальных, приходит в своём масштабе:
+ * генератор вписывает фигуру в кадр, а не держит расстояние до камеры.
+ * Поправка на такой кадр кладётся в scale.json рядом — {"файл": 0.38}.
+ * Множитель проще всего снять так: привести обе фигуры к одной высоте
+ * рамки и сравнить головы; голова от позы не зависит.
+ *
  *   node tools/make-foe.mjs alley
  */
 import fs from 'node:fs/promises';
@@ -31,7 +37,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 /** высота буфера спрайта — та же, что у рисованных (foeArt.ts) */
-const ART_W = 120;
+const ART_W = 152;
 const ART_H = 208;
 /** какую долю буфера занимает фигура от макушки до подошв */
 const FILL = 0.86;
@@ -79,9 +85,13 @@ function bounds(px, w, h) {
   return x1 < 0 ? null : { x0, y0, x1, y1 };
 }
 
-/** середина стоп: нижняя десятая часть силуэта */
+/**
+ * Середина опоры: нижняя пятая часть силуэта. Узкая полоса не годится —
+ * в замахе одна нога стоит заметно ниже другой, и якорь уезжает на неё,
+ * а фигура вылезает за край холста.
+ */
 function feetCenter(px, w, h, b) {
-  const from = b.y1 - Math.max(2, Math.round((b.y1 - b.y0) * 0.08));
+  const from = b.y1 - Math.max(2, Math.round((b.y1 - b.y0) * 0.22));
   let sum = 0;
   let n = 0;
   for (let y = from; y <= b.y1; y++) {
@@ -178,6 +188,14 @@ async function main() {
     process.exit(1);
   }
 
+  // поправки масштаба для кадров из других источников
+  let hints = {};
+  try {
+    hints = JSON.parse(await fs.readFile(path.join(dir, 'scale.json'), 'utf8'));
+  } catch {
+    /* поправок нет — все кадры с одного листа */
+  }
+
   const views = [];
   let unit = 0;
   // кадр анфас в покое идёт первым: он задаёт масштаб для остальных
@@ -197,7 +215,7 @@ async function main() {
     // масштаб общий на тварь: считается по кадру покоя и переиспользуется
     const figH = b.y1 - b.y0 + 1;
     if (!unit) unit = (ART_H * FILL) / figH;
-    const scale = unit;
+    const scale = unit * (hints[f] ?? 1);
     const cropW = b.x1 - b.x0 + 1;
     const smallW = Math.max(1, Math.round(cropW * scale));
     const smallH = Math.max(1, Math.round(figH * scale));
@@ -271,6 +289,12 @@ async function main() {
         buf[i + 2] = copy[n + 2] * 0.38;
         buf[i + 3] = 255;
       }
+    }
+    // молчаливая обрезка — худшее, что может сделать конвейер: кадр
+    // выглядит целым, пока не посмотришь на него вплотную
+    const need = Math.ceil(2 * Math.max(v.foot, v.w - v.foot));
+    if (need > ART_W) {
+      console.warn(`  ВНИМАНИЕ: ${v.name} не влезает — нужен холст ${need}, а он ${ART_W}`);
     }
     const file = v.name.replace(/\.png$/, '.sprite.png');
     await sharp(buf, { raw: { width: ART_W, height: ART_H, channels: 4 } })

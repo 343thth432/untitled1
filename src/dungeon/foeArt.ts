@@ -20,9 +20,9 @@ import { FOES, FOE_IDS, type FoeId, type Gait, type Outfit, type Skin } from './
  * спины и спина. Остальные три получаются отражением, как в оригинале.
  */
 
-export const ART_W = 120;
+export const ART_W = 152;
 export const ART_H = 208;
-const CX = 60;
+const CX = 76;
 /** пол в буфере */
 const G = 205;
 
@@ -891,7 +891,7 @@ export function foeSprite(id: FoeId, view: number, pose: PoseId, flip = false): 
   const key = `${id}|${view}|${pose}|${flip ? 1 : 0}`;
   const hit = cache.get(key);
   if (hit) return hit;
-  if (cache.size > 300) cache.clear();
+  if (cache.size > 260) cache.clear();
   const s = FOES[id].skin;
   const shot = pose[0] === 'g' ? null : pick(id, view, pose);
   let c: HTMLCanvasElement;
