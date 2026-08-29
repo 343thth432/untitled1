@@ -58,6 +58,11 @@
       "pose": "walk3"
     },
     {
+      "file": "alley-1.sprite.png",
+      "view": 1,
+      "pose": "idle"
+    },
+    {
       "file": "alley-2.sprite.png",
       "view": 2,
       "pose": "idle"
