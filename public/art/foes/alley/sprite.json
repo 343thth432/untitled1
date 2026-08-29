@@ -13,6 +13,16 @@
       "pose": "atk"
     },
     {
+      "file": "alley-0-atk1.sprite.png",
+      "view": 0,
+      "pose": "atk1"
+    },
+    {
+      "file": "alley-0-die0.sprite.png",
+      "view": 0,
+      "pose": "die0"
+    },
+    {
       "file": "alley-0-die1.sprite.png",
       "view": 0,
       "pose": "die1"
@@ -26,6 +36,26 @@
       "file": "alley-0-pain.sprite.png",
       "view": 0,
       "pose": "pain"
+    },
+    {
+      "file": "alley-0-walk0.sprite.png",
+      "view": 0,
+      "pose": "walk0"
+    },
+    {
+      "file": "alley-0-walk1.sprite.png",
+      "view": 0,
+      "pose": "walk1"
+    },
+    {
+      "file": "alley-0-walk2.sprite.png",
+      "view": 0,
+      "pose": "walk2"
+    },
+    {
+      "file": "alley-0-walk3.sprite.png",
+      "view": 0,
+      "pose": "walk3"
     },
     {
       "file": "alley-2.sprite.png",

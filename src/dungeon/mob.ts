@@ -16,8 +16,10 @@ export type MobState = 'idle' | 'chase' | 'wind' | 'pain' | 'dead' | 'gib';
 // нарисованные кадры тянутся один раз, до первого кадра игры
 loadFoeArt();
 
-/** длительность кадра в каждой раскадровке, с */
-const STEP = 0.14;
+/** длина шага в клетках: кадр меняется на каждой такой доле пути.
+ *  Раньше кадр менялся по времени, и все твари шагали с одной частотой
+ *  вне зависимости от скорости — быстрая семенила, не перебирая ногами. */
+const STRIDE = 0.3;
 const PAIN_T = 0.2;
 const DIE_T = 0.16;
 const GIB_T = 0.1;
@@ -215,13 +217,15 @@ export class Mob {
       case 'pain':
         return 'pain';
       case 'wind':
-        return this.def.bolts > 0 ? 'cast' : 'atk';
+        // ближний бой в два кадра: замах, потом удар
+        if (this.def.bolts > 0) return 'cast';
+        return this.t < this.def.wind * 0.55 ? 'atk' : 'atk1';
       case 'dead':
         return DIE[Math.min(DIE.length - 1, Math.max(0, Math.floor(this.t / DIE_T)))];
       case 'gib':
         return GIB[Math.min(GIB.length - 1, Math.max(0, Math.floor(this.t / GIB_T)))];
       default:
-        return WALK[Math.max(0, Math.floor(this.step / (STEP * this.def.speed * 2))) % WALK.length];
+        return WALK[Math.max(0, Math.floor(this.step / STRIDE)) % WALK.length];
     }
   }
 

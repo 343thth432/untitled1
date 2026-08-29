@@ -29,7 +29,7 @@ const G = 205;
 /** имена кадров: w — фаза шага, d — смерть, g — разрыв */
 export type PoseId =
   | 'w0' | 'w1' | 'w2' | 'w3'
-  | 'atk' | 'cast' | 'pain'
+  | 'atk' | 'atk1' | 'cast' | 'pain'
   | 'd0' | 'd1' | 'd2' | 'd3' | 'd4'
   | 'g0' | 'g1' | 'g2' | 'g3';
 
@@ -76,6 +76,8 @@ function posesOf(g: Gait): Record<PoseId, Pose> {
     w3: walk(3, g),
     // замах: корпус вперёд, когти занесены над головой
     atk: { bob: -1.5 * g.bounce, lean: 4 * g.snap + g.stoop, foot: [-6 * g.stride, 7 * g.stride], rise: [0, 0], hand: [-out, out], drop: [-up, -up * 0.7], squash: 0.98, head: -1.5, roar: 1 },
+    // удар: корпус ещё дальше вперёд, когти дошли до цели
+    atk1: { bob: -2 * g.bounce, lean: 7 * g.snap + g.stoop, foot: [-9 * g.stride, 10 * g.stride], rise: [0, 0], hand: [-out * 1.25, out * 1.25], drop: [-up * 0.4, -up * 0.3], squash: 0.94, head: -2, roar: 1 },
     // бросок: одна рука выброшена вперёд, вторая отведена
     cast: { bob: 0, lean: 3 * g.snap + g.stoop, foot: [-4 * g.stride, 6 * g.stride], rise: [0, 0], hand: [-out * 1.15, out * 0.6], drop: [-3, -up], squash: 1, head: -1.5, roar: 1 },
     // боль: отброшена назад, руки вскинуты
@@ -793,9 +795,10 @@ function poseKey(p: PoseId): string {
   if (p === 'w1') return 'walk1';
   if (p === 'w2') return 'walk2';
   if (p === 'w3') return 'walk3';
-  if (p === 'atk' || p === 'cast' || p === 'pain') return p;
+  if (p === 'atk' || p === 'atk1' || p === 'cast' || p === 'pain') return p;
   if (p === 'd0') return 'pain';
-  if (p === 'd1' || p === 'd2') return 'die1';
+  if (p === 'd1') return 'die0';
+  if (p === 'd2') return 'die1';
   if (p === 'd3' || p === 'd4') return 'die2';
   return 'idle';
 }
