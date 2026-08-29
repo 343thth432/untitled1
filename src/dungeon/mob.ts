@@ -1,5 +1,5 @@
 import { FOES, type FoeId, type Tier } from './foes';
-import { ART_H, ART_W, figSpan, foeSprite, loadFoeArt, viewFor, type PoseId } from './foeArt';
+import { ART_H, figSpan, foeAspect, foeSprite, loadFoeArt, viewFor, type PoseId } from './foeArt';
 import { solid, type Floor } from './map';
 import type { Player } from './player';
 import type { Board } from './billboard';
@@ -239,7 +239,7 @@ export class Mob {
       x: this.x,
       y: this.y,
       src,
-      aspect: ART_W / ART_H,
+      aspect: foeAspect(this.id),
       scale: this.scale,
       hang: 0,
       emissive: this.state === 'wind' ? 0.5 : 0.32,

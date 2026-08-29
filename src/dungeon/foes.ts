@@ -131,7 +131,7 @@ const LIST: FoeDef[] = [
     boltSpeed: 0,
     pain: 0.7,
     sight: 11,
-    scale: 1.05,
+    scale: 0.82,
     where: ['crypt', 'catacomb'],
     count: 2,
     gait: { stride: 1.05, swing: 1.15, bounce: 1, stoop: 3, wide: 0.95, snap: 1 },

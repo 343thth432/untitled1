@@ -85,6 +85,20 @@ function bounds(px, w, h) {
   return x1 < 0 ? null : { x0, y0, x1, y1 };
 }
 
+/** середина всей фигуры по горизонтали */
+function massCenter(px, w, b) {
+  let sum = 0;
+  let n = 0;
+  for (let y = b.y0; y <= b.y1; y++) {
+    for (let x = b.x0; x <= b.x1; x++) {
+      if (!solid(px, (y * w + x) * 4)) continue;
+      sum += x;
+      n++;
+    }
+  }
+  return n ? sum / n : (b.x0 + b.x1) / 2;
+}
+
 /**
  * Середина опоры: нижняя пятая часть силуэта. Узкая полоса не годится —
  * в замахе одна нога стоит заметно ниже другой, и якорь уезжает на неё,
@@ -198,6 +212,7 @@ async function main() {
 
   const views = [];
   let unit = 0;
+  let tall = 0;
   // кадр анфас в покое идёт первым: он задаёт масштаб для остальных
   for (const f of [`${id}-0.png`, ...files.filter((x) => x !== `${id}-0.png`)]) {
     const src = path.join(dir, f);
@@ -214,8 +229,16 @@ async function main() {
 
     // масштаб общий на тварь: считается по кадру покоя и переиспользуется
     const figH = b.y1 - b.y0 + 1;
-    if (!unit) unit = (ART_H * FILL) / figH;
+    if (!unit) {
+      unit = (ART_H * FILL) / figH;
+      tall = figH;
+    }
     const scale = unit * (hints[f] ?? 1);
+    // у припавшей и лежачей «стопы» теряют смысл: низ силуэта тянется во
+    // всю длину тела, и якорь уезжает вбок. Такие кадры вешаем на середину
+    // массы — тварь остаётся над своей клеткой
+    const low = figH < tall * 0.88;
+    const fx2 = low ? massCenter(data, w, b) : fx;
     const cropW = b.x1 - b.x0 + 1;
     const smallW = Math.max(1, Math.round(cropW * scale));
     const smallH = Math.max(1, Math.round(figH * scale));
@@ -234,7 +257,7 @@ async function main() {
       w: smallW,
       h: smallH,
       // куда лёг центр стоп в уменьшенном кадре
-      foot: (fx - b.x0) * scale,
+      foot: (fx2 - b.x0) * scale,
     });
   }
 
@@ -248,10 +271,16 @@ async function main() {
   const pal = medianCut(sample, COLORS);
   console.log(`палитра: ${pal.length} цветов из ${sample.length} пикселей`);
 
+  // холст расширяется под самый широкий кадр: сгорбленная тварь с хвостом
+  // вбок в общий не влезает, а молчаливая обрезка — худшее, что бывает
+  const need = Math.max(...views.map((v) => Math.ceil(2 * Math.max(v.foot, v.w - v.foot))));
+  const CW = Math.max(ART_W, need + 2);
+  if (CW > ART_W) console.log(`холст расширен до ${CW}: самый широкий кадр требует ${need}`);
+
   const out = [];
   for (const v of views) {
-    const buf = Buffer.alloc(ART_W * ART_H * 4, 0);
-    const ox = Math.round(ART_W / 2 - v.foot);
+    const buf = Buffer.alloc(CW * ART_H * 4, 0);
+    const ox = Math.round(CW / 2 - v.foot);
     const oy = ART_H - v.h;
     for (let y = 0; y < v.h; y++) {
       for (let x = 0; x < v.w; x++) {
@@ -259,9 +288,9 @@ async function main() {
         if (v.px[s + 3] <= 128) continue;
         const dx = x + ox;
         const dy = y + oy;
-        if (dx < 0 || dy < 0 || dx >= ART_W || dy >= ART_H) continue;
+        if (dx < 0 || dy < 0 || dx >= CW || dy >= ART_H) continue;
         const c = nearest(pal, v.px[s], v.px[s + 1], v.px[s + 2]);
-        const d = (dy * ART_W + dx) * 4;
+        const d = (dy * CW + dx) * 4;
         buf[d] = c[0];
         buf[d + 1] = c[1];
         buf[d + 2] = c[2];
@@ -270,10 +299,10 @@ async function main() {
     }
     // кант: цветом соседа, притемнённым — не сплошная чернота
     const copy = Buffer.from(buf);
-    const at = (x, y) => (x < 0 || y < 0 || x >= ART_W || y >= ART_H ? null : (y * ART_W + x) * 4);
+    const at = (x, y) => (x < 0 || y < 0 || x >= CW || y >= ART_H ? null : (y * CW + x) * 4);
     for (let y = 0; y < ART_H; y++) {
-      for (let x = 0; x < ART_W; x++) {
-        const i = (y * ART_W + x) * 4;
+      for (let x = 0; x < CW; x++) {
+        const i = (y * CW + x) * 4;
         if (copy[i + 3]) continue;
         let n = null;
         for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
@@ -290,14 +319,13 @@ async function main() {
         buf[i + 3] = 255;
       }
     }
-    // молчаливая обрезка — худшее, что может сделать конвейер: кадр
+    // холст уже подобран под самый широкий кадр, но проверку оставляем:
+    // молчаливая обрезка — худшее, что может сделать конвейер, кадр
     // выглядит целым, пока не посмотришь на него вплотную
-    const need = Math.ceil(2 * Math.max(v.foot, v.w - v.foot));
-    if (need > ART_W) {
-      console.warn(`  ВНИМАНИЕ: ${v.name} не влезает — нужен холст ${need}, а он ${ART_W}`);
-    }
+    const fit = Math.ceil(2 * Math.max(v.foot, v.w - v.foot));
+    if (fit > CW) console.warn(`  ВНИМАНИЕ: ${v.name} не влезает — нужен холст ${fit}, а он ${CW}`);
     const file = v.name.replace(/\.png$/, '.sprite.png');
-    await sharp(buf, { raw: { width: ART_W, height: ART_H, channels: 4 } })
+    await sharp(buf, { raw: { width: CW, height: ART_H, channels: 4 } })
       .png({ compressionLevel: 9 })
       .toFile(path.join(dir, file));
     out.push({ file, view: v.view, pose: v.pose });
@@ -306,7 +334,7 @@ async function main() {
 
   await fs.writeFile(
     path.join(dir, 'sprite.json'),
-    JSON.stringify({ w: ART_W, h: ART_H, frames: out }, null, 2) + '\n',
+    JSON.stringify({ w: CW, h: ART_H, frames: out }, null, 2) + '\n',
   );
   console.log('готово:', dir);
 }

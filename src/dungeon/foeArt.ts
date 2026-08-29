@@ -784,6 +784,9 @@ function gibs(b: Paint, s: Skin, k: number): void {
  */
 interface Drawn {
   frames: Map<string, HTMLImageElement>;
+  /** свой холст: сгорбленная тварь с хвостом вбок шире прямостоящей */
+  w: number;
+  h: number;
 }
 
 const drawn = new Map<FoeId, Drawn>();
@@ -811,8 +814,8 @@ export function loadFoeArt(): void {
     const dir = `${base}art/foes/${id}/`;
     fetch(`${dir}sprite.json`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((man: { frames: { file: string; view: number; pose: string }[] }) => {
-        const d: Drawn = { frames: new Map() };
+      .then((man: { w?: number; h?: number; frames: { file: string; view: number; pose: string }[] }) => {
+        const d: Drawn = { frames: new Map(), w: man.w ?? ART_W, h: man.h ?? ART_H };
         drawn.set(id, d);
         for (const f of man.frames) {
           const img = new Image();
@@ -859,26 +862,26 @@ function pick(id: FoeId, view: number, pose: PoseId): { img: HTMLImageElement; e
 }
 
 /** поза нарисованного кадра: без разрезки на части — преобразованием целиком */
-function posed(img: HTMLImageElement, p: Pose, k: number, fallen: number): HTMLCanvasElement {
+function posed(img: HTMLImageElement, p: Pose, k: number, fallen: number, w: number, h: number): HTMLCanvasElement {
   const c = document.createElement('canvas');
-  c.width = ART_W;
-  c.height = ART_H;
+  c.width = w;
+  c.height = h;
   const ctx = c.getContext('2d');
   if (!ctx) return c;
   ctx.imageSmoothingEnabled = false;
   ctx.save();
   // опорная точка — середина подошв: от неё считаются и наклон, и оседание
-  ctx.translate(ART_W / 2, ART_H - 1);
+  ctx.translate(w / 2, h - 1);
   if (fallen > 0) {
     // заваливается набок и съезжает к полу
     ctx.rotate((Math.PI / 2) * fallen);
-    ctx.translate(ART_H * 0.28 * fallen, ART_W * 0.16 * fallen);
+    ctx.translate(h * 0.28 * fallen, w * 0.16 * fallen);
   }
   ctx.rotate(p.lean * 0.006);
   ctx.translate(0, -p.bob * k * 0.7);
   const sy = Math.max(0.12, p.squash);
   ctx.scale(1 + (1 - sy) * 0.35, sy);
-  ctx.drawImage(img, -ART_W / 2, -(ART_H - 1));
+  ctx.drawImage(img, -w / 2, -(h - 1));
   ctx.restore();
   return c;
 }
@@ -903,7 +906,8 @@ export function foeSprite(id: FoeId, view: number, pose: PoseId, flip = false): 
     // точный кадр берётся как есть; недостающую позу доигрываем сами
     const fall = shot.exact ? 0 : pose === 'd4' ? 1 : pose === 'd3' ? 0.9 : pose === 'd2' ? 0.55 : pose === 'd1' ? 0.2 : 0;
     const p = shot.exact ? posesFor(id).w0 : posesFor(id)[pose];
-    c = posed(shot.img, p, s.tall / 100, fall);
+    const d = drawn.get(id);
+    c = posed(shot.img, p, s.tall / 100, fall, d?.w ?? ART_W, d?.h ?? ART_H);
   } else {
     const b = new Paint(ART_W, ART_H);
     if (pose[0] === 'g') gibs(b, s, Number(pose[1]));
@@ -914,12 +918,12 @@ export function foeSprite(id: FoeId, view: number, pose: PoseId, flip = false): 
   }
   if (flip) {
     const m = document.createElement('canvas');
-    m.width = ART_W;
-    m.height = ART_H;
+    m.width = c.width;
+    m.height = c.height;
     const ctx = m.getContext('2d');
     if (ctx) {
       ctx.imageSmoothingEnabled = false;
-      ctx.translate(ART_W, 0);
+      ctx.translate(c.width, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(c, 0, 0);
     }
@@ -939,6 +943,16 @@ export function viewFor(facing: number, toCam: number): [number, boolean] {
   while (d < -Math.PI) d += Math.PI * 2;
   const oct = ((Math.round(d / (Math.PI / 4)) % 8) + 8) % 8;
   return oct <= 4 ? [oct, false] : [8 - oct, true];
+}
+
+/**
+ * Ширина к высоте кадра. У нарисованных тварей холст свой: сгорбленная с
+ * хвостом вбок в общий не влезает. Билборд обязан знать эту пропорцию,
+ * иначе спрайт растянет.
+ */
+export function foeAspect(id: FoeId): number {
+  const d = drawn.get(id);
+  return d ? d.w / d.h : ART_W / ART_H;
 }
 
 /** высота фигуры в пикселях буфера — по ней считается размер билборда */
