@@ -294,6 +294,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
     };
 
     let raf = 0;
+    let shownAlive = mobs.length;
     let last = performance.now();
     let clock = 0;
     let avg = 16;
@@ -373,6 +374,14 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
               );
             }
           }
+        }
+        // счётчик в шапке пересчитывается только по событиям, а смерть
+        // твари событием не была — счёт врал до первого подбора или удара
+        let alive = 0;
+        for (const m of mobs) if (m.alive) alive++;
+        if (alive !== shownAlive) {
+          shownAlive = alive;
+          cbRef.current.onState(state());
         }
         for (let i = bolts.length - 1; i >= 0; i--) {
           taken += bolts[i].update(dt, floor, player.x, player.y);
