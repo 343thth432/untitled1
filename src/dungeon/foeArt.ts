@@ -28,6 +28,7 @@ const G = 205;
 
 /** имена кадров: w — фаза шага, d — смерть, g — разрыв */
 export type PoseId =
+  | 'stand'
   | 'w0' | 'w1' | 'w2' | 'w3'
   | 'atk' | 'atk1' | 'atk2' | 'cast' | 'pain'
   | 'd0' | 'd1' | 'd2' | 'd3' | 'd4'
@@ -70,6 +71,7 @@ function posesOf(g: Gait): Record<PoseId, Pose> {
   const out = 12 + 5 * g.wide;
   const idle = walk(0, g);
   return {
+    stand: idle,
     w0: idle,
     w1: walk(1, g),
     w2: walk(2, g),
@@ -844,12 +846,30 @@ const NEAR = [
   [4, 3, 2, 1, 0],
 ];
 
-/** ближайший нарисованный кадр и точна ли поза */
+/**
+ * Ближайший нарисованный кадр и точна ли поза.
+ *
+ * Ракурс важнее позы. Раньше поза искалась по всем разворотам сразу, и
+ * тварь, у которой шаг нарисован только анфас, поворачивалась к камере
+ * с любой стороны: пять нарисованных ракурсов не показывались никогда.
+ * Теперь сначала берётся свой разворот — с нужной позой, а если её нет,
+ * то его же кадр покоя, доигранный преобразованием. Чужие развороты
+ * идут в дело, только когда своего нет вовсе.
+ *
+ * На замахе и смерти это ничего не отнимает: тварь перед ударом
+ * доворачивается к игроку, и её разворот там и так нулевой.
+ */
 function pick(id: FoeId, view: number, pose: PoseId): { img: HTMLImageElement; exact: boolean } | null {
   const d = drawn.get(id);
   if (!d) return null;
-  const near = NEAR[view] ?? NEAR[0];
   const key = poseKey(pose);
+  if (key !== 'idle') {
+    const own = d.frames.get(`${view}|${key}`);
+    if (own) return { img: own, exact: true };
+  }
+  const mine = d.frames.get(`${view}|idle`);
+  if (mine) return { img: mine, exact: key === 'idle' };
+  const near = NEAR[view] ?? NEAR[0];
   if (key !== 'idle') {
     for (const v of near) {
       const hit = d.frames.get(`${v}|${key}`);

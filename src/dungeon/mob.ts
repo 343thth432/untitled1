@@ -233,7 +233,10 @@ export class Mob {
   private pose(): PoseId {
     switch (this.state) {
       case 'idle':
-        return 'w0';
+        // стоящая тварь показывает кадр покоя, а не первую фазу шага:
+        // иначе она замирает посреди замаха ногой, да ещё и не во всех
+        // ракурсах — шаг нарисован только анфас
+        return 'stand';
       case 'pain':
         return 'pain';
       case 'wind': {
