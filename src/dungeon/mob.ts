@@ -42,6 +42,10 @@ export class Mob {
   /** фаза шага, растёт по пройденному пути; стартовый сдвиг свой у
    *  каждой, иначе стая шагает строем */
   step = Math.random() * 4;
+  /** собственное время: по нему качается в воздухе летающая */
+  private life = Math.random() * 6;
+  /** этот замах — когтями, а не снарядом */
+  private claw = false;
   readonly id: FoeId;
   readonly tier: Tier;
   readonly name: string;
@@ -128,6 +132,7 @@ export class Mob {
   /** @returns урон, который тварь нанесла игроку в этот кадр */
   update(dt: number, f: Floor, p: Player, others: Mob[]): number {
     this.t += dt;
+    this.life += dt;
     this.cd = Math.max(0, this.cd - dt);
     if (!this.alive) return 0;
 
@@ -162,7 +167,7 @@ export class Mob {
       this.state = 'chase';
       this.t = 0;
       this.cd = d.cool;
-      if (d.bolts > 0) {
+      if (d.bolts > 0 && !this.claw) {
         this.fired = { x: this.x, y: this.y, a: this.a, n: d.bolts, speed: d.boltSpeed, dmg: this.dmg };
         return 0;
       }
@@ -171,20 +176,21 @@ export class Mob {
     }
 
     const ranged = d.bolts > 0;
-    const canHit = ranged
-      ? dist < d.sight && dist > 1.4 && this.canSee(f, p.x, p.y)
-      : dist <= d.reach;
+    // стрелка достали вплотную — отходить поздно, бьёт когтями
+    const close = dist <= d.reach;
+    const canHit = close || (ranged && dist < d.sight && dist > 1.4 && this.canSee(f, p.x, p.y));
     if (canHit && this.cd <= 0) {
       this.state = 'wind';
       this.t = 0;
+      this.claw = close;
       return 0;
     }
 
     // подходим, расталкивая соседей, чтобы не слипались в одну точку
     let sx = dx / (dist || 1);
     let sy = dy / (dist || 1);
-    // стрелки держат дистанцию
-    if (ranged && dist < 3.5) {
+    // стрелки держат дистанцию, но не пятятся из-под самого носа
+    if (ranged && dist < 3.5 && !close) {
       sx = -sx;
       sy = -sy;
     }
@@ -201,7 +207,7 @@ export class Mob {
     }
     const len = Math.sqrt(sx * sx + sy * sy) || 1;
     const sp = d.speed * dt;
-    const still = !ranged && dist <= d.reach * 0.9;
+    const still = dist <= d.reach * 0.9;
     if (!still) {
       this.slide(f, this.x + (sx / len) * sp, this.y + (sy / len) * sp);
       this.step += sp;
@@ -217,8 +223,8 @@ export class Mob {
       case 'pain':
         return 'pain';
       case 'wind':
+        if (this.def.bolts > 0 && !this.claw) return 'cast';
         // ближний бой в два кадра: замах, потом удар
-        if (this.def.bolts > 0) return 'cast';
         return this.t < this.def.wind * 0.55 ? 'atk' : 'atk1';
       case 'dead':
         return DIE[Math.min(DIE.length - 1, Math.max(0, Math.floor(this.t / DIE_T)))];
@@ -227,6 +233,15 @@ export class Mob {
       default:
         return WALK[Math.max(0, Math.floor(this.step / STRIDE)) % WALK.length];
     }
+  }
+
+  /** подъём над полом в долях своей высоты: полёт, качание, падение */
+  private get lift(): number {
+    const fly = this.def.fly ?? 0;
+    if (!fly) return 0;
+    // сбитая тварь валится на пол за треть секунды
+    const drop = this.alive ? 1 : Math.max(0, 1 - this.t / 0.35);
+    return (fly + Math.sin(this.life * 2.4) * 0.05) * drop;
   }
 
   board(camX: number, camY: number): Board {
@@ -242,6 +257,7 @@ export class Mob {
       aspect: foeAspect(this.id),
       scale: this.scale,
       hang: 0,
+      lift: this.lift,
       emissive: this.state === 'wind' ? 0.5 : 0.32,
       // еле заметный отсвет: в темноте тварь видно, но нимба вокруг нет
       glow: this.alive ? `${this.aura}22` : undefined,

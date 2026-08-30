@@ -11,7 +11,7 @@ import type { FloorId } from '../game/types';
  * стиль и сколько угодно разных тварей.
  */
 
-export type FoeId = 'stray' | 'alley' | 'hex' | 'brute' | 'lance' | 'matron';
+export type FoeId = 'stray' | 'alley' | 'wing' | 'hex' | 'brute' | 'lance' | 'matron';
 export type Tier = 'foe' | 'elite' | 'boss';
 
 /**
@@ -107,6 +107,8 @@ export interface FoeDef {
   sight: number;
   /** высота в клетках мира */
   scale: number;
+  /** высота полёта в долях своего роста; 0 или нет поля — ходит по полу */
+  fly?: number;
   where: FloorId[];
   /** сколько таких ставить в стае */
   count: number;
@@ -200,6 +202,51 @@ const LIST: FoeDef[] = [
       tall: 116,
       broad: 34,
       mane: 0.14,
+      tail: 1,
+    },
+  },
+  {
+    id: 'wing',
+    name: 'Крылатая',
+    tier: 'foe',
+    hp: 30,
+    dmg: 9,
+    // на пятую часть быстрее самой прыткой из обычных
+    speed: 2.46,
+    reach: 1,
+    cool: 1.5,
+    wind: 0.4,
+    bolts: 1,
+    boltSpeed: 7.5,
+    pain: 0.8,
+    sight: 13,
+    scale: 0.76,
+    fly: 0.42,
+    where: ['crypt', 'catacomb', 'sanctum'],
+    count: 2,
+    gait: { stride: 1.35, swing: 1.1, bounce: 1.9, stoop: 0, wide: 0.9, snap: 1.4 },
+    aura: '#3fd0ff',
+    skin: {
+      skin: '#f4d0ba',
+      hair: '#162435',
+      cloth: '#0c1b2b',
+      top: '#1c2939',
+      sock: '#173b61',
+      sockH: 0.8,
+      bare: 0.6,
+      skirt: 0.7,
+      outfit: 'harness',
+      metal: '#11a8f0',
+      lite: '#cee7e9',
+      trim: '#0f8dd2',
+      eye: '#4accf5',
+      ear: '#c89f8d',
+      claw: '#94e4f7',
+      rim: '#0c6aab',
+      boot: '#0c1b2b',
+      tall: 108,
+      broad: 32,
+      mane: 0.2,
       tail: 1,
     },
   },
