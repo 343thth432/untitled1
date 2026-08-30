@@ -159,10 +159,18 @@ export class Mob {
       return 0;
     }
 
-    // всегда смотрим на игрока в бою — так ракурс спрайта совпадает с боем
-    this.a = Math.atan2(dy, dx);
+    // всегда смотрим на игрока в бою — так ракурс спрайта совпадает с боем.
+    // Рвущаяся вперёд тварь наводится только до замаха: иначе от рывка,
+    // который доворачивает за игроком, некуда деться
+    if (!d.lunge || this.state !== 'wind') this.a = Math.atan2(dy, dx);
 
     if (this.state === 'wind') {
+      // рывок: тяжёлая не заносит когти на месте, а наваливается вперёд —
+      // и тормозит, дойдя до цели, иначе влезает игроку в лицо
+      if (d.lunge && this.t > d.wind * 0.4 && dist > d.reach * 0.8) {
+        const sp = d.lunge * dt;
+        this.slide(f, this.x + Math.cos(this.a) * sp, this.y + Math.sin(this.a) * sp);
+      }
       if (this.t < d.wind) return 0;
       this.state = 'chase';
       this.t = 0;
@@ -178,7 +186,13 @@ export class Mob {
     const ranged = d.bolts > 0;
     // стрелка достали вплотную — отходить поздно, бьёт когтями
     const close = dist <= d.reach;
-    const canHit = close || (ranged && dist < d.sight && dist > 1.4 && this.canSee(f, p.x, p.y));
+    // рвущаяся тварь заносит когти заранее: рывок донесёт её сам, и на
+    // это время у игрока есть шаг в сторону
+    const span = d.lunge ? d.lunge * d.wind * 0.6 : 0;
+    const canHit = close
+      || (ranged
+        ? dist < d.sight && dist > 1.4 && this.canSee(f, p.x, p.y)
+        : dist <= d.reach + span && (!span || this.canSee(f, p.x, p.y)));
     if (canHit && this.cd <= 0) {
       this.state = 'wind';
       this.t = 0;
@@ -222,10 +236,17 @@ export class Mob {
         return 'w0';
       case 'pain':
         return 'pain';
-      case 'wind':
-        if (this.def.bolts > 0 && !this.claw) return 'cast';
+      case 'wind': {
+        const d = this.def;
+        if (d.bolts > 0 && !this.claw) return 'cast';
+        // рывок нарисован в три кадра: занос, бросок тела, удар в упор
+        if (d.lunge) {
+          const k = this.t / d.wind;
+          return k < 0.4 ? 'atk' : k < 0.72 ? 'atk1' : 'atk2';
+        }
         // ближний бой в два кадра: замах, потом удар
-        return this.t < this.def.wind * 0.55 ? 'atk' : 'atk1';
+        return this.t < d.wind * 0.55 ? 'atk' : 'atk1';
+      }
       case 'dead':
         return DIE[Math.min(DIE.length - 1, Math.max(0, Math.floor(this.t / DIE_T)))];
       case 'gib':

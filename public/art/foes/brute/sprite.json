@@ -1,0 +1,66 @@
+{
+  "w": 249,
+  "h": 208,
+  "frames": [
+    {
+      "file": "brute-0.sprite.png",
+      "view": 0,
+      "pose": "idle"
+    },
+    {
+      "file": "brute-0-atk.sprite.png",
+      "view": 0,
+      "pose": "atk"
+    },
+    {
+      "file": "brute-0-atk1.sprite.png",
+      "view": 0,
+      "pose": "atk1"
+    },
+    {
+      "file": "brute-0-atk2.sprite.png",
+      "view": 0,
+      "pose": "atk2"
+    },
+    {
+      "file": "brute-0-die0.sprite.png",
+      "view": 0,
+      "pose": "die0"
+    },
+    {
+      "file": "brute-0-die1.sprite.png",
+      "view": 0,
+      "pose": "die1"
+    },
+    {
+      "file": "brute-0-die2.sprite.png",
+      "view": 0,
+      "pose": "die2"
+    },
+    {
+      "file": "brute-0-pain.sprite.png",
+      "view": 0,
+      "pose": "pain"
+    },
+    {
+      "file": "brute-1.sprite.png",
+      "view": 1,
+      "pose": "idle"
+    },
+    {
+      "file": "brute-2.sprite.png",
+      "view": 2,
+      "pose": "idle"
+    },
+    {
+      "file": "brute-3.sprite.png",
+      "view": 3,
+      "pose": "idle"
+    },
+    {
+      "file": "brute-4.sprite.png",
+      "view": 4,
+      "pose": "idle"
+    }
+  ]
+}
