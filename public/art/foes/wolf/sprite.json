@@ -1,0 +1,81 @@
+{
+  "w": 152,
+  "h": 208,
+  "frames": [
+    {
+      "file": "wolf-0.sprite.png",
+      "view": 0,
+      "pose": "idle"
+    },
+    {
+      "file": "wolf-0-atk.sprite.png",
+      "view": 0,
+      "pose": "atk"
+    },
+    {
+      "file": "wolf-0-atk1.sprite.png",
+      "view": 0,
+      "pose": "atk1"
+    },
+    {
+      "file": "wolf-0-die0.sprite.png",
+      "view": 0,
+      "pose": "die0"
+    },
+    {
+      "file": "wolf-0-die1.sprite.png",
+      "view": 0,
+      "pose": "die1"
+    },
+    {
+      "file": "wolf-0-die2.sprite.png",
+      "view": 0,
+      "pose": "die2"
+    },
+    {
+      "file": "wolf-0-pain.sprite.png",
+      "view": 0,
+      "pose": "pain"
+    },
+    {
+      "file": "wolf-0-walk0.sprite.png",
+      "view": 0,
+      "pose": "walk0"
+    },
+    {
+      "file": "wolf-0-walk1.sprite.png",
+      "view": 0,
+      "pose": "walk1"
+    },
+    {
+      "file": "wolf-0-walk2.sprite.png",
+      "view": 0,
+      "pose": "walk2"
+    },
+    {
+      "file": "wolf-0-walk3.sprite.png",
+      "view": 0,
+      "pose": "walk3"
+    },
+    {
+      "file": "wolf-1.sprite.png",
+      "view": 1,
+      "pose": "idle"
+    },
+    {
+      "file": "wolf-2.sprite.png",
+      "view": 2,
+      "pose": "idle"
+    },
+    {
+      "file": "wolf-3.sprite.png",
+      "view": 3,
+      "pose": "idle"
+    },
+    {
+      "file": "wolf-4.sprite.png",
+      "view": 4,
+      "pose": "idle"
+    }
+  ]
+}
