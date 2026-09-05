@@ -1,7 +1,8 @@
 import { PixBuf } from './pixel';
 
 /**
- * Арсенал: двухстволка, пулемёт, ракетница, меч и топор.
+ * Арсенал: двухстволка, пулемёт, ракетница. Ближнего боя нет — под
+ * затмение спускаются с полными карманами и стреляют.
  *
  * Спрайты здесь нарисованы пиксель за пикселем и служат запасным
  * вариантом: если в public/art/weapons лежит готовая лента кадров
@@ -9,7 +10,7 @@ import { PixBuf } from './pixel';
  * id Software открыли исходники движка, но не данные игры.
  */
 
-export type WeaponId = 'ssg' | 'chaingun' | 'launcher' | 'sword' | 'axe';
+export type WeaponId = 'ssg' | 'chaingun' | 'launcher';
 export type AmmoId = 'shells' | 'bullets' | 'rockets';
 
 export interface WeaponDef {
@@ -17,8 +18,8 @@ export interface WeaponDef {
   name: string;
   short: string;
   /** как считается попадание */
-  kind: 'hitscan' | 'projectile' | 'melee';
-  /** урон за луч (для ближнего — за замах) */
+  kind: 'hitscan' | 'projectile';
+  /** урон за луч */
   dmg: number;
   /** секунд на весь цикл выстрела */
   cool: number;
@@ -30,47 +31,11 @@ export interface WeaponDef {
   cost: number;
   glow: string;
   kick: number;
-  /** дальность замаха в клетках */
-  reach?: number;
   /** ключевые кадры: [доля цикла, индекс кадра] */
   seq: [number, number][];
 }
 
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
-  sword: {
-    id: 'sword',
-    name: 'Клинок затмения',
-    short: 'клинок',
-    kind: 'melee',
-    dmg: 34,
-    cool: 0.42,
-    strike: 0.34,
-    spread: 0,
-    pellets: 1,
-    ammo: null,
-    cost: 0,
-    glow: '#bfe4ff',
-    kick: 0.5,
-    reach: 1.7,
-    seq: [[0, 1], [0.28, 2], [0.5, 3], [0.72, 4], [1, 0]],
-  },
-  axe: {
-    id: 'axe',
-    name: 'Тяжёлый топор',
-    short: 'топор',
-    kind: 'melee',
-    dmg: 62,
-    cool: 0.78,
-    strike: 0.46,
-    spread: 0,
-    pellets: 1,
-    ammo: null,
-    cost: 0,
-    glow: '#ffcf8a',
-    kick: 1.2,
-    reach: 1.55,
-    seq: [[0, 1], [0.34, 2], [0.52, 3], [0.78, 4], [1, 0]],
-  },
   ssg: {
     id: 'ssg',
     name: 'Двухстволка',
@@ -121,7 +86,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
   },
 };
 
-export const ORDER: WeaponId[] = ['sword', 'axe', 'ssg', 'chaingun', 'launcher'];
+export const ORDER: WeaponId[] = ['ssg', 'chaingun', 'launcher'];
 
 /**
  * Посадка кадра снята с пропорций классического шутера: экран 320×200,
@@ -182,8 +147,6 @@ const C = {
 const STEEL = [C.s4, C.s3, C.s2, C.s1, C.s0, C.line];
 const BRASS = [C.b3, C.b2, C.b1, C.b0, C.b0, C.line];
 const WOOD = [C.w4, C.w3, C.w2, C.w1, C.w0, C.line];
-const EDGE = [C.s5, C.s4, C.s3, C.s1, C.s0, C.line];
-
 
 interface Art {
   frames: HTMLCanvasElement[];
@@ -424,101 +387,6 @@ function launcherFrame(back: number): PixBuf {
   return b;
 }
 
-// ── меч и топор ──────────────────────────────────────────────
-
-function swordFrame(k: number): PixBuf {
-  const b = new PixBuf(W, H);
-  const cx = W >> 1;
-  const path: [number, number, number, number][] = [
-    [cx + 52, H - 26, cx + 104, 54],
-    [cx + 62, H - 32, cx + 114, 2],
-    [cx + 22, H - 40, cx - 38, 2],
-    [cx - 20, H - 34, cx - 110, 60],
-    [cx + 28, H - 28, cx + 84, 78],
-  ];
-  const [hx, hy, tx, ty] = path[Math.min(path.length - 1, k)];
-  const dx = tx - hx;
-  const dy = ty - hy;
-  const len = Math.hypot(dx, dy) || 1;
-  const ux = dx / len;
-  const uy = dy / len;
-  const nx = -uy;
-  const ny = ux;
-  b.thickLine(hx, hy, tx, ty, 17, 6, EDGE);
-  for (let i = 0; i <= len; i++) {
-    const t = i / len;
-    const px = hx + dx * t;
-    const py = hy + dy * t;
-    b.set(Math.round(px), Math.round(py), C.s5);
-    b.set(Math.round(px + nx * (7 - t * 2)), Math.round(py + ny * (7 - t * 2)), t > 0.2 ? C.edge : C.s3);
-    if (k >= 1 && k <= 3 && t > 0.25) {
-      b.set(Math.round(px + nx * (9 - t * 2)), Math.round(py + ny * (9 - t * 2)), C.edgeHot);
-    }
-  }
-  b.thickLine(hx - nx * 19, hy - ny * 19, hx + nx * 19, hy + ny * 19, 9, 9, BRASS);
-  b.thickLine(hx, hy, hx - ux * 36, hy - uy * 36, 14, 12, WOOD);
-  b.ellipse(Math.round(hx - ux * 38), Math.round(hy - uy * 38), 7, 7, C.b2);
-  handAt(b, hx - ux * 12 - 8, hy - uy * 12, 50, 44, -1, 12);
-  b.outline(C.line);
-  return b;
-}
-
-function axeFrame(k: number): PixBuf {
-  const b = new PixBuf(W, H);
-  const cx = W >> 1;
-  const path: [number, number, number, number][] = [
-    [cx + 48, H - 22, cx + 82, 62],
-    [cx + 60, H - 30, cx + 100, 2],
-    [cx + 26, H - 42, cx + 14, -16],
-    [cx - 6, H - 36, cx - 26, 30],
-    [cx + 24, H - 24, cx + 66, 82],
-  ];
-  const [hx, hy, tx, ty] = path[Math.min(path.length - 1, k)];
-  const dx = tx - hx;
-  const dy = ty - hy;
-  const len = Math.hypot(dx, dy) || 1;
-  const ux = dx / len;
-  const uy = dy / len;
-  const nx = -uy;
-  const ny = ux;
-  b.thickLine(hx, hy, tx, ty, 15, 11, WOOD);
-  const ax = tx;
-  const ay = ty;
-  const blade = (out: number, back: number, front: number, c: number): void => {
-    const pts: [number, number][] = [];
-    for (let i = 0; i <= 10; i++) {
-      const t = i / 10;
-      const r = out * (0.34 + Math.sin(t * Math.PI) * 0.66);
-      const along = -back + (front + back) * t;
-      pts.push([ax + nx * r + ux * along, ay + ny * r + uy * along]);
-    }
-    for (let i = 10; i >= 0; i--) {
-      const t = i / 10;
-      const along = -back * 0.35 + (front * 0.35 + back * 0.35) * t;
-      pts.push([ax + nx * 9 + ux * along, ay + ny * 9 + uy * along]);
-    }
-    b.quad(pts, c);
-  };
-  blade(50, 17, 31, C.s2);
-  blade(50, 12, 27, C.s3);
-  blade(50, 6, 16, k >= 1 && k <= 3 ? C.s5 : C.s4);
-  b.quad(
-    [
-      [ax - nx * 23 - ux * 15, ay - ny * 23 - uy * 15],
-      [ax - nx * 4 - ux * 17, ay - ny * 4 - uy * 17],
-      [ax - nx * 4 + ux * 9, ay - ny * 4 + uy * 9],
-      [ax - nx * 23 + ux * 5, ay - ny * 23 + uy * 5],
-    ],
-    C.s1,
-  );
-  b.thickLine(ax - ux * 19, ay - uy * 19, ax + ux * 14, ay + uy * 14, 21, 21, STEEL);
-  b.thickLine(hx + ux * 28, hy + uy * 28, hx + ux * 40, hy + uy * 40, 16, 16, BRASS);
-  handAt(b, hx + ux * 4 - 8, hy + uy * 4, 48, 42, -1, 12);
-  handAt(b, hx + ux * 46 + 8, hy + uy * 46, 44, 38, 1, 11);
-  b.outline(C.line);
-  return b;
-}
-
 // ── вспышка ──────────────────────────────────────────────────
 
 function flashArt(muzzles: [number, number][], big: number): HTMLCanvasElement {
@@ -544,7 +412,6 @@ function flashArt(muzzles: [number, number][], big: number): HTMLCanvasElement {
 }
 
 function build(id: WeaponId): Art {
-  const cx = W >> 1;
   if (id === 'ssg') {
     const frames = [
       ssgFrame(0, false, 0),
@@ -570,9 +437,8 @@ function build(id: WeaponId): Art {
     const muzzles: [number, number][] = [[46, 52]];
     return { frames, flash: flashArt(muzzles, 1.5), muzzles };
   }
-  const gen = id === 'sword' ? swordFrame : axeFrame;
-  const frames = [0, 1, 2, 3, 4].map((k) => gen(k).toCanvas(PAL));
-  return { frames, flash: flashArt([[cx, H]], 0.01), muzzles: [] };
+  // сюда не попасть: в арсенале только три ствола, и все разобраны выше
+  throw new Error(`нет спрайта для ${id}`);
 }
 
 export function weaponArt(id: WeaponId): Art {

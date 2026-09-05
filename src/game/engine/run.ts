@@ -11,7 +11,8 @@ const FLOORS: { tier: FloorId; name: string; foes: number; elites: number }[] = 
   { tier: 'sanctum', name: 'Святилище Затмения', foes: 11, elites: 3 },
 ];
 
-const GUNS = ['ssg', 'chaingun', 'launcher'] as const;
+// на старте уже есть двухстволка, в подземелье добираются остальные
+const GUNS = ['chaingun', 'launcher'] as const;
 
 function plan(r: Rng, i: number): FloorPlan {
   const f = FLOORS[i];
@@ -27,8 +28,8 @@ function plan(r: Rng, i: number): FloorPlan {
   foes.push({ id: bossFor(f.tier), tier: 'boss' });
 
   const loot: FloorPlan['loot'] = [];
-  for (let k = 0; k < 3 + i; k++) loot.push({ kind: 'ammo', give: 'shells', amount: range(r, 6, 10) });
-  for (let k = 0; k < 2 + i; k++) loot.push({ kind: 'ammo', give: 'bullets', amount: range(r, 30, 55) });
+  for (let k = 0; k < 4 + i; k++) loot.push({ kind: 'ammo', give: 'shells', amount: range(r, 7, 11) });
+  for (let k = 0; k < 3 + i; k++) loot.push({ kind: 'ammo', give: 'bullets', amount: range(r, 30, 55) });
   if (i > 0) for (let k = 0; k < i; k++) loot.push({ kind: 'ammo', give: 'rockets', amount: range(r, 2, 4) });
   for (let k = 0; k < 2 + i; k++) loot.push({ kind: 'heal', amount: range(r, 18, 30) });
   loot.push({ kind: 'relic', amount: 10 });
@@ -50,9 +51,11 @@ export function newRun(heroId: string, seed = String(Date.now())): RunState {
     heroId,
     hp: hero.maxHp,
     maxHp: hero.maxHp,
-    ammo: { shells: 8, bullets: 0, rockets: 0 },
-    weapon: 'sword',
-    guns: ['sword', 'axe'],
+    // ближнего боя нет: без патронов героиня беззащитна, поэтому их на
+    // старте вдвое больше прежнего, и по ярусам их тоже прибавили
+    ammo: { shells: 20, bullets: 0, rockets: 0 },
+    weapon: 'ssg',
+    guns: ['ssg'],
     legs: FLOORS.map((_, i) => buildLeg(r, i)),
     leg: 0,
   };

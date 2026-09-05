@@ -185,30 +185,13 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
       cbRef.current.onState(state());
     };
 
-    /** момент, когда выстрел или замах действительно наносит урон */
+    /** момент, когда выстрел действительно наносит урон */
     const strike = (): void => {
       const d = WEAPONS[weapon];
-      flash = d.kind === 'melee' ? 0 : 1;
+      flash = 1;
       player.kick = d.kick;
       // выстрел слышно — ближние твари просыпаются, как в оригинале
-      if (d.kind !== 'melee') alert(mobs, player.x, player.y, 13);
-      if (d.kind === 'melee') {
-        const reach = d.reach ?? 1.6;
-        for (const m of mobs) {
-          if (!m.alive) continue;
-          const dist = Math.hypot(m.x - player.x, m.y - player.y);
-          if (dist > reach) continue;
-          let diff = Math.atan2(m.y - player.y, m.x - player.x) - player.a;
-          while (diff > Math.PI) diff -= Math.PI * 2;
-          while (diff < -Math.PI) diff += Math.PI * 2;
-          // замах бьёт по дуге перед собой, а не в точку
-          if (Math.abs(diff) < 0.75) {
-            m.hurtBy(d.dmg);
-            puffs.push({ x: m.x, y: m.y, h: 0.35, t: 0 });
-          }
-        }
-        return;
-      }
+      alert(mobs, player.x, player.y, 13);
       if (d.kind === 'projectile') {
         rockets.push(
           new Rocket(player.x + Math.cos(player.a) * 0.45, player.y + Math.sin(player.a) * 0.45, player.a),
