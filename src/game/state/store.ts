@@ -90,7 +90,6 @@ export const useGame = create<Store>((set, get) => ({
       maxHp: s.maxHp,
       ammo: s.ammo,
       weapon: s.weapon,
-      guns: s.guns,
     };
     descend(next);
     const meta = { ...get().meta, best: Math.max(get().meta.best, next.leg) };

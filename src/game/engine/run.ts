@@ -28,9 +28,9 @@ function plan(r: Rng, i: number): FloorPlan {
   foes.push({ id: bossFor(f.tier), tier: 'boss' });
 
   const loot: FloorPlan['loot'] = [];
-  for (let k = 0; k < 4 + i; k++) loot.push({ kind: 'ammo', give: 'shells', amount: range(r, 7, 11) });
-  for (let k = 0; k < 3 + i; k++) loot.push({ kind: 'ammo', give: 'bullets', amount: range(r, 30, 55) });
-  if (i > 0) for (let k = 0; k < i; k++) loot.push({ kind: 'ammo', give: 'rockets', amount: range(r, 2, 4) });
+  // тип патронов в россыпи не задаётся: ствол у героини один, и находка
+  // подходит к тому, что у неё в руках. Считаем только сколько россыпей
+  for (let k = 0; k < 8 + i * 2; k++) loot.push({ kind: 'ammo', amount: 0 });
   for (let k = 0; k < 2 + i; k++) loot.push({ kind: 'heal', amount: range(r, 18, 30) });
   loot.push({ kind: 'relic', amount: 10 });
   // каждый ярус даёт новый ствол
@@ -55,7 +55,6 @@ export function newRun(heroId: string, seed = String(Date.now())): RunState {
     // старте вдвое больше прежнего, и по ярусам их тоже прибавили
     ammo: { shells: 20, bullets: 0, rockets: 0 },
     weapon: 'ssg',
-    guns: ['ssg'],
     legs: FLOORS.map((_, i) => buildLeg(r, i)),
     leg: 0,
   };

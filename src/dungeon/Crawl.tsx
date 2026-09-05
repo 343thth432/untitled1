@@ -7,7 +7,7 @@ import { Player } from './player';
 import { drawBoards, type Board } from './billboard';
 import { PALETTES, Raycaster, type Cam, type Palette } from './render';
 import { loadAll, type TexName } from './textures';
-import { ORDER, WEAPONS, frameAt, seqFrame, weaponArt, WEAPON_ART, type AmmoId, type WeaponId } from './weapon';
+import { WEAPONS, frameAt, seqFrame, weaponArt, WEAPON_ART, type AmmoId, type WeaponId } from './weapon';
 import { loadSheets, weaponSheet } from './sheet';
 
 // ленты кадров тянутся один раз, до первого кадра игры
@@ -23,13 +23,7 @@ export interface CrawlState {
   maxHp: number;
   ammo: Ammo;
   weapon: WeaponId;
-  guns: WeaponId[];
-  left: number;
   name: string;
-}
-
-export interface CrawlApi {
-  pick(id: WeaponId): void;
 }
 
 interface Props {
@@ -38,11 +32,12 @@ interface Props {
   floorName: string;
   /** множитель силы противников */
   scale: number;
-  start: { hp: number; maxHp: number; ammo: Ammo; weapon: WeaponId; guns: WeaponId[] };
-  apiRef?: { current: CrawlApi | null };
+  start: { hp: number; maxHp: number; ammo: Ammo; weapon: WeaponId };
   onState: (s: CrawlState) => void;
   onDescend: (s: CrawlState) => void;
   onDeath: () => void;
+  /** выход из вылазки: угловой значок в самой игре */
+  onQuit: () => void;
   className?: string;
 }
 
@@ -57,12 +52,14 @@ interface Stick {
 const MAP = { cell: 5, r: 9, pad: 10 };
 
 const MAX_AMMO: Ammo = { shells: 40, bullets: 200, rockets: 20 };
+/** сколько патронов идёт вместе с подобранным стволом */
+const START_AMMO: Ammo = { shells: 12, bullets: 90, rockets: 6 };
 
-export default function Crawl({ floor, palette, floorName, scale, start, apiRef, onState, onDescend, onDeath, className }: Props) {
+export default function Crawl({ floor, palette, floorName, scale, start, onState, onDescend, onDeath, onQuit, className }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cbRef = useRef({ onState, onDescend, onDeath });
-  cbRef.current = { onState, onDescend, onDeath };
+  const cbRef = useRef({ onState, onDescend, onDeath, onQuit });
+  cbRef.current = { onState, onDescend, onDeath, onQuit };
 
   useEffect(() => {
     const host = hostRef.current;
@@ -76,8 +73,8 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
     player.hp = start.hp;
     player.maxHp = start.maxHp;
     const ammo: Ammo = { ...start.ammo };
+    // ствол один: подобранный вытесняет прежний
     let weapon: WeaponId = start.weapon;
-    let guns = start.guns.slice();
     const mobs = spawnMobs(floor, scale);
     const rockets: Rocket[] = [];
     const blasts: Blast[] = [];
@@ -97,18 +94,9 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
       maxHp: player.maxHp,
       ammo: { ...ammo },
       weapon,
-      guns,
-      left: mobs.filter((m) => m.alive).length,
       name: floorName,
     });
     cbRef.current.onState(state());
-
-    const swap = (id: WeaponId): void => {
-      if (!guns.includes(id) || fireT >= 0 || weapon === id) return;
-      weapon = id;
-      cbRef.current.onState(state());
-    };
-    if (apiRef) apiRef.current = { pick: swap };
 
     // ── управление пальцами ────────────────────────────────
     let stick: Stick | null = null;
@@ -117,11 +105,17 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
     let fireId = -1;
 
     const fireZone = (fx: number, fy: number): boolean => fx > 0.66 && fy > 0.72;
+    /** угол выхода: маленький, чтобы не ловить палец, идущий за стиком */
+    const quitZone = (fx: number, fy: number): boolean => fx < 0.12 && fy < 0.06;
 
     const down = (e: PointerEvent): void => {
       const b = canvas.getBoundingClientRect();
       const fx = (e.clientX - b.left) / b.width;
       const fy = (e.clientY - b.top) / b.height;
+      if (quitZone(fx, fy)) {
+        cbRef.current.onQuit();
+        return;
+      }
       if (fireZone(fx, fy)) {
         firing = true;
         fireId = e.pointerId;
@@ -164,8 +158,6 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
         e.preventDefault();
         firing = true;
       }
-      const n = Number(e.key);
-      if (n >= 1 && n <= ORDER.length) swap(ORDER[n - 1]);
     };
     const ku = (e: KeyboardEvent): void => {
       keys.delete(e.key.toLowerCase());
@@ -265,19 +257,20 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
       floor,
       player,
       mobs,
-      // отладочная выдача арсенала — нужна автотестам
+      // отладочная выдача — нужна автотестам
       give: () => {
-        guns = ORDER.slice();
         ammo.shells = 40;
         ammo.bullets = 200;
         ammo.rockets = 20;
         cbRef.current.onState(state());
       },
-      use: (id: WeaponId) => swap(id),
+      use: (id: WeaponId) => {
+        weapon = id;
+        cbRef.current.onState(state());
+      },
     };
 
     let raf = 0;
-    let shownAlive = mobs.length;
     let last = performance.now();
     let clock = 0;
     let avg = 16;
@@ -358,14 +351,6 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
             }
           }
         }
-        // счётчик в шапке пересчитывается только по событиям, а смерть
-        // твари событием не была — счёт врал до первого подбора или удара
-        let alive = 0;
-        for (const m of mobs) if (m.alive) alive++;
-        if (alive !== shownAlive) {
-          shownAlive = alive;
-          cbRef.current.onState(state());
-        }
         for (let i = bolts.length - 1; i >= 0; i--) {
           taken += bolts[i].update(dt, floor, player.x, player.y);
           if (!bolts[i].alive) bolts.splice(i, 1);
@@ -403,14 +388,23 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
             player.heal(mk.amount);
             pickMsg = `+${mk.amount} здоровья`;
           } else if (mk.kind === 'ammo') {
-            const kind = (mk.give ?? 'shells') as AmmoId;
-            ammo[kind] = Math.min(MAX_AMMO[kind], ammo[kind] + mk.amount);
+            // ствол один, и россыпь подходит именно к нему. Раньше тип
+            // патронов был записан в самой россыпи, и с одним стволом
+            // две трети находок оказывались мусором: с ракетницей в
+            // руках гильзы уже не пригодятся, а ракет на ярусе мало
+            const kind = (WEAPONS[weapon].ammo ?? 'shells') as AmmoId;
+            const gain = Math.max(1, Math.round(MAX_AMMO[kind] * (0.18 + Math.random() * 0.12)));
+            ammo[kind] = Math.min(MAX_AMMO[kind], ammo[kind] + gain);
             const label = kind === 'shells' ? 'патронов' : kind === 'bullets' ? 'пуль' : 'ракет';
-            pickMsg = `+${mk.amount} ${label}`;
+            pickMsg = `+${gain} ${label}`;
           } else if (mk.kind === 'weapon' && mk.give) {
+            // подобранный ствол вытесняет прежний. Раз вернуться к старому
+            // нельзя, к новому сразу даём патронов: иначе поднятая пустая
+            // ракетница оставляет героиню безоружной
             const g = mk.give as WeaponId;
-            if (!guns.includes(g)) guns = [...guns, g];
             weapon = g;
+            const kind = WEAPONS[g].ammo;
+            if (kind) ammo[kind] = Math.min(MAX_AMMO[kind], ammo[kind] + START_AMMO[kind]);
             pickMsg = WEAPONS[g].name;
           } else {
             player.maxHp += 10;
@@ -477,6 +471,8 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
         drawWeapon(ctx, w, h, weapon, player, fireT, flash);
         overlay(ctx, w, h, hurtFlash, flash, pal.torch);
         minimap(ctx, floor, player, mobs, w);
+        const kind = WEAPONS[weapon].ammo;
+        hud(ctx, w, h, Math.round(player.hp), kind ? ammo[kind] : null, floorName);
         if (pickT > 0) {
           ctx.save();
           ctx.globalAlpha = Math.min(1, pickT * 1.6);
@@ -516,7 +512,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, apiRef,
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
     };
-  }, [floor, palette, floorName, scale, start, apiRef]);
+  }, [floor, palette, floorName, scale, start]);
 
   return (
     <div ref={hostRef} className={className}>
@@ -618,6 +614,96 @@ function overlay(
     ctx.fillStyle = r;
     ctx.fillRect(0, 0, w, h);
   }
+}
+
+/**
+ * Всё, что игрок должен знать, нарисовано прямо в кадре и полупрозрачно:
+ * крест с числом жизней, счётчик патронов и название яруса. Панелей и
+ * списков нет — ствол в руках виден и так, а он теперь один.
+ */
+function hud(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  hp: number,
+  shots: number | null,
+  name: string,
+): void {
+  ctx.save();
+  const pad = Math.round(Math.min(w, h) * 0.05);
+  // снизу отступ больше: там у телефонов полоса жеста, и цифры в неё лезут
+  const low = pad + Math.round(Math.min(w, h) * 0.03);
+  const size = Math.max(15, Math.round(h * 0.026));
+  const ink = (a: number): string => `rgba(238,232,222,${a})`;
+
+  /** тень под знаком: иначе он теряется на светлой стене */
+  const shadow = (draw: () => void): void => {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.85)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetY = 1;
+    draw();
+    ctx.restore();
+  };
+
+  // ── жизни: крест и число, левый нижний угол ──────────────
+  const by = h - low;
+  const arm = Math.round(size * 0.72);
+  const thick = Math.max(3, Math.round(arm * 0.34));
+  const cx = pad + arm / 2;
+  const cy = by - Math.round(size * 0.34);
+  shadow(() => {
+    ctx.fillStyle = `rgba(214,72,72,${hp <= 25 ? 0.85 : 0.55})`;
+    ctx.fillRect(Math.round(cx - thick / 2), Math.round(cy - arm / 2), thick, arm);
+    ctx.fillRect(Math.round(cx - arm / 2), Math.round(cy - thick / 2), arm, thick);
+  });
+  ctx.font = `700 ${size}px Manrope, system-ui, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  shadow(() => {
+    ctx.fillStyle = ink(hp <= 25 ? 0.85 : 0.58);
+    ctx.fillText(String(hp), pad + arm + Math.round(size * 0.42), by);
+  });
+
+  // ── патроны: гильза и число, следом за жизнями ───────────
+  if (shots !== null) {
+    const ax = pad + arm + Math.round(size * 3.1);
+    const sh = Math.round(size * 0.86);
+    const sw = Math.max(4, Math.round(sh * 0.42));
+    shadow(() => {
+      ctx.fillStyle = `rgba(226,176,96,${shots > 0 ? 0.5 : 0.85})`;
+      ctx.beginPath();
+      ctx.roundRect(ax, cy - sh / 2, sw, sh, Math.round(sw * 0.35));
+      ctx.fill();
+    });
+    shadow(() => {
+      ctx.fillStyle = ink(shots > 0 ? 0.58 : 0.85);
+      ctx.fillText(String(shots), ax + sw + Math.round(size * 0.42), by);
+    });
+  }
+
+  // ── ярус: сверху слева, чуть тише остального ─────────────
+  ctx.font = `600 ${Math.round(size * 0.82)}px Manrope, system-ui, sans-serif`;
+  shadow(() => {
+    ctx.fillStyle = ink(0.4);
+    ctx.fillText(name, pad + Math.round(size * 1.1), pad + Math.round(size * 0.7));
+  });
+
+  // ── выход: уголок, по которому можно уйти на титул ───────
+  const qx = Math.round(w * 0.055);
+  const qy = Math.round(h * 0.03);
+  const q = Math.round(size * 0.42);
+  shadow(() => {
+    ctx.strokeStyle = ink(0.32);
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(qx + q, qy - q);
+    ctx.lineTo(qx - q * 0.6, qy);
+    ctx.lineTo(qx + q, qy + q);
+    ctx.stroke();
+  });
+  ctx.restore();
 }
 
 /** подсказки под пальцами: круг стика и кнопка огня */

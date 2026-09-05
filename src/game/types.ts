@@ -185,7 +185,6 @@ export interface RunState {
   /** заряды по видам */
   ammo: import('../dungeon/Crawl').Ammo;
   weapon: import('../dungeon/weapon').WeaponId;
-  guns: import('../dungeon/weapon').WeaponId[];
   legs: Leg[];
   /** текущий этаж */
   leg: number;
