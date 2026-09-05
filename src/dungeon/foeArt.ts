@@ -30,7 +30,7 @@ const G = 205;
 export type PoseId =
   | 'stand'
   | 'w0' | 'w1' | 'w2' | 'w3'
-  | 'atk' | 'atk1' | 'atk2' | 'cast' | 'pain'
+  | 'atk' | 'atk1' | 'atk2' | 'cast' | 'cast1' | 'pain'
   | 'd0' | 'd1' | 'd2' | 'd3' | 'd4'
   | 'g0' | 'g1' | 'g2' | 'g3';
 
@@ -84,6 +84,8 @@ function posesOf(g: Gait): Record<PoseId, Pose> {
     atk2: { bob: -2.4 * g.bounce, lean: 9 * g.snap + g.stoop, foot: [-11 * g.stride, 12 * g.stride], rise: [0, 0], hand: [-out * 1.4, out * 1.4], drop: [-up * 0.2, -up * 0.15], squash: 0.92, head: -2.4, roar: 1 },
     // бросок: одна рука выброшена вперёд, вторая отведена
     cast: { bob: 0, lean: 3 * g.snap + g.stoop, foot: [-4 * g.stride, 6 * g.stride], rise: [0, 0], hand: [-out * 1.15, out * 0.6], drop: [-3, -up], squash: 1, head: -1.5, roar: 1 },
+    // выброс: корпус распрямлён, обе руки разведены — второй кадр броска
+    cast1: { bob: -1, lean: 5 * g.snap + g.stoop, foot: [-6 * g.stride, 8 * g.stride], rise: [0, 0], hand: [-out * 1.35, out * 1.1], drop: [-up * 0.6, -up * 0.6], squash: 0.98, head: -2, roar: 1 },
     // боль: отброшена назад, руки вскинуты
     pain: { bob: 1.5, lean: -5 * g.snap, foot: [4 * g.stride, -4 * g.stride], rise: [0, 1.5], hand: [-out * 0.8, out * 0.8], drop: [-up * 0.55, -up * 0.5], squash: 0.96, head: 6, roar: 1 },
     d0: { bob: 0, lean: -6 * g.snap, foot: [6 * g.stride, -6 * g.stride], rise: [0, 3], hand: [-out * 0.9, out * 0.9], drop: [-up * 0.8, -up * 0.7], squash: 0.9, head: 9, roar: 1 },
@@ -802,7 +804,7 @@ function poseKey(p: PoseId): string {
   if (p === 'w1') return 'walk1';
   if (p === 'w2') return 'walk2';
   if (p === 'w3') return 'walk3';
-  if (p === 'atk' || p === 'atk1' || p === 'atk2' || p === 'cast' || p === 'pain') return p;
+  if (p === 'atk' || p === 'atk1' || p === 'atk2' || p === 'cast' || p === 'cast1' || p === 'pain') return p;
   if (p === 'd0') return 'pain';
   if (p === 'd1') return 'die0';
   if (p === 'd2') return 'die1';
@@ -975,6 +977,16 @@ export function viewFor(facing: number, toCam: number): [number, boolean] {
 export function foeAspect(id: FoeId): number {
   const d = drawn.get(id);
   return d ? d.w / d.h : ART_W / ART_H;
+}
+
+/**
+ * Нарисован ли у твари такой кадр. Нужен раскадровке: двухкадровый
+ * бросок показывать можно только тем, у кого второй кадр есть, иначе
+ * вместо него подставится кадр покоя.
+ */
+export function hasFrame(id: FoeId, pose: PoseId): boolean {
+  const d = drawn.get(id);
+  return d ? d.frames.has(`0|${poseKey(pose)}`) : false;
 }
 
 /** высота фигуры в пикселях буфера — по ней считается размер билборда */

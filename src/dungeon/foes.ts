@@ -11,7 +11,7 @@ import type { FloorId } from '../game/types';
  * стиль и сколько угодно разных тварей.
  */
 
-export type FoeId = 'stray' | 'alley' | 'wing' | 'wolf' | 'brute' | 'stalk' | 'matron';
+export type FoeId = 'stray' | 'alley' | 'wing' | 'wolf' | 'brute' | 'stalk' | 'sphinx';
 export type Tier = 'foe' | 'elite' | 'boss';
 
 /**
@@ -387,45 +387,46 @@ const LIST: FoeDef[] = [
     },
   },
   {
-    id: 'matron',
-    name: 'Хозяйка склепа',
+    id: 'sphinx',
+    name: 'Девятихвостая',
     tier: 'boss',
-    hp: 340,
-    dmg: 20,
-    speed: 1.1,
-    reach: 1.7,
+    hp: 480,
+    dmg: 13,
+    speed: 1.05,
+    reach: 1.8,
     cool: 1.5,
-    wind: 0.6,
-    bolts: 3,
+    wind: 0.7,
+    // залп по числу хвостов, которые видно на кадре броска
+    bolts: 5,
     boltSpeed: 7.5,
-    pain: 0.12,
+    pain: 0.1,
     sight: 18,
-    scale: 2.05,
+    scale: 2.7,
     where: ['crypt', 'catacomb', 'sanctum'],
     count: 1,
-    gait: { stride: 0.55, swing: 0.4, bounce: 0.25, stoop: -2, wide: 0.85, snap: 0.75 },
-    aura: '#ffb03a',
+    gait: { stride: 0.9, swing: 0.5, bounce: 0.4, stoop: 2, wide: 1.15, snap: 0.8 },
+    aura: '#63de8d',
     skin: {
-      skin: '#a67b83',
-      hair: '#332c44',
-      cloth: '#463060',
-      top: '#5c4268',
-      sock: '#3e2e46',
-      sockH: 0.85,
-      bare: 0.75,
-      skirt: 1.35,
+      skin: '#f2e3da',
+      hair: '#edd7cd',
+      cloth: '#463a3b',
+      top: '#362d31',
+      sock: '#534543',
+      sockH: 0.4,
+      bare: 0.7,
+      skirt: 1.1,
       outfit: 'gown',
-      metal: '#ffd479',
-      lite: '#f6e8ff',
-      trim: '#ffb03a',
-      eye: '#ffcf5a',
-      ear: '#c07a86',
-      claw: '#ffd88a',
-      rim: '#6a4a1c',
-      boot: '#2a2130',
-      tall: 168,
-      broad: 52,
-      mane: 0.66,
+      metal: '#c8a24e',
+      lite: '#f6efe6',
+      trim: '#d3b070',
+      eye: '#9df1b3',
+      ear: '#cfb6ae',
+      claw: '#e4d4c9',
+      rim: '#3f7a58',
+      boot: '#463a3b',
+      tall: 150,
+      broad: 46,
+      mane: 0.9,
       tail: 1,
     },
   },
@@ -441,5 +442,5 @@ export function foePool(tier: Tier, floor: FloorId): FoeId[] {
 }
 
 export function bossFor(_floor: FloorId): FoeId {
-  return 'matron';
+  return 'sphinx';
 }

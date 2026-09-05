@@ -1,0 +1,91 @@
+{
+  "w": 280,
+  "h": 208,
+  "frames": [
+    {
+      "file": "sphinx-0.sprite.png",
+      "view": 0,
+      "pose": "idle"
+    },
+    {
+      "file": "sphinx-0-atk.sprite.png",
+      "view": 0,
+      "pose": "atk"
+    },
+    {
+      "file": "sphinx-0-atk1.sprite.png",
+      "view": 0,
+      "pose": "atk1"
+    },
+    {
+      "file": "sphinx-0-cast.sprite.png",
+      "view": 0,
+      "pose": "cast"
+    },
+    {
+      "file": "sphinx-0-cast1.sprite.png",
+      "view": 0,
+      "pose": "cast1"
+    },
+    {
+      "file": "sphinx-0-die0.sprite.png",
+      "view": 0,
+      "pose": "die0"
+    },
+    {
+      "file": "sphinx-0-die1.sprite.png",
+      "view": 0,
+      "pose": "die1"
+    },
+    {
+      "file": "sphinx-0-die2.sprite.png",
+      "view": 0,
+      "pose": "die2"
+    },
+    {
+      "file": "sphinx-0-pain.sprite.png",
+      "view": 0,
+      "pose": "pain"
+    },
+    {
+      "file": "sphinx-0-walk0.sprite.png",
+      "view": 0,
+      "pose": "walk0"
+    },
+    {
+      "file": "sphinx-0-walk1.sprite.png",
+      "view": 0,
+      "pose": "walk1"
+    },
+    {
+      "file": "sphinx-0-walk2.sprite.png",
+      "view": 0,
+      "pose": "walk2"
+    },
+    {
+      "file": "sphinx-0-walk3.sprite.png",
+      "view": 0,
+      "pose": "walk3"
+    },
+    {
+      "file": "sphinx-1.sprite.png",
+      "view": 1,
+      "pose": "idle"
+    },
+    {
+      "file": "sphinx-2.sprite.png",
+      "view": 2,
+      "pose": "idle"
+    },
+    {
+      "file": "sphinx-3.sprite.png",
+      "view": 3,
+      "pose": "idle"
+    },
+    {
+      "file": "sphinx-4.sprite.png",
+      "view": 4,
+      "pose": "idle"
+    }
+  ]
+}

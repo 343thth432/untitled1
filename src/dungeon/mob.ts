@@ -1,5 +1,5 @@
 import { FOES, type FoeId, type Tier } from './foes';
-import { ART_H, figSpan, foeAspect, foeSprite, loadFoeArt, viewFor, type PoseId } from './foeArt';
+import { ART_H, figSpan, foeAspect, foeSprite, hasFrame, loadFoeArt, viewFor, type PoseId } from './foeArt';
 import { solid, type Floor } from './map';
 import type { Player } from './player';
 import type { Board } from './billboard';
@@ -241,7 +241,12 @@ export class Mob {
         return 'pain';
       case 'wind': {
         const d = this.def;
-        if (d.bolts > 0 && !this.claw) return 'cast';
+        if (d.bolts > 0 && !this.claw) {
+          // бросок в два кадра — тем, у кого второй нарисован: сначала
+          // тварь набирает, потом выбрасывает
+          if (!hasFrame(this.id, 'cast1')) return 'cast';
+          return this.t < d.wind * 0.55 ? 'cast' : 'cast1';
+        }
         // рывок нарисован в три кадра: занос, бросок тела, удар в упор
         if (d.lunge) {
           const k = this.t / d.wind;
