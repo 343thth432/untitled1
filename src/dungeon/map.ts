@@ -234,8 +234,30 @@ export function buildFloor(seed: string, stone: Cell, plan: FloorPlan): Floor {
   const [fx2, fy2] = far ? centre(far) : [sx, sy];
   placed.push({ kind: 'stairs', amount: 0, x: fx2, y: fy2, taken: false });
 
+  /** видно ли клетку со входа: между ней и точкой спуска нет стен */
+  const seesEntry = (x: number, y: number): boolean => {
+    const dx = sx - x;
+    const dy = sy - y;
+    const n = Math.ceil(Math.hypot(dx, dy) * 3);
+    for (let i = 1; i < n; i++) {
+      const t = i / n;
+      const cx = Math.floor(x + 0.5 + dx * t);
+      const cy = Math.floor(y + 0.5 + dy * t);
+      if (cells[cy * w + cx] !== CELL.empty) return false;
+    }
+    return true;
+  };
+
   const spawns: Spawn[] = plan.foes.map((f) => {
-    const [x, y] = nextCell();
+    // тварь, которой видно вход, открывает огонь раньше, чем игрок
+    // успеет что-то сделать: залпа хозяйки хватает, чтобы убить на
+    // пороге. Поэтому такие клетки пропускаем, пока есть из чего выбрать
+    let x = 0;
+    let y = 0;
+    for (let tries = 0; tries < 24; tries++) {
+      [x, y] = nextCell();
+      if (!seesEntry(x, y)) break;
+    }
     return { x: x + 0.5, y: y + 0.5, tier: f.tier, id: f.id };
   });
 
