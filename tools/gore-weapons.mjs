@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Обвешивает ленты кадров оружия кровью, костями и черепами.
+ * Заливает ленты кадров оружия кровью.
  *
  * Исходные кадры — из Freedoom (BSD 3-clause), они лежат нетронутыми в
  * tools/weapons-raw и в игру не попадают. Скрипт кладёт поверх них свой
@@ -14,7 +14,7 @@
  *
  * Кадры вспышки не трогаем — кровь на дульном пламени выглядит грязью.
  *
- *   node tools/gore-weapons.mjs          # обвешать
+ *   node tools/gore-weapons.mjs          # залить кровью
  *   node tools/gore-weapons.mjs --reset  # вернуть чистые кадры
  */
 import fs from 'node:fs/promises';
@@ -36,39 +36,7 @@ function rng(seed) {
 }
 
 // ── трафареты ────────────────────────────────────────────────
-// B светлая кость, b тень кости, d глазница, m мясо, . пусто
-
-const SKULL = [
-  '...BBBBBBB...',
-  '..BBBBBBBBB..',
-  '.BBBBBBBBBBB.',
-  'BBBBBBBBBBBBB',
-  'BBdddBBBdddBB',
-  'BBdddBBBdddBB',
-  'BBdddBBBdddBB',
-  'BBBBBBdBBBBBB',
-  '.BBBBBdBBBBB.',
-  '.BBBBBBBBBBB.',
-  '..BBBBBBBBB..',
-  '..BdBdBdBdB..',
-  '..BBBBBBBBB..',
-  '...bbbbbbb...',
-  '....bbbbb....',
-];
-
-const BONE = [
-  'BB.BB',
-  'BBBBB',
-  '.BBB.',
-  '..B..',
-  '..B..',
-  '..B..',
-  '..B..',
-  '..B..',
-  '.BBB.',
-  'BBBBB',
-  'BB.BB',
-];
+// m мясо, r тёмный край, . пусто
 
 const CHUNK = [
   '..rrr..',
@@ -79,40 +47,19 @@ const CHUNK = [
 ];
 
 const INK = {
-  B: [222, 210, 180],
-  b: [150, 138, 112],
-  d: [42, 34, 30],
-  m: [154, 50, 44],
-  r: [56, 14, 14],
+  m: [176, 40, 34],
+  r: [74, 12, 12],
 };
 
 /**
- * Где что висит на каждом стволе. Отсчёт от середины низа силуэта кадра:
- * низ у всех кадров на месте, а вершина уезжает, когда ствол переломлен
- * или откинут. Поэтому якорь снизу, а не по рамке.
+ * Сколько крови на каждом стволе и где налипли куски. Отсчёт от середины
+ * низа силуэта кадра: низ у всех кадров на месте, а вершина уезжает,
+ * когда ствол переломлен или откинут. Поэтому якорь снизу, а не по рамке.
  */
 const RIG = {
-  ssg: {
-    seed: 7412,
-    blood: 0.42,
-    skull: [-4, -21],
-    bones: [[-22, -28], [20, -30]],
-    chunks: [[-17, -5], [14, -7], [-6, -38]],
-  },
-  chaingun: {
-    seed: 22801,
-    blood: 0.38,
-    skull: [0, -20],
-    bones: [[-23, -11], [23, -11]],
-    chunks: [[-13, -4], [13, -5], [0, -37]],
-  },
-  launcher: {
-    seed: 5533,
-    blood: 0.4,
-    skull: [-3, -21],
-    bones: [[-25, -12], [25, -14]],
-    chunks: [[-13, -4], [14, -6], [-1, -40]],
-  },
+  ssg: { seed: 7412, blood: 0.64, chunks: [[-17, -5], [14, -7], [-6, -38]] },
+  chaingun: { seed: 22801, blood: 0.64, chunks: [[-13, -4], [13, -5], [0, -37]] },
+  launcher: { seed: 5533, blood: 0.64, chunks: [[-13, -4], [14, -6], [-1, -40]] },
 };
 
 /** мягкий шум по решётке: пятна крови, а не сыпь по пикселю */
@@ -189,12 +136,13 @@ async function gore(id, entry) {
         const n = noise(x - x0, y) * 0.75 + fine(x - x0, y) * 0.25;
         if (n < 1 - rig.blood) continue;
         // густота растёт к середине пятна, поэтому край не режется линией
-        const k = Math.min(1, (n - (1 - rig.blood)) / (rig.blood * 0.7)) * 0.86;
+        const k = Math.min(1, (n - (1 - rig.blood)) / (rig.blood * 0.7)) * 0.94;
         // кровь темнит металл, а не закрашивает: рельеф под ней виден
         const lum = (px[i] * 0.4 + px[i + 1] * 0.4 + px[i + 2] * 0.2) / 255;
-        const rr = 58 + lum * 116;
-        const gg = 10 + lum * 26;
-        const bb = 12 + lum * 22;
+        // подсохшая кровь: тёмная, по ней потом побегут свежие струйки
+        const rr = 70 + lum * 120;
+        const gg = 11 + lum * 26;
+        const bb = 13 + lum * 22;
         px[i] = Math.round(px[i] * (1 - k) + rr * k);
         px[i + 1] = Math.round(px[i + 1] * (1 - k) + gg * k);
         px[i + 2] = Math.round(px[i + 2] * (1 - k) + bb * k);
@@ -202,25 +150,42 @@ async function gore(id, entry) {
     }
 
     // ── подтёки вниз ─────────────────────────────────────────
-    const drips = 5 + Math.floor(r() * 4);
+    // струйка идёт от места, где кровь гуще, и течёт по металлу до края
+    // силуэта: так она читается стекающей, а не мазком
+    const drips = 14 + Math.floor(r() * 8);
     for (let d = 0; d < drips; d++) {
-      const dx = bx0 + Math.floor(r() * Math.max(1, bx1 - bx0));
+      let dx = bx0 + Math.floor(r() * Math.max(1, bx1 - bx0));
       let dy = Math.floor(r() * H);
       while (dy > 0 && !solid(dx, dy)) dy--;
-      const len = 5 + Math.floor(r() * 14);
+      const len = 10 + Math.floor(r() * 26);
+      const wide = r() < 0.4;
       for (let k = 0; k < len; k++) {
         const y = dy + k;
         if (!solid(dx, y)) break;
-        const i = at(dx, y);
-        const f = 0.8 * (1 - k / len);
-        px[i] = Math.round(px[i] * (1 - f) + 118 * f);
-        px[i + 1] = Math.round(px[i + 1] * (1 - f) + 20 * f);
-        px[i + 2] = Math.round(px[i + 2] * (1 - f) + 20 * f);
-        if (r() < 0.35 && solid(dx + 1, y)) {
-          const j = at(dx + 1, y);
-          px[j] = Math.round(px[j] * (1 - f * 0.5) + 118 * f * 0.5);
-          px[j + 1] = Math.round(px[j + 1] * (1 - f * 0.5) + 20 * f * 0.5);
-          px[j + 2] = Math.round(px[j + 2] * (1 - f * 0.5) + 20 * f * 0.5);
+        // струйка густеет книзу и заканчивается каплей
+        const tail = k / len;
+        const bead = k > len - 3 ? 1.25 : 1;
+        const f = Math.min(1, (0.55 + tail * 0.45) * bead);
+        const lum = (px[at(dx, y)] * 0.4 + px[at(dx, y) + 1] * 0.4 + px[at(dx, y) + 2] * 0.2) / 255;
+        // струйка свежая и заметно светлее подсохшего пятна, иначе её
+        // не видно на общем красном
+        const rr = 168 + lum * 74;
+        const paint = (x, w) => {
+          if (!solid(x, y)) return;
+          const i = at(x, y);
+          px[i] = Math.round(px[i] * (1 - f * w) + rr * f * w);
+          px[i + 1] = Math.round(px[i + 1] * (1 - f * w) + 24 * f * w);
+          px[i + 2] = Math.round(px[i + 2] * (1 - f * w) + 22 * f * w);
+        };
+        paint(dx, 1);
+        if (wide) paint(dx + 1, 0.7);
+        if (k > len - 3) {
+          paint(dx - 1, 0.6);
+          paint(dx + 1, 0.6);
+        }
+        // струйку слегка уводит по рельефу — прямая линия выдаёт черчение
+        if (r() < 0.18 && solid(dx + 1, y + 1) && solid(dx - 1, y + 1)) {
+          dx += r() < 0.5 ? -1 : 1;
         }
       }
     }
@@ -242,8 +207,8 @@ async function gore(id, entry) {
           // только по металлу: иначе кость повисает в воздухе
           if (!solid(x, y)) continue;
           const col = INK[ch];
-          // кость темнеет книзу и вправо — иначе трафарет выглядит наклейкой
-          const f = shade * (1 - 0.3 * (j / mh) - 0.08 * (i2 / mw));
+          // кусок темнеет книзу — иначе трафарет выглядит наклейкой
+          const f = shade * (1 - 0.26 * (j / mh) - 0.06 * (i2 / mw));
           const k = at(x, y);
           px[k] = Math.round(col[0] * f);
           px[k + 1] = Math.round(col[1] * f);
@@ -254,8 +219,6 @@ async function gore(id, entry) {
       return put;
     };
 
-    stamped += stamp(SKULL, rig.skull[0], rig.skull[1], 1);
-    for (const [ox, oy] of rig.bones) stamped += stamp(BONE, ox, oy, 0.92);
     for (const [ox, oy] of rig.chunks) stamped += stamp(CHUNK, ox, oy, 1);
 
     // ── царапины ─────────────────────────────────────────────
