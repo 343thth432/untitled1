@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Gore } from './gore';
 import { CELL, at, solid, type Floor, type Mark } from './map';
 import { lootArt } from './loot';
 import { propArt } from './props';
@@ -17,15 +18,13 @@ import {
   Bolt,
   Rocket,
   blastBoard,
-  moteBoard,
-  puffBoard,
+  moteBoards,
   spawnMotes,
   splash,
   splashOn,
   stepMotes,
   type Blast,
   type Mote,
-  type Puff,
 } from './projectile';
 
 const TEXES: TexName[] = ['wallBrick', 'wallRock', 'wallMoss', 'floorCobble', 'ceilRock', 'doorWood'];
@@ -109,8 +108,9 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
     const rockets: Rocket[] = [];
     const blasts: Blast[] = [];
     const bolts: Bolt[] = [];
-    const puffs: Puff[] = [];
     const motes: Mote[] = [];
+    // кровь: брызги, пятна на камне и клякса на «стекле» — всё в одном
+    const gore = new Gore(floor.w, floor.h);
 
     // ── западня ──────────────────────────────────────────────
     // Волна: −1 ещё не начата, 0..n−1 идёт, n выбита и ворота открыты
@@ -154,6 +154,8 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
     let flash = 0;
     let over = false;
     let hurtFlash = 0;
+    /** тёплая вспышка, когда ихор влился: подобранная капля видна сразу */
+    let healFlash = 0;
     let pickMsg = '';
     let pickT = 0;
     /** метка, на которой стоим после размена стволов */
@@ -300,8 +302,16 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
           }
         }
         if (blocked) continue;
-        m.hurtBy(dmg);
-        puffs.push({ x: m.x, y: m.y, h: 0.3 + Math.random() * 0.25, t: 0 });
+        // куда пришлось: вверх прицела нет, поэтому зона берётся от того,
+        // насколько ровно тварь держалась в середине. Держишь по центру —
+        // чаще бьёшь в голову, а это и урон в полтора раза, и фонтан
+        const acc = 1 - Math.min(1, Math.abs(diff) / half);
+        const roll = Math.random();
+        const zone = roll < 0.1 + acc * acc * 0.32 ? 0 : roll < 0.8 ? 1 : 2;
+        const dealt = zone === 0 ? Math.round(dmg * 1.6) : dmg;
+        m.hurtBy(dealt);
+        const up = (m.def.fly ?? 0) * m.scale;
+        gore.hit(m.x, m.y, up + m.scale * (zone === 0 ? 0.84 : zone === 1 ? 0.5 : 0.16), a, dealt, zone);
         return;
       }
     };
@@ -337,6 +347,8 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
       floor,
       player,
       mobs,
+      gore,
+      motes,
       // отладочная выдача — нужна автотестам
       give: () => {
         ammo.shells = 40;
@@ -373,6 +385,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         if (fireT >= 1) fireT = -1;
       }
       hurtFlash = Math.max(0, hurtFlash - dt * 2.4);
+      healFlash = Math.max(0, healFlash - dt * 2.2);
       pickT = Math.max(0, pickT - dt);
 
       if (!over) {
@@ -410,6 +423,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
             hurtFlash = 1;
           }
           flash = Math.max(flash, 0.8);
+          gore.shake = Math.max(gore.shake, 0.55);
         }
         for (let i = rockets.length - 1; i >= 0; i--) if (rockets[i].dead) rockets.splice(i, 1);
         for (const bl of blasts) bl.t += dt;
@@ -469,8 +483,14 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         // твари
         let taken = 0;
         for (const m of mobs) {
+          if (!m.alive && m.t < 1.8 && m.tier !== 'boss') gore.bleed(m.x, m.y, m.scale, dt);
           if (!m.alive && !m.reaped) {
             m.reaped = true;
+            // разорвало — ошмётки и широкая лужа, просто свалилась —
+            // последний выброс от стрелка и лужа под телом
+            const away = Math.atan2(m.y - player.y, m.x - player.x);
+            if (m.state === 'gib') gore.gib(m.x, m.y, m.scale);
+            else gore.fall(m.x, m.y, m.scale, away);
             // крупная тварь роняет больше: с элиты можно поправиться всерьёз
             const drop = m.tier === 'boss' ? 12 : m.tier === 'elite' ? 6 : 3;
             spawnMotes(motes, m.x, m.y, drop, MOTE_HEAL);
@@ -503,18 +523,17 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
           taken += bolts[i].update(dt, floor, player.x, player.y);
           if (!bolts[i].alive) bolts.splice(i, 1);
         }
-        for (let i = puffs.length - 1; i >= 0; i--) {
-          puffs[i].t += dt;
-          if (puffs[i].t > 0.3) puffs.splice(i, 1);
-        }
+        gore.step(dt, floor, player.x, player.y);
         const drank = stepMotes(motes, dt, player.x, player.y);
         if (drank > 0) {
           player.heal(drank);
+          healFlash = Math.min(1, healFlash + 0.5);
           cbRef.current.onState(state());
         }
         if (taken > 0) {
           player.hurt(taken);
           hurtFlash = 1;
+          gore.shake = Math.max(gore.shake, 0.3);
           cbRef.current.onState(state());
           if (player.dead) {
             over = true;
@@ -585,7 +604,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
       if (rc && ready && w && h) {
         const cam: Cam = { x: player.x, y: player.y, a: player.a };
         const fl = 0.9 + 0.06 * Math.sin(clock * 7.7) + 0.04 * Math.sin(clock * 16.1) + flash * 1.4;
-        rc.render(floor, cam, pal, fl);
+        rc.render(floor, cam, pal, fl, gore.stains);
         rc.flush();
 
         boards.length = 0;
@@ -622,11 +641,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         for (const m of mobs) boards.push(m.board(player.x, player.y));
         for (const r of rockets) boards.push(r.board());
         for (const bo of bolts) boards.push(bo.board());
-        for (const mo of motes) boards.push(moteBoard(mo));
-        for (const pf of puffs) {
-          const pb = puffBoard(pf);
-          if (pb) boards.push(pb);
-        }
+        for (const mo of motes) moteBoards(mo, boards);
         for (const bl of blasts) {
           const bb = blastBoard(bl);
           if (bb) boards.push(bb);
@@ -634,9 +649,18 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         drawBoards(rc, cam, boards);
 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        // тряска: качается только мир, показания стоят на месте
+        const sk = gore.shake;
+        ctx.save();
+        if (sk > 0.01) ctx.translate(Math.sin(clock * 71) * sk * 9, Math.cos(clock * 53) * sk * 7);
         rc.present(ctx, w, h);
+        // кровь идёт последней и в полном разрешении экрана: в буфере
+        // капля у самого носа вырождалась в алый квадрат
+        gore.draw(ctx, w, h, rc, cam, pal);
+        ctx.restore();
         drawWeapon(ctx, w, h, weapon, player, fireT, flash);
-        overlay(ctx, w, h, hurtFlash, flash, pal.torch);
+        overlay(ctx, w, h, hurtFlash, flash, pal.torch, healFlash);
+        gore.drawLens(ctx, w, h);
         minimap(ctx, floor, player, mobs, w);
         const kind = WEAPONS[weapon].ammo;
         hud(ctx, w, h, Math.round(player.hp), kind ? ammo[kind] : null, floorName);
@@ -751,6 +775,7 @@ function overlay(
   hurt: number,
   flash: number,
   torch: { r: number; g: number; b: number },
+  heal: number,
 ): void {
   if (flash > 0.05) {
     ctx.save();
@@ -780,6 +805,17 @@ function overlay(
     r.addColorStop(1, `rgba(190,20,40,${hurt * 0.55})`);
     ctx.fillStyle = r;
     ctx.fillRect(0, 0, w, h);
+  }
+  // ихор влился: короткая тёплая вспышка от краёв к середине
+  if (heal > 0.02) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(w * 0.5, h * 0.5, Math.min(w, h) * 0.16, w * 0.5, h * 0.5, Math.max(w, h) * 0.62);
+    g.addColorStop(0, 'rgba(255,90,60,0)');
+    g.addColorStop(1, `rgba(255,90,60,${heal * 0.22})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
   }
 }
 

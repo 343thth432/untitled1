@@ -1,5 +1,6 @@
 import { CELL, at, type Floor, type Light } from './map';
 import { texOf, type Tex, type TexName } from './textures';
+import type { Stains } from './gore';
 
 /**
  * Рейкастер. Стены, пол и потолок берут цвет из CC0-материалов, а рельеф —
@@ -128,7 +129,11 @@ export class Raycaster {
     }
   }
 
-  render(f: Floor, cam: Cam, pal: Palette, flicker: number): void {
+  /** карта залитого кровью камня; её ведёт слой крови, рейкастер только читает */
+  private stains: Stains | null = null;
+
+  render(f: Floor, cam: Cam, pal: Palette, flicker: number, stains?: Stains | null): void {
+    this.stains = stains ?? null;
     const { w, h, px32, depth } = this;
     const dirX = Math.cos(cam.a);
     const dirY = Math.sin(cam.a);
@@ -225,6 +230,11 @@ export class Raycaster {
       const fogK = 1 - Math.exp(-dist * dens);
       const atten = power / (1 + dist * 0.62 + dist * dist * 0.42);
       const mask = tex.size - 1;
+      // потёк на этой грани ищется один раз на столбец: клетка, сторона и
+      // доля вдоль грани у всего столбца общие
+      const stn = this.stains;
+      const face = stn ? stn.faceAt(mapX, mapY, side, side === 0 ? faceX : faceY) : undefined;
+      const ui = face && stn ? stn.wallCol(wallX) : 0;
       // горизонтальная часть расстояния до каждого огня — одна на столбец
       const lh: number[] = [];
       for (const L2 of lit) {
@@ -276,7 +286,8 @@ export class Raycaster {
           sg += L2.g * a2;
           sb += L2.b * a2;
         }
-        px32[y * w + x] = shade(tex.col, ti, k, pal.torch, sr, sg, sb, fr, fg, fb, fogK);
+        const c = shade(tex.col, ti, k, pal.torch, sr, sg, sb, fr, fg, fb, fogK);
+        px32[y * w + x] = face && stn ? bloody(c, stn.wallAt(face, ui, zw) * (1 - fogK), tex.col, ti) : c;
       }
     }
   }
@@ -313,6 +324,7 @@ export class Raycaster {
     const invLen = 1 / Math.sqrt(rowDist * rowDist + dz * dz);
     const lz = dz * invLen;
     const row = y * w;
+    const st = this.stains;
     const lit = this.lit;
     const n = lit.length;
     const zw = up > 0 ? 0 : WALL_H;
@@ -332,7 +344,17 @@ export class Raycaster {
         sg += L2.g * a2;
         sb += L2.b * a2;
       }
-      px32[row + x] = shadePlane(tex, fx, fy, lx, ly, lz, up, atten, pal, sr, sg, sb, fr, fg, fb, fogK);
+      const c = shadePlane(tex, fx, fy, lx, ly, lz, up, atten, pal, sr, sg, sb, fr, fg, fb, fogK);
+      // кровь на полу — не спрайт поверх, а сам камень: лужа темнеет и
+      // багровеет вместе с плитой и так же тонет в мгле
+      const bl = st === null || up < 0 ? 0 : st.atFloor(fx, fy) * (1 - fogK);
+      if (bl > 0.004) {
+        const sz = tex.size;
+        const ti = ((((fy - (fy | 0)) * sz) | 0) * sz + (((fx - (fx | 0)) * sz) | 0)) * 3;
+        px32[row + x] = bloody(c, bl, tex.col, ti);
+      } else {
+        px32[row + x] = c;
+      }
     }
   }
 
@@ -358,6 +380,33 @@ export class Raycaster {
     this.flush();
     this.present(ctx, w, h);
   }
+}
+
+/**
+ * Кровь поверх посчитанного пикселя. Камень не закрашивается ровным
+ * пятном, а темнеет и багровеет: зелёное и синее гасятся почти целиком,
+ * красное держится. Поэтому лужа в темноте остаётся тёмной, а под
+ * факелом наливается — и подчиняется тому же свету, что и плита.
+ *
+ * Густота берётся по рельефу: в тёмные швы и выбоины кровь затекает,
+ * со светлых выпуклостей сходит. Тот же приём, что на стволах, — без
+ * него залитая стена выглядит наклейкой, а не залитой стеной.
+ */
+function bloody(px: number, s: number, col: Uint8Array, ti: number): number {
+  if (s <= 0.004) return px;
+  const lum = (col[ti] + col[ti + 1] + col[ti + 2]) * (1 / 765);
+  let k = s * (1.32 - lum * 0.9);
+  if (k > 1) k = 1;
+  const r = px & 255;
+  const g = (px >>> 8) & 255;
+  const b = (px >>> 16) & 255;
+  // свежая кровь блестит: там, где залито густо, красное чуть подсвечено
+  const wet = k > 0.55 ? (k - 0.55) * 0.6 : 0;
+  let rr = r * (1 - 0.3 * k) + r * wet * 0.4;
+  const gg = g * (1 - 0.8 * k);
+  const bb = b * (1 - 0.74 * k);
+  if (rr > 255) rr = 255;
+  return 0xff000000 | ((bb | 0) << 16) | ((gg | 0) << 8) | (rr | 0);
 }
 
 function packFog(fr: number, fg: number, fb: number, k: number, r: number, g: number, b: number): number {

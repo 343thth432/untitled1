@@ -253,50 +253,6 @@ export class Bolt {
   }
 }
 
-/** брызги крови в точке попадания */
-export interface Puff {
-  x: number;
-  y: number;
-  h: number;
-  t: number;
-}
-
-const PW = 40;
-const PPAL = ['#00000000', '#2c0508', '#6d0d13', '#a8151d', '#d63a34', '#ff8a6a'];
-const puffArt: HTMLCanvasElement[] = [];
-
-function makePuff(k: number): HTMLCanvasElement {
-  const b = new PixBuf(PW, PW);
-  const c = PW >> 1;
-  const r = 4 + k * 5;
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + k;
-    const d = r * (0.4 + ((i * 23) % 9) / 14);
-    b.ellipse(c + Math.round(Math.cos(a) * d), c + Math.round(Math.sin(a) * d), 3 - k, 3 - k, 2 + (i % 2));
-  }
-  b.ellipse(c, c, Math.max(1, r - 2 - k * 2), Math.max(1, r - 3 - k * 2), 3);
-  b.ellipse(c, c - 1, Math.max(1, r - 5), Math.max(1, r - 5), 4);
-  return b.toCanvas(PPAL);
-}
-
-/** брызги живут четверть секунды и растворяются */
-export function puffBoard(p: Puff): Board | null {
-  const k = Math.floor(p.t / 0.06);
-  if (k > 3) return null;
-  if (!puffArt.length) for (let i = 0; i < 4; i++) puffArt.push(makePuff(i));
-  return {
-    x: p.x,
-    y: p.y,
-    src: puffArt[k],
-    aspect: 1,
-    scale: 0.45 + k * 0.12,
-    hang: 0,
-    emissive: 0.9,
-    alpha: 1 - k * 0.22,
-    lift: p.h,
-  };
-}
-
 /** ------- ихор: капли жизни, что остаются от убитой твари ------- */
 
 /**
@@ -304,6 +260,12 @@ export function puffBoard(p: Puff): Board | null {
  * тянутся к игроку и заживляют. Это единственный надёжный способ
  * поправиться: аптечки на ярусе редки. Значит, отсиживаться в углу
  * невыгодно — чтобы держаться, надо идти вперёд и убивать.
+ *
+ * Первая капля была тремя вложенными эллипсами и выглядела мёртвой.
+ * Теперь это живой огонёк: силуэт пляшет по кадрам, ядро добела, за
+ * летящей тянется след из собственных прошлых положений, а вокруг
+ * вьются две искры. След тем длиннее, чем быстрее каплю тянет к ногам,
+ * поэтому подхваченная капля читается как рывок, а не как переползание.
  */
 export interface Mote {
   x: number;
@@ -314,26 +276,91 @@ export interface Mote {
   h: number;
   t: number;
   heal: number;
+  /** свой сдвиг фазы: стая не должна мигать в такт */
+  ph: number;
+  /** след: тройки x, y, h от свежей к старой */
+  tr: number[];
+  /** накопитель, чтобы след писался не каждый кадр */
+  ta: number;
 }
 
 /** с какого расстояния каплю тянет к игроку и с какого она подбирается */
 const PULL = 3.2;
 const TAKE = 0.5;
 const MOTE_LIFE = 8;
+const TRAIL = 5;
 
-const MW = 24;
-const MPAL = ['#00000000', '#3a040a', '#8c0f18', '#d42430', '#ff5a4a', '#ffb49a', '#fff0e4'];
-const moteArt: HTMLCanvasElement[] = [];
+const WW = 34;
+const WH = 44;
+const WISP_N = 10;
+const WPAL = [
+  '#00000000',
+  '#1c0106',
+  '#5e040f',
+  '#9c0d18',
+  '#d81f1f',
+  '#ff4a2c',
+  '#ff8f52',
+  '#ffd79a',
+  '#fff6e2',
+];
+const wispArt: HTMLCanvasElement[] = [];
+let sparkArt: HTMLCanvasElement | null = null;
 
-function makeMote(k: number): HTMLCanvasElement {
-  const b = new PixBuf(MW, MW);
-  const c = MW >> 1;
-  const r = 5 - k;
-  b.ellipse(c, c, r + 2, r + 2, 1);
-  b.ellipse(c, c, r, r, 2 + (k % 2));
-  b.ellipse(c, c - 1, Math.max(1, r - 2), Math.max(1, r - 2), 4);
-  b.ellipse(c - 1, c - 2, Math.max(1, r - 4), Math.max(1, r - 4), 6);
-  return b.toCanvas(MPAL);
+/**
+ * Огонёк ихора: капля-основание и вылизывающий вверх язык. Силуэт
+ * задаётся построчно, поэтому кадры перетекают друг в друга, а не
+ * подменяются.
+ */
+function makeWisp(k: number): HTMLCanvasElement {
+  const b = new PixBuf(WW, WH);
+  const cx = WW >> 1;
+  const ph = (k / WISP_N) * Math.PI * 2;
+  const bot = WH - 4;
+  const top = 4;
+  const H = bot - top;
+  for (let y = bot; y >= top; y--) {
+    const f = (bot - y) / H;
+    // основание круглое, к кончику язык виляет и утончается
+    const wob = Math.sin(ph + f * 5.4) * f * f * 4.2;
+    const half = Math.max(0.7, (1 - f) ** 0.55 * 9.2 * (0.82 + 0.18 * Math.sin(ph * 2 + f * 3.1)));
+    const x = cx + wob;
+    const put = (w: number, c: number): void => {
+      if (w < 0.5) return;
+      b.rect(Math.round(x - w), y, Math.max(1, Math.round(w * 2)), 1, c);
+    };
+    put(half, f < 0.3 ? 2 : 1 + Math.min(1, Math.floor(f * 2)));
+    put(half * 0.74, f < 0.72 ? 3 : 2);
+    put(half * 0.5, f < 0.55 ? 4 : 3);
+    put(half * 0.3, f < 0.4 ? 5 : 4);
+    // ядро добела — только в нижней трети, там, где огонь самый плотный
+    if (f < 0.34) put(half * 0.17, f < 0.16 ? 8 : 7);
+  }
+  // тяжёлая капля у основания и её блик
+  b.ellipse(cx, bot - 6, 9, 7, 3);
+  b.ellipse(cx, bot - 6, 6, 5, 4);
+  b.ellipse(cx - 1, bot - 8, 3, 3, 6);
+  b.set(cx - 2, bot - 9, 8);
+  // оторвавшиеся угольки над языком
+  for (let i = 0; i < 3; i++) {
+    const a = ph + i * 2.1;
+    const ey = top + 2 + ((i * 5 + k) % 9);
+    const ex = cx + Math.round(Math.sin(a) * (3 + i * 2));
+    b.ellipse(ex, ey, 1, 1, i === 0 ? 6 : 5);
+  }
+  return b.toCanvas(WPAL);
+}
+
+function makeSpark(): HTMLCanvasElement {
+  const b = new PixBuf(10, 10);
+  b.ellipse(5, 5, 2, 2, 4);
+  b.ellipse(5, 5, 1, 1, 7);
+  return b.toCanvas(WPAL);
+}
+
+function wisp(k: number): HTMLCanvasElement {
+  if (!wispArt.length) for (let i = 0; i < WISP_N; i++) wispArt.push(makeWisp(i));
+  return wispArt[k % WISP_N];
 }
 
 /** капли из точки, где тварь свалилась */
@@ -341,7 +368,18 @@ export function spawnMotes(out: Mote[], x: number, y: number, n: number, heal: n
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2;
     const v = 1.1 + Math.random() * 1.5;
-    out.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, h: 0.3 + Math.random() * 0.3, t: 0, heal });
+    out.push({
+      x,
+      y,
+      vx: Math.cos(a) * v,
+      vy: Math.sin(a) * v,
+      h: 0.3 + Math.random() * 0.3,
+      t: 0,
+      heal,
+      ph: Math.random() * 100,
+      tr: [],
+      ta: 0,
+    });
   }
 }
 
@@ -378,26 +416,70 @@ export function stepMotes(motes: Mote[], dt: number, px: number, py: number): nu
     m.vy *= drag;
     m.x += m.vx * dt;
     m.y += m.vy * dt;
-    m.h = 0.3 + Math.sin(m.t * 5.5) * 0.08;
+    m.h = 0.32 + Math.sin(m.t * 5.5 + m.ph) * 0.09;
+    // след пишется с шагом по времени, а не по кадрам: на быстром
+    // устройстве он не должен съёживаться
+    m.ta += dt;
+    if (m.ta > 0.028) {
+      m.ta = 0;
+      m.tr.unshift(m.x, m.y, m.h);
+      if (m.tr.length > TRAIL * 3) m.tr.length = TRAIL * 3;
+    }
   }
   return got;
 }
 
-export function moteBoard(m: Mote): Board {
-  if (!moteArt.length) for (let i = 0; i < 3; i++) moteArt.push(makeMote(i));
-  const k = Math.floor(m.t * 9) % 3;
+/** огонёк, его след и вьющиеся вокруг искры — всё одной каплей */
+export function moteBoards(m: Mote, out: Board[]): void {
+  if (!sparkArt) sparkArt = makeSpark();
+  const k = Math.floor(m.t * 15 + m.ph * 7) % WISP_N;
+  const src = wisp(k);
   // последнюю секунду капля гаснет: видно, что сейчас пропадёт
-  const fade = Math.min(1, (MOTE_LIFE - m.t) / 1);
-  return {
+  const fade = Math.min(1, MOTE_LIFE - m.t);
+  const sp = Math.hypot(m.vx, m.vy);
+  const pulse = 1 + Math.sin(m.t * 9 + m.ph) * 0.08;
+  // след виден только на ходу: подхваченная капля читается рывком
+  const tail = Math.min(1, sp / 3.4);
+  if (tail > 0.05) {
+    for (let i = 2; i < m.tr.length; i += 3) {
+      const j = (i - 2) / 3;
+      out.push({
+        x: m.tr[i - 2],
+        y: m.tr[i - 1],
+        src,
+        aspect: WW / WH,
+        scale: 0.4 * pulse * (1 - (j + 1) / (TRAIL + 1)) * (0.6 + tail * 0.4),
+        hang: 0,
+        emissive: 1,
+        alpha: fade * tail * 0.42 * (1 - j / TRAIL),
+        lift: m.tr[i],
+      });
+    }
+  }
+  out.push({
     x: m.x,
     y: m.y,
-    src: moteArt[k],
-    aspect: 1,
-    scale: 0.3,
+    src,
+    aspect: WW / WH,
+    scale: 0.4 * pulse,
     hang: 0,
     emissive: 1,
     alpha: fade,
-    glow: '#ff30401f',
+    glow: '#ff4a2c55',
     lift: m.h,
-  };
+  });
+  for (let i = 0; i < 2; i++) {
+    const a = m.t * 3.4 + m.ph + i * Math.PI;
+    out.push({
+      x: m.x + Math.cos(a) * 0.11,
+      y: m.y + Math.sin(a) * 0.11,
+      src: sparkArt,
+      aspect: 1,
+      scale: 0.09 + Math.sin(m.t * 11 + i) * 0.02,
+      hang: 0,
+      emissive: 1,
+      alpha: fade * 0.9,
+      lift: m.h + 0.16 + Math.sin(m.t * 4 + i * 2) * 0.1,
+    });
+  }
 }
