@@ -19,12 +19,18 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 
-/** что за лист: сетка по умолчанию и нужна ли из него маска */
+/**
+ * Что за лист и нужна ли из него маска. Сетка у всех одна — три на два.
+ * Это не прихоть: генератор рисует в своих размерах, и 1536x1024 —
+ * единственный, который бьётся на ровные квадраты, по 512 на клетку.
+ * Сетка четыре на два дала бы клетки 384x512, а движок ставит выхлоп
+ * квадратом, и кадр бы сплющило.
+ */
 const KINDS = {
-  'burst-body': { cols: 4, rows: 2, mask: false },
-  'burst-head': { cols: 4, rows: 2, mask: false },
-  'burst-gib': { cols: 4, rows: 2, mask: false },
-  drop: { cols: 4, rows: 2, mask: false },
+  'burst-body': { cols: 3, rows: 2, mask: false },
+  'burst-head': { cols: 3, rows: 2, mask: false },
+  'burst-gib': { cols: 3, rows: 2, mask: false },
+  drop: { cols: 3, rows: 2, mask: false },
   pool: { cols: 3, rows: 2, mask: true },
   wall: { cols: 3, rows: 2, mask: true },
   lens: { cols: 3, rows: 2, mask: false },

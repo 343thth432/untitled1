@@ -719,7 +719,9 @@ export class Gore {
       ctx.globalAlpha = d.kind === 0 ? 0.16 + dim * 0.44 : Math.min(1, 0.65 + dim * 0.35);
       ctx.translate(scr * kx, py * ky);
       ctx.rotate(Math.atan2(dy, dx));
-      const drawn = bloodDrop(d.kind === 2 ? 5 + (d.hop + i2) % 3 : (i2 * 7) % 5, band, FOGS, fog);
+      // на листе капель шесть клеток: первые четыре — капли, две последние
+      // — ошмётки мяса
+      const drawn = bloodDrop(d.kind === 2 ? 4 + ((d.hop + i2) % 2) : (i2 * 7) % 4, band, FOGS, fog);
       ctx.drawImage(drawn ?? blob(d.kind, band, fog), -len * 0.62, -size / 2, len, size);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
