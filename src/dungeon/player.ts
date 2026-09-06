@@ -4,6 +4,10 @@ const RADIUS = 0.28;
 const SPEED = 3.4;
 const STRAFE = 2.9;
 const TURN = 2.6;
+/** рывок: во сколько раз быстрее, как долго и через сколько снова */
+const DASH_K = 3.4;
+const DASH_T = 0.17;
+const DASH_CD = 1.15;
 
 /**
  * Свободное перемещение по залам с проверкой стен по кругу.
@@ -21,6 +25,10 @@ export class Player {
   private bobT = 0;
   /** отдача камеры после выстрела */
   kick = 0;
+  /** сколько ещё длится рывок */
+  dash = 0;
+  /** откат до следующего рывка */
+  dashCd = 0;
 
   constructor(f: Floor) {
     this.x = f.spawn[0];
@@ -51,12 +59,37 @@ export class Player {
    * @param side −1..1 боком
    * @param turn −1..1 поворот
    */
+  /**
+   * Рывок. Уходит туда, куда игрок уже держит; если не держит никуда —
+   * вперёд. Неуязвимости не даёт: это способ разорвать дистанцию и уйти
+   * с линии залпа, а не отменить попадание.
+   *
+   * @returns удалось ли: на откате рывка не будет
+   */
+  lunge(): boolean {
+    if (this.dash > 0 || this.dashCd > 0) return false;
+    this.dash = DASH_T;
+    this.dashCd = DASH_CD;
+    return true;
+  }
+
+  /** доля отката рывка: 1 — готов, 0 — только что потрачен */
+  get dashReady(): number {
+    return this.dashCd <= 0 ? 1 : 1 - this.dashCd / DASH_CD;
+  }
+
   move(f: Floor, dt: number, fwd: number, side: number, turn: number): void {
+    this.dash = Math.max(0, this.dash - dt);
+    this.dashCd = Math.max(0, this.dashCd - dt);
     this.a += turn * TURN * dt;
     const c = Math.cos(this.a);
     const s = Math.sin(this.a);
-    const vx = (c * fwd * SPEED - s * side * STRAFE) * dt;
-    const vy = (s * fwd * SPEED + c * side * STRAFE) * dt;
+    // в рывке разгон общий, а направление — то, что уже задано; стоящий
+    // на месте рвётся вперёд
+    const k = this.dash > 0 ? DASH_K : 1;
+    if (this.dash > 0 && !fwd && !side) fwd = 1;
+    const vx = (c * fwd * SPEED - s * side * STRAFE) * k * dt;
+    const vy = (s * fwd * SPEED + c * side * STRAFE) * k * dt;
     if (vx && this.free(f, this.x + vx, this.y)) this.x += vx;
     if (vy && this.free(f, this.x, this.y + vy)) this.y += vy;
 

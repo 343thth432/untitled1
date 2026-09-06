@@ -3,6 +3,7 @@ import { CELL, at, solid, type Floor, type Mark } from './map';
 import { lootArt } from './loot';
 import { propArt } from './props';
 import { Mob, alert, spawnMobs } from './mob';
+import type { FoeId } from './foes';
 import { Player } from './player';
 import { drawBoards, type Board } from './billboard';
 import { PALETTES, Raycaster, type Cam, type Palette } from './render';
@@ -12,7 +13,20 @@ import { loadSheets, weaponSheet } from './sheet';
 
 // ленты кадров тянутся один раз, до первого кадра игры
 loadSheets();
-import { Bolt, Rocket, blastBoard, puffBoard, splash, splashOn, type Blast, type Puff } from './projectile';
+import {
+  Bolt,
+  Rocket,
+  blastBoard,
+  moteBoard,
+  puffBoard,
+  spawnMotes,
+  splash,
+  splashOn,
+  stepMotes,
+  type Blast,
+  type Mote,
+  type Puff,
+} from './projectile';
 
 const TEXES: TexName[] = ['wallBrick', 'wallRock', 'wallMoss', 'floorCobble', 'ceilRock', 'doorWood'];
 
@@ -50,10 +64,26 @@ interface Stick {
 }
 
 const MAP = { cell: 5, r: 9, pad: 10 };
+/** где под пальцем лежат огонь и рывок, в долях кадра */
+const FIRE_AT: [number, number] = [0.84, 0.86];
+const DASH_AT: [number, number] = [0.62, 0.75];
 
 const MAX_AMMO: Ammo = { shells: 40, bullets: 200, rockets: 20 };
 /** сколько патронов идёт вместе с подобранным стволом */
 const START_AMMO: Ammo = { shells: 12, bullets: 90, rockets: 6 };
+
+/**
+ * Ярость. Убийства подряд копят жар; на полном он срывается в ярость —
+ * несколько секунд, когда бьёшь чаще и сильнее. Жар тает сам, так что
+ * держать его можно только напором: остановился — потерял.
+ */
+const HEAT_PER_KILL = 0.26;
+const HEAT_DECAY = 0.11;
+const RAGE_T = 5;
+const RAGE_COOL = 0.62;
+const RAGE_DMG = 1.4;
+/** сколько капель роняет тварь и по сколько лечит каждая */
+const MOTE_HEAL = 3;
 
 export default function Crawl({ floor, palette, floorName, scale, start, onState, onDescend, onDeath, onQuit, className }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -80,6 +110,44 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
     const blasts: Blast[] = [];
     const bolts: Bolt[] = [];
     const puffs: Puff[] = [];
+    const motes: Mote[] = [];
+
+    // ── западня ──────────────────────────────────────────────
+    // Волна: −1 ещё не начата, 0..n−1 идёт, n выбита и ворота открыты
+    const arena = floor.arena;
+    let wave = -1;
+    let waveGap = 0;
+    let arenaDone = false;
+    /** твари текущей волны: пока хоть одна жива, ворота закрыты */
+    let penned: Mob[] = [];
+
+    const gates = (shut: boolean): void => {
+      if (!arena) return;
+      for (const [gx, gy] of arena.gates) floor.cells[gy * floor.w + gx] = shut ? CELL.door : CELL.empty;
+    };
+
+    /** выпускает волну по свободным клеткам зала, подальше от игрока */
+    const release = (n: number): void => {
+      if (!arena) return;
+      const free: [number, number][] = [];
+      for (let y = arena.y; y < arena.y + arena.h; y++) {
+        for (let x = arena.x; x < arena.x + arena.w; x++) {
+          if (Math.hypot(x + 0.5 - player.x, y + 0.5 - player.y) < 1.6) continue;
+          free.push([x, y]);
+        }
+      }
+      penned = [];
+      for (const f of arena.waves[n]) {
+        const spot = free.length ? free[Math.floor(Math.random() * free.length)] : [arena.x, arena.y];
+        const m = new Mob(f.id as FoeId, spot[0] + 0.5, spot[1] + 0.5, scale);
+        m.wake();
+        mobs.push(m);
+        penned.push(m);
+      }
+    };
+    /** жар от убийств 0..1 и оставшееся время ярости */
+    let heat = 0;
+    let rage = 0;
     // fireT < 0 — оружие в покое, иначе доля цикла выстрела
     let fireT = -1;
     let struck = false;
@@ -106,7 +174,11 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
     let firing = false;
     let fireId = -1;
 
-    const fireZone = (fx: number, fy: number): boolean => fx > 0.66 && fy > 0.72;
+    /** кнопки под правым большим: огонь и рывок над ним */
+    const inRound = (fx: number, fy: number, c: [number, number], r: number): boolean =>
+      Math.hypot(fx - c[0], (fy - c[1]) * 1.9) < r;
+    const fireZone = (fx: number, fy: number): boolean => inRound(fx, fy, FIRE_AT, 0.16);
+    const dashZone = (fx: number, fy: number): boolean => inRound(fx, fy, DASH_AT, 0.12);
     /** угол выхода: маленький, чтобы не ловить палец, идущий за стиком */
     const quitZone = (fx: number, fy: number): boolean => fx < 0.12 && fy < 0.06;
 
@@ -116,6 +188,10 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
       const fy = (e.clientY - b.top) / b.height;
       if (quitZone(fx, fy)) {
         cbRef.current.onQuit();
+        return;
+      }
+      if (dashZone(fx, fy)) {
+        player.lunge();
         return;
       }
       if (fireZone(fx, fy)) {
@@ -160,6 +236,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         e.preventDefault();
         firing = true;
       }
+      if (e.key === 'Shift') player.lunge();
     };
     const ku = (e: KeyboardEvent): void => {
       keys.delete(e.key.toLowerCase());
@@ -192,8 +269,9 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         );
         return;
       }
+      const dmg = Math.round(d.dmg * (rage > 0 ? RAGE_DMG : 1));
       for (let i = 0; i < d.pellets; i++) {
-        hit(player.a + (Math.random() - 0.5) * d.spread * 2, d.dmg);
+        hit(player.a + (Math.random() - 0.5) * d.spread * 2, dmg);
       }
     };
 
@@ -287,7 +365,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
       flash = Math.max(0, flash - dt * 6.5);
       const def = WEAPONS[weapon];
       if (fireT >= 0) {
-        fireT += dt / def.cool;
+        fireT += dt / (def.cool * (rage > 0 ? RAGE_COOL : 1));
         if (!struck && fireT >= def.strike) {
           struck = true;
           strike();
@@ -337,9 +415,77 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         for (const bl of blasts) bl.t += dt;
         for (let i = blasts.length - 1; i >= 0; i--) if (blasts[i].t > 0.4) blasts.splice(i, 1);
 
+        // ── западня: захлопнуть, потом выпускать волну за волной ──
+        if (arena && !arenaDone) {
+          const inside =
+            player.x > arena.x && player.y > arena.y &&
+            player.x < arena.x + arena.w && player.y < arena.y + arena.h;
+          if (wave < 0 && inside) {
+            wave = 0;
+            gates(true);
+            // из западни за патронами не выйти: кладём россыпь в углу
+            // зала, иначе войти с пустым стволом означало бы конец вылазки
+            floor.marks.push({
+              kind: 'ammo',
+              amount: 0,
+              x: arena.x + (player.x > arena.x + arena.w / 2 ? 0 : arena.w - 1),
+              y: arena.y + (player.y > arena.y + arena.h / 2 ? 0 : arena.h - 1),
+              taken: false,
+            });
+            release(0);
+            pickMsg = 'Западня';
+            pickT = 1.6;
+          } else if (wave >= 0) {
+            if (penned.length && penned.every((m) => !m.alive)) {
+              penned = [];
+              // пауза между волнами: игроку дают собрать капли и вдохнуть
+              waveGap = 1.4;
+              wave++;
+            }
+            if (waveGap > 0) {
+              waveGap -= dt;
+              if (waveGap <= 0) {
+                if (wave < arena.waves.length) {
+                  release(wave);
+                } else {
+                  arenaDone = true;
+                  gates(false);
+                  spawnMotes(motes, player.x, player.y, 8, MOTE_HEAL);
+                  const kind = WEAPONS[weapon].ammo;
+                  if (kind) ammo[kind] = Math.min(MAX_AMMO[kind], ammo[kind] + Math.round(MAX_AMMO[kind] * 0.3));
+                  pickMsg = 'Путь свободен';
+                  pickT = 1.8;
+                  cbRef.current.onState(state());
+                }
+              }
+            }
+          }
+        }
+
+        // ярость тает сама: держится только напором
+        rage = Math.max(0, rage - dt);
+        if (rage <= 0) heat = Math.max(0, heat - HEAT_DECAY * dt);
+
         // твари
         let taken = 0;
         for (const m of mobs) {
+          if (!m.alive && !m.reaped) {
+            m.reaped = true;
+            // крупная тварь роняет больше: с элиты можно поправиться всерьёз
+            const drop = m.tier === 'boss' ? 12 : m.tier === 'elite' ? 6 : 3;
+            spawnMotes(motes, m.x, m.y, drop, MOTE_HEAL);
+            // в западне выйти за патронами некуда, поэтому запертые твари
+            // роняют их сами — иначе волна может застать с пустым стволом
+            if (penned.includes(m)) {
+              const kind = WEAPONS[weapon].ammo;
+              if (kind) ammo[kind] = Math.min(MAX_AMMO[kind], ammo[kind] + Math.max(1, Math.round(MAX_AMMO[kind] * 0.045)));
+            }
+            heat = Math.min(1, heat + HEAT_PER_KILL);
+            if (heat >= 1) {
+              heat = 0;
+              rage = RAGE_T;
+            }
+          }
           taken += m.update(dt, floor, player, mobs);
           if (m.fired) {
             const f = m.fired;
@@ -360,6 +506,11 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         for (let i = puffs.length - 1; i >= 0; i--) {
           puffs[i].t += dt;
           if (puffs[i].t > 0.3) puffs.splice(i, 1);
+        }
+        const drank = stepMotes(motes, dt, player.x, player.y);
+        if (drank > 0) {
+          player.heal(drank);
+          cbRef.current.onState(state());
         }
         if (taken > 0) {
           player.hurt(taken);
@@ -471,6 +622,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         for (const m of mobs) boards.push(m.board(player.x, player.y));
         for (const r of rockets) boards.push(r.board());
         for (const bo of bolts) boards.push(bo.board());
+        for (const mo of motes) boards.push(moteBoard(mo));
         for (const pf of puffs) {
           const pb = puffBoard(pf);
           if (pb) boards.push(pb);
@@ -499,7 +651,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
           ctx.fillText(pickMsg, w / 2, h * 0.36);
           ctx.restore();
         }
-        controls(ctx, w, h, stick, fireT);
+        controls(ctx, w, h, stick, fireT, player.dashReady, heat, rage);
       }
       // подстройка разрешения: реагируем не на отдельный кадр, а на среднее
       avg += (dt * 1000 - avg) * 0.08;
@@ -719,25 +871,40 @@ function hud(
   ctx.restore();
 }
 
-/** подсказки под пальцами: круг стика и кнопка огня */
+/** подсказки под пальцами: стик, огонь, рывок и жар ярости */
 function controls(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
   stick: Stick | null,
   fireT: number,
+  dashReady: number,
+  heat: number,
+  rage: number,
 ): void {
   ctx.save();
-  const fx = w * 0.84;
-  const fy = h * 0.86;
+  const fx = w * FIRE_AT[0];
+  const fy = h * FIRE_AT[1];
   const r = Math.min(w, h) * 0.085;
   ctx.beginPath();
   ctx.arc(fx, fy, r, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillStyle = rage > 0 ? 'rgba(255,90,60,0.14)' : 'rgba(255,255,255,0.06)';
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.strokeStyle = rage > 0 ? 'rgba(255,140,90,0.5)' : 'rgba(255,255,255,0.22)';
   ctx.lineWidth = 2;
   ctx.stroke();
+
+  // жар от убийств копится кольцом вокруг огня, в ярости кольцо полное
+  // и горит: другого места под этот показатель не нужно
+  const fill = rage > 0 ? 1 : heat;
+  if (fill > 0.01) {
+    ctx.beginPath();
+    ctx.arc(fx, fy, r + 5, -Math.PI / 2, -Math.PI / 2 + fill * Math.PI * 2);
+    ctx.strokeStyle = rage > 0 ? `rgba(255,120,70,${0.5 + 0.35 * Math.sin(rage * 9)})` : 'rgba(255,150,90,0.42)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+
   if (fireT >= 0) {
     ctx.beginPath();
     ctx.arc(fx, fy, r - 4, -Math.PI / 2, -Math.PI / 2 + fireT * Math.PI * 2);
@@ -749,6 +916,37 @@ function controls(
   ctx.beginPath();
   ctx.arc(fx, fy, r * 0.3, 0, Math.PI * 2);
   ctx.fill();
+
+  // ── рывок: круг поменьше над кнопкой огня ────────────────
+  const dx = w * DASH_AT[0];
+  const dy = h * DASH_AT[1];
+  const dr = Math.min(w, h) * 0.062;
+  const ready = dashReady >= 1;
+  ctx.beginPath();
+  ctx.arc(dx, dy, dr, 0, Math.PI * 2);
+  ctx.fillStyle = ready ? 'rgba(150,210,255,0.09)' : 'rgba(255,255,255,0.04)';
+  ctx.fill();
+  ctx.strokeStyle = ready ? 'rgba(160,215,255,0.4)' : 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  if (!ready) {
+    ctx.beginPath();
+    ctx.arc(dx, dy, dr - 3, -Math.PI / 2, -Math.PI / 2 + dashReady * Math.PI * 2);
+    ctx.strokeStyle = 'rgba(160,215,255,0.55)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+  // две стрелки вперёд — знак рывка
+  ctx.strokeStyle = ready ? 'rgba(190,230,255,0.75)' : 'rgba(200,220,240,0.3)';
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = 'round';
+  for (const off of [-dr * 0.3, dr * 0.14]) {
+    ctx.beginPath();
+    ctx.moveTo(dx + off - dr * 0.16, dy - dr * 0.34);
+    ctx.lineTo(dx + off + dr * 0.2, dy);
+    ctx.lineTo(dx + off - dr * 0.16, dy + dr * 0.34);
+    ctx.stroke();
+  }
 
   if (stick) {
     const b = ctx.canvas.getBoundingClientRect();

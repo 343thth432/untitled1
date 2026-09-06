@@ -296,3 +296,108 @@ export function puffBoard(p: Puff): Board | null {
     lift: p.h,
   };
 }
+
+/** ------- ихор: капли жизни, что остаются от убитой твари ------- */
+
+/**
+ * С каждой убитой сыплется несколько капель. Они разлетаются, а потом
+ * тянутся к игроку и заживляют. Это единственный надёжный способ
+ * поправиться: аптечки на ярусе редки. Значит, отсиживаться в углу
+ * невыгодно — чтобы держаться, надо идти вперёд и убивать.
+ */
+export interface Mote {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  /** высота над полом в долях своего размера */
+  h: number;
+  t: number;
+  heal: number;
+}
+
+/** с какого расстояния каплю тянет к игроку и с какого она подбирается */
+const PULL = 3.2;
+const TAKE = 0.5;
+const MOTE_LIFE = 8;
+
+const MW = 24;
+const MPAL = ['#00000000', '#3a040a', '#8c0f18', '#d42430', '#ff5a4a', '#ffb49a', '#fff0e4'];
+const moteArt: HTMLCanvasElement[] = [];
+
+function makeMote(k: number): HTMLCanvasElement {
+  const b = new PixBuf(MW, MW);
+  const c = MW >> 1;
+  const r = 5 - k;
+  b.ellipse(c, c, r + 2, r + 2, 1);
+  b.ellipse(c, c, r, r, 2 + (k % 2));
+  b.ellipse(c, c - 1, Math.max(1, r - 2), Math.max(1, r - 2), 4);
+  b.ellipse(c - 1, c - 2, Math.max(1, r - 4), Math.max(1, r - 4), 6);
+  return b.toCanvas(MPAL);
+}
+
+/** капли из точки, где тварь свалилась */
+export function spawnMotes(out: Mote[], x: number, y: number, n: number, heal: number): void {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const v = 1.1 + Math.random() * 1.5;
+    out.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, h: 0.3 + Math.random() * 0.3, t: 0, heal });
+  }
+}
+
+/**
+ * Двигает капли и собирает те, до которых игрок дотянулся.
+ *
+ * @returns сколько здоровья собрано за этот кадр
+ */
+export function stepMotes(motes: Mote[], dt: number, px: number, py: number): number {
+  let got = 0;
+  for (let i = motes.length - 1; i >= 0; i--) {
+    const m = motes[i];
+    m.t += dt;
+    if (m.t > MOTE_LIFE) {
+      motes.splice(i, 1);
+      continue;
+    }
+    const dx = px - m.x;
+    const dy = py - m.y;
+    const d = Math.hypot(dx, dy);
+    if (d < TAKE) {
+      got += m.heal;
+      motes.splice(i, 1);
+      continue;
+    }
+    if (d < PULL) {
+      // чем ближе, тем сильнее тянет: у самых ног капля уже не убежит
+      const k = (1 - d / PULL) ** 2 * 26;
+      m.vx += (dx / d) * k * dt;
+      m.vy += (dy / d) * k * dt;
+    }
+    const drag = Math.max(0, 1 - dt * 2.6);
+    m.vx *= drag;
+    m.vy *= drag;
+    m.x += m.vx * dt;
+    m.y += m.vy * dt;
+    m.h = 0.3 + Math.sin(m.t * 5.5) * 0.08;
+  }
+  return got;
+}
+
+export function moteBoard(m: Mote): Board {
+  if (!moteArt.length) for (let i = 0; i < 3; i++) moteArt.push(makeMote(i));
+  const k = Math.floor(m.t * 9) % 3;
+  // последнюю секунду капля гаснет: видно, что сейчас пропадёт
+  const fade = Math.min(1, (MOTE_LIFE - m.t) / 1);
+  return {
+    x: m.x,
+    y: m.y,
+    src: moteArt[k],
+    aspect: 1,
+    scale: 0.3,
+    hang: 0,
+    emissive: 1,
+    alpha: fade,
+    glow: '#ff30401f',
+    lift: m.h,
+  };
+}

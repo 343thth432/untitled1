@@ -37,7 +37,18 @@ function plan(r: Rng, i: number): FloorPlan {
   // amount -1 — ствол лежит нетронутым: подобравший получит начальный
   // запас. Дальше в этом поле хранится боезапас брошенного ствола
   if (i < GUNS.length) loot.push({ kind: 'weapon', give: GUNS[i], amount: -1 });
-  return { loot, foes };
+  // ── западня: три волны, последняя с элитой ──────────────
+  // Твари берутся из того же пула, что и на ярусе, так что западня не
+  // подсовывает никого, кого игрок здесь ещё не видел
+  const waves: FloorPlan['waves'] = [];
+  for (let k = 0; k < 3; k++) {
+    const wave: FloorPlan['waves'][number] = [];
+    for (let n = 0; n < 3 + k + i; n++) wave.push({ id: pick(r, pool), tier: 'foe' });
+    if (k === 2) wave.push({ id: pick(r, elite), tier: 'elite' });
+    waves.push(wave);
+  }
+
+  return { loot, foes, waves };
 }
 
 function buildLeg(r: Rng, i: number): Leg {

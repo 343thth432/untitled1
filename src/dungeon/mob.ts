@@ -51,6 +51,8 @@ export class Mob {
   readonly name: string;
   readonly dmg: number;
   readonly aura: string;
+  /** смерть уже засчитана игровым циклом: капли и ярость выдаются раз */
+  reaped = false;
   /** заявка на выстрел, которую забирает игровой цикл */
   fired: { x: number; y: number; a: number; n: number; speed: number; dmg: number } | null = null;
 

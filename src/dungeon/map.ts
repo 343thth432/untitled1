@@ -60,10 +60,28 @@ export interface Light {
   live: boolean;
 }
 
+/**
+ * Западня: зал, который захлопывается за спиной. Пока волны не выбиты,
+ * проходы закрыты воротами, а на месте убитых встают новые. Даёт бою
+ * ритм: до этого ярус проходился в своём темпе, тварь за тварью.
+ */
+export interface Arena {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** клетки проходов, которые закрываются воротами */
+  gates: [number, number][];
+  /** кого выпускать волна за волной */
+  waves: { id: string; tier: 'foe' | 'elite' | 'boss' }[][];
+}
+
 export interface Floor {
   w: number;
   h: number;
   cells: Uint8Array;
+  /** зал-западня, если он нашёлся на этом ярусе */
+  arena: Arena | null;
   marks: Mark[];
   spawns: Spawn[];
   things: Thing[];
@@ -122,7 +140,7 @@ export function pathTo(f: Floor, from: [number, number], to: [number, number]): 
   return [];
 }
 
-interface Room {
+export interface Room {
   x: number;
   y: number;
   w: number;
@@ -138,6 +156,8 @@ export interface FloorPlan {
   loot: { kind: MarkKind; give?: string; amount: number }[];
   /** кого выпускать: id противника и его ранг */
   foes: { id: string; tier: 'foe' | 'elite' | 'boss' }[];
+  /** волны для зала-западни; пусто — западни на ярусе не будет */
+  waves: { id: string; tier: 'foe' | 'elite' | 'boss' }[][];
 }
 
 /** прямоугольные залы, соединённые Г-образными коридорами */
@@ -264,7 +284,54 @@ export function buildFloor(seed: string, stone: Cell, plan: FloorPlan): Floor {
 
   const { things, lights } = dressFloor(r, w, h, cells, rooms);
 
-  return { w, h, cells, marks: placed, spawns, things, lights, spawn: [sx + 0.5, sy + 0.5], facing: 0, stone };
+  // ── западня ──────────────────────────────────────────────
+  // Берём просторный зал, но не тот, где вход, и не тот, где лестница:
+  // захлопывать выход из вылазки или запирать спуск нечестно
+  let arena: Arena | null = null;
+  if (plan.waves.length) {
+    const gatesOf = (room: Room): [number, number][] => {
+      const out: [number, number][] = [];
+      for (let x = room.x - 1; x <= room.x + room.w; x++) {
+        for (const y of [room.y - 1, room.y + room.h]) {
+          if (x < 0 || y < 0 || x >= w || y >= h) continue;
+          if (cells[y * w + x] === CELL.empty) out.push([x, y]);
+        }
+      }
+      for (let y = room.y; y < room.y + room.h; y++) {
+        for (const x of [room.x - 1, room.x + room.w]) {
+          if (x < 0 || y < 0 || x >= w || y >= h) continue;
+          if (cells[y * w + x] === CELL.empty) out.push([x, y]);
+        }
+      }
+      return out;
+    };
+    const inRoom = (room: Room, x: number, y: number): boolean =>
+      x >= room.x && y >= room.y && x < room.x + room.w && y < room.y + room.h;
+    const picks = rooms
+      .slice(1)
+      .filter((room) => !inRoom(room, sx, sy) && !inRoom(room, fx2, fy2))
+      .map((room) => ({ room, gates: gatesOf(room) }))
+      .filter((c) => c.gates.length > 0 && c.room.w * c.room.h >= 9)
+      .sort((a, b) => b.room.w * b.room.h - a.room.w * a.room.h);
+    if (picks.length) {
+      const { room, gates } = picks[0];
+      arena = { x: room.x, y: room.y, w: room.w, h: room.h, gates, waves: plan.waves };
+    }
+  }
+
+  return {
+    w,
+    h,
+    cells,
+    arena,
+    marks: placed,
+    spawns,
+    things,
+    lights,
+    spawn: [sx + 0.5, sy + 0.5],
+    facing: 0,
+    stone,
+  };
 }
 
 /**
