@@ -88,6 +88,8 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
     let hurtFlash = 0;
     let pickMsg = '';
     let pickT = 0;
+    /** метка, на которой стоим после размена стволов */
+    let held: Mark | null = null;
 
     const state = (): CrawlState => ({
       hp: Math.round(player.hp),
@@ -372,7 +374,11 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
         // подбор
         for (const mk of floor.marks) {
           if (mk.taken) continue;
-          if (Math.hypot(mk.x + 0.5 - player.x, mk.y + 0.5 - player.y) > 0.62) continue;
+          if (Math.hypot(mk.x + 0.5 - player.x, mk.y + 0.5 - player.y) > 0.62) {
+            if (mk === held) held = null;
+            continue;
+          }
+          if (mk === held) continue;
           if (mk.kind === 'stairs') {
             if (mobs.some((m) => m.alive && m.tier === 'boss')) {
               pickMsg = 'Хранитель ещё жив';
@@ -383,7 +389,7 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
             cbRef.current.onDescend(state());
             break;
           }
-          mk.taken = true;
+          mk.taken = mk.kind !== 'weapon';
           if (mk.kind === 'heal') {
             player.heal(mk.amount);
             pickMsg = `+${mk.amount} здоровья`;
@@ -398,13 +404,22 @@ export default function Crawl({ floor, palette, floorName, scale, start, onState
             const label = kind === 'shells' ? 'патронов' : kind === 'bullets' ? 'пуль' : 'ракет';
             pickMsg = `+${gain} ${label}`;
           } else if (mk.kind === 'weapon' && mk.give) {
-            // подобранный ствол вытесняет прежний. Раз вернуться к старому
-            // нельзя, к новому сразу даём патронов: иначе поднятая пустая
-            // ракетница оставляет героиню безоружной
+            // размен: новый ствол в руки, старый ложится на его место
+            // вместе со своим боезапасом. Значит, за брошенным можно
+            // вернуться, и подобранная пустая ракетница уже не приговор
             const g = mk.give as WeaponId;
-            weapon = g;
+            const old = weapon;
+            const oldKind = WEAPONS[old].ammo;
             const kind = WEAPONS[g].ammo;
-            if (kind) ammo[kind] = Math.min(MAX_AMMO[kind], ammo[kind] + START_AMMO[kind]);
+            const gain = mk.amount >= 0 ? mk.amount : kind ? START_AMMO[kind] : 0;
+            mk.give = old;
+            mk.amount = oldKind ? ammo[oldKind] : 0;
+            if (oldKind) ammo[oldKind] = 0;
+            weapon = g;
+            if (kind) ammo[kind] = Math.min(MAX_AMMO[kind], ammo[kind] + gain);
+            // метка остаётся лежать, но пока с неё не сойдёшь, размен
+            // не повторяется: иначе стволы менялись бы каждый кадр
+            held = mk;
             pickMsg = WEAPONS[g].name;
           } else {
             player.maxHp += 10;
@@ -618,8 +633,9 @@ function overlay(
 
 /**
  * Всё, что игрок должен знать, нарисовано прямо в кадре и полупрозрачно:
- * крест с числом жизней, счётчик патронов и название яруса. Панелей и
- * списков нет — ствол в руках виден и так, а он теперь один.
+ * крест с числом жизней и счётчик патронов вверху, где их не закрывает
+ * ствол в руках, название яруса внизу. Панелей и списков нет — ствол
+ * виден и так, а он теперь один.
  */
 function hud(
   ctx: CanvasRenderingContext2D,
@@ -631,8 +647,6 @@ function hud(
 ): void {
   ctx.save();
   const pad = Math.round(Math.min(w, h) * 0.05);
-  // снизу отступ больше: там у телефонов полоса жеста, и цифры в неё лезут
-  const low = pad + Math.round(Math.min(w, h) * 0.03);
   const size = Math.max(15, Math.round(h * 0.026));
   const ink = (a: number): string => `rgba(238,232,222,${a})`;
 
@@ -646,50 +660,10 @@ function hud(
     ctx.restore();
   };
 
-  // ── жизни: крест и число, левый нижний угол ──────────────
-  const by = h - low;
-  const arm = Math.round(size * 0.72);
-  const thick = Math.max(3, Math.round(arm * 0.34));
-  const cx = pad + arm / 2;
-  const cy = by - Math.round(size * 0.34);
-  shadow(() => {
-    ctx.fillStyle = `rgba(214,72,72,${hp <= 25 ? 0.85 : 0.55})`;
-    ctx.fillRect(Math.round(cx - thick / 2), Math.round(cy - arm / 2), thick, arm);
-    ctx.fillRect(Math.round(cx - arm / 2), Math.round(cy - thick / 2), arm, thick);
-  });
-  ctx.font = `700 ${size}px Manrope, system-ui, sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  shadow(() => {
-    ctx.fillStyle = ink(hp <= 25 ? 0.85 : 0.58);
-    ctx.fillText(String(hp), pad + arm + Math.round(size * 0.42), by);
-  });
 
-  // ── патроны: гильза и число, следом за жизнями ───────────
-  if (shots !== null) {
-    const ax = pad + arm + Math.round(size * 3.1);
-    const sh = Math.round(size * 0.86);
-    const sw = Math.max(4, Math.round(sh * 0.42));
-    shadow(() => {
-      ctx.fillStyle = `rgba(226,176,96,${shots > 0 ? 0.5 : 0.85})`;
-      ctx.beginPath();
-      ctx.roundRect(ax, cy - sh / 2, sw, sh, Math.round(sw * 0.35));
-      ctx.fill();
-    });
-    shadow(() => {
-      ctx.fillStyle = ink(shots > 0 ? 0.58 : 0.85);
-      ctx.fillText(String(shots), ax + sw + Math.round(size * 0.42), by);
-    });
-  }
-
-  // ── ярус: сверху слева, чуть тише остального ─────────────
-  ctx.font = `600 ${Math.round(size * 0.82)}px Manrope, system-ui, sans-serif`;
-  shadow(() => {
-    ctx.fillStyle = ink(0.4);
-    ctx.fillText(name, pad + Math.round(size * 1.1), pad + Math.round(size * 0.7));
-  });
-
-  // ── выход: уголок, по которому можно уйти на титул ───────
+  // ── выход: уголок в самом верху слева ────────────────────
   const qx = Math.round(w * 0.055);
   const qy = Math.round(h * 0.03);
   const q = Math.round(size * 0.42);
@@ -702,6 +676,45 @@ function hud(
     ctx.lineTo(qx - q * 0.6, qy);
     ctx.lineTo(qx + q, qy + q);
     ctx.stroke();
+  });
+
+  // ── жизни и патроны: верхняя строка, за уголком выхода ───
+  const ty = qy + Math.round(size * 0.4);
+  const arm = Math.round(size * 0.72);
+  const thick = Math.max(3, Math.round(arm * 0.34));
+  const hx = qx + Math.round(size * 1.5);
+  shadow(() => {
+    ctx.fillStyle = `rgba(214,72,72,${hp <= 25 ? 0.9 : 0.6})`;
+    ctx.fillRect(Math.round(hx - thick / 2), Math.round(qy - arm / 2), thick, arm);
+    ctx.fillRect(Math.round(hx - arm / 2), Math.round(qy - thick / 2), arm, thick);
+  });
+  ctx.font = `700 ${size}px Manrope, system-ui, sans-serif`;
+  shadow(() => {
+    ctx.fillStyle = ink(hp <= 25 ? 0.9 : 0.62);
+    ctx.fillText(String(hp), hx + arm, ty);
+  });
+
+  if (shots !== null) {
+    const ax = hx + arm + Math.round(size * 2.7);
+    const sh = Math.round(size * 0.86);
+    const sw = Math.max(4, Math.round(sh * 0.42));
+    shadow(() => {
+      ctx.fillStyle = `rgba(226,176,96,${shots > 0 ? 0.55 : 0.9})`;
+      ctx.beginPath();
+      ctx.roundRect(ax, qy - sh / 2, sw, sh, Math.round(sw * 0.35));
+      ctx.fill();
+    });
+    shadow(() => {
+      ctx.fillStyle = ink(shots > 0 ? 0.62 : 0.9);
+      ctx.fillText(String(shots), ax + sw + Math.round(size * 0.42), ty);
+    });
+  }
+
+  // ── ярус: внизу слева, тише остального ───────────────────
+  ctx.font = `600 ${Math.round(size * 0.82)}px Manrope, system-ui, sans-serif`;
+  shadow(() => {
+    ctx.fillStyle = ink(0.38);
+    ctx.fillText(name, pad, h - pad - Math.round(Math.min(w, h) * 0.03));
   });
   ctx.restore();
 }

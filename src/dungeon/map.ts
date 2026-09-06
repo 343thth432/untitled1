@@ -24,6 +24,7 @@ export interface Mark {
   y: number;
   /** что именно даёт: id оружия или величина */
   give?: string;
+  /** у оружия — боезапас, что лежит вместе с ним; -1 у нетронутого */
   amount: number;
   taken: boolean;
 }

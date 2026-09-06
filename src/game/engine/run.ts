@@ -34,7 +34,9 @@ function plan(r: Rng, i: number): FloorPlan {
   for (let k = 0; k < 2 + i; k++) loot.push({ kind: 'heal', amount: range(r, 18, 30) });
   loot.push({ kind: 'relic', amount: 10 });
   // каждый ярус даёт новый ствол
-  if (i < GUNS.length) loot.push({ kind: 'weapon', give: GUNS[i], amount: 0 });
+  // amount -1 — ствол лежит нетронутым: подобравший получит начальный
+  // запас. Дальше в этом поле хранится боезапас брошенного ствола
+  if (i < GUNS.length) loot.push({ kind: 'weapon', give: GUNS[i], amount: -1 });
   return { loot, foes };
 }
 
