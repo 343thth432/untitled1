@@ -149,20 +149,20 @@ export class Stains {
     const set = bloodMasks('wall');
     if (set && set.length) {
       const m = set[(Math.random() * set.length) | 0];
-      // маска рисуется от точки удара вниз: тяжесть на стене всегда туда
-      const ru = r * WU * 1.6;
-      const rv = (r * (WV / WALL_H)) * 1.6;
-      const u0 = u * WU - ru;
-      const v0 = (z / WALL_H) * WV - rv * 0.45;
-      for (let vv = Math.max(0, Math.floor(v0 - rv * 1.4)); vv < WV; vv++) {
-        // клетки маски: вверх ей отведена малая часть, вниз — весь потёк
-        const my2 = ((v0 + rv * 1.4 - vv) / (rv * 3.2)) * m.s;
-        const mv = (m.s - 1 - my2) | 0;
-        if (mv < 0 || mv >= m.s) continue;
-        for (let uu = Math.max(0, Math.floor(u0)); uu <= Math.min(WU - 1, Math.ceil(u0 + ru * 2)); uu++) {
-          const mu = (((uu - u0) / (ru * 2)) * m.s) | 0;
-          if (mu < 0 || mu >= m.s) continue;
-          const al = m.a[mv * m.s + mu];
+      // на кадре брызга сидит в верхней трети клетки, а потёки уходят до
+      // низа. Значит квадрат маски вешаем так, чтобы точка удара легла на
+      // саму брызгу, а хвост свесился ниже
+      const side = r * 5.5;
+      const left = u - side / 2;
+      const top = z + side * 0.28;
+      for (let vv = 0; vv < WV; vv++) {
+        const wz = ((vv + 0.5) / WV) * WALL_H;
+        const my = (((top - wz) / side) * m.s) | 0;
+        if (my < 0 || my >= m.s) continue;
+        for (let uu = 0; uu < WU; uu++) {
+          const mx = ((((uu + 0.5) / WU - left) / side) * m.s) | 0;
+          if (mx < 0 || mx >= m.s) continue;
+          const al = m.a[my * m.s + mx];
           if (!al) continue;
           const i = vv * WU + uu;
           const val = a[i] + amt * al;
@@ -236,7 +236,7 @@ interface Lens {
 }
 
 const GRAV = 11;
-const MAX_DROPS = 460;
+const MAX_DROPS = 340;
 
 /* ── рисованные кадры ── */
 
@@ -483,7 +483,7 @@ export class Gore {
     const force = 0.75 + Math.min(1.4, dmg / 26);
     const n = Math.round(Math.min(16, 3 + dmg * 0.45));
     this.jet(x, y, z, a, n, zone, force);
-    this.gushes.push({ x, y, z, t: 0, sort: zone === 0 ? 1 : 0, size: (zone === 0 ? 0.95 : 0.75) * force });
+    this.gushes.push({ x, y, z, t: 0, sort: zone === 0 ? 1 : 0, size: (zone === 0 ? 0.78 : 0.66) * force });
     if (zone === 0) this.shake = Math.max(this.shake, 0.18);
     this.lensFrom(x, y, zone === 0 ? 3 : 2);
   }
@@ -491,7 +491,7 @@ export class Gore {
   /** тварь свалилась: последний выброс и лужа под ней */
   fall(x: number, y: number, tall: number, a: number): void {
     this.jet(x, y, tall * 0.45, a, 12, 1, 1.1);
-    this.gushes.push({ x, y, z: tall * 0.45, t: 0, sort: 0, size: 1.05 });
+    this.gushes.push({ x, y, z: tall * 0.45, t: 0, sort: 0, size: 0.85 });
     this.stains.pool(x, y, 0.18 + tall * 0.1, 0.5);
     this.lensFrom(x, y, 3);
   }
@@ -537,7 +537,7 @@ export class Gore {
         hop: 1,
       });
     }
-    this.gushes.push({ x, y, z, t: 0, sort: 2, size: 0.9 + tall * 0.55 });
+    this.gushes.push({ x, y, z, t: 0, sort: 2, size: 0.62 + tall * 0.38 });
     this.stains.pool(x, y, 0.3 + tall * 0.16, 0.85);
     this.shake = Math.max(this.shake, 0.45);
     this.lensFrom(x, y, 6);
@@ -583,7 +583,7 @@ export class Gore {
         art: Math.floor(Math.random() * 6),
       });
     }
-    if (this.lens.length > 22) this.lens.splice(0, this.lens.length - 22);
+    if (this.lens.length > 16) this.lens.splice(0, this.lens.length - 16);
   }
 
   /** двигает всё разом; заодно запоминает, где стоит глаз */
@@ -688,6 +688,7 @@ export class Gore {
     ctx.save();
     ctx.imageSmoothingEnabled = true;
     let i2 = 0;
+    let was = -1;
     for (const d of this.drops) {
       i2++;
       const sx = d.x - cam.x;
@@ -716,14 +717,27 @@ export class Gore {
       const len = Math.min(size * 6, Math.max(size, Math.hypot(dx, dy) + size * 0.5));
       const band = Math.min(FOGS - 1, Math.round((1 - Math.exp(-ty * dens)) * (FOGS - 1)));
       const dim = d.kind === 0 ? Math.max(0, 1 - d.t / d.life) : 1;
-      ctx.globalAlpha = d.kind === 0 ? 0.16 + dim * 0.44 : Math.min(1, 0.65 + dim * 0.35);
-      ctx.translate(scr * kx, py * ky);
-      ctx.rotate(Math.atan2(dy, dx));
+      const al = d.kind === 0 ? 0.16 + dim * 0.44 : Math.min(1, 0.65 + dim * 0.35);
+      if (al !== was) {
+        ctx.globalAlpha = al;
+        was = al;
+      }
       // на листе капель шесть клеток: первые четыре — капли, две последние
       // — ошмётки мяса
-      const drawn = bloodDrop(d.kind === 2 ? 4 + ((d.hop + i2) % 2) : (i2 * 7) % 4, band, FOGS, fog);
-      ctx.drawImage(drawn ?? blob(d.kind, band, fog), -len * 0.62, -size / 2, len, size);
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const spr = bloodDrop(d.kind === 2 ? 4 + ((d.hop + i2) % 2) : (i2 * 7) % 4, band, FOGS, fog)
+        ?? blob(d.kind, band, fog);
+      const cx = scr * kx;
+      const cy = py * ky;
+      if (len < size * 1.3) {
+        // почти стоячая капля: разворот холста ради неё не окупается, а
+        // на пике их сотни
+        ctx.drawImage(spr, cx - size / 2, cy - size / 2, size, size);
+      } else {
+        ctx.translate(cx, cy);
+        ctx.rotate(Math.atan2(dy, dx));
+        ctx.drawImage(spr, -len * 0.62, -size / 2, len, size);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      }
     }
     ctx.restore();
 
@@ -739,8 +753,10 @@ export class Gore {
       const tx = invDet * (dirY * sx - dirX * sy);
       const scr = (bw / 2) * (1 + tx / ty);
       // в упор выхлоп иначе застилает весь кадр одним размытым пятном
-      const sh = Math.min(bh * 0.72, (g.size * proj) / ty);
-      const top = half + (EYE_H * proj) / ty - (g.z * proj) / ty - sh / 2;
+      const sh = Math.min(bh * 0.58, (g.size * proj) / ty);
+      // фонтан из головы нарисован стоящим на нижнем краю клетки:
+      // его надо ставить на рану, а не вешать на неё серединой
+      const top = half + (EYE_H * proj) / ty - (g.z * proj) / ty - sh * (g.sort === 1 ? 1 : 0.5);
       const left = scr - sh / 2;
       const x0 = Math.max(0, Math.floor(left));
       const x1 = Math.min(bw - 1, Math.ceil(left + sh));

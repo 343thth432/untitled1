@@ -129,7 +129,9 @@ const dst = path.join(out, `${kind}.png`);
 await fs.mkdir(out, { recursive: true });
 await sharp(px, { raw: { width: w, height: h, channels: 4 } })
   .extract({ left: 0, top: 0, width: cw * cols, height: ch * rows })
-  .png()
+  // палитра вместо полного цвета: кровь укладывается в полторы сотни
+  // оттенков, а лист худеет вчетверо. Для мобильного это решает
+  .png({ palette: true, colours: 160, effort: 9 })
   .toFile(dst);
 
 const manPath = path.join(out, 'blood.json');

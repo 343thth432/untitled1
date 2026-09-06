@@ -1,0 +1,58 @@
+{
+  "burst-body": {
+    "cols": 3,
+    "rows": 2,
+    "cw": 512,
+    "ch": 512,
+    "n": 6,
+    "mask": false
+  },
+  "burst-head": {
+    "cols": 3,
+    "rows": 2,
+    "cw": 512,
+    "ch": 512,
+    "n": 6,
+    "mask": false
+  },
+  "burst-gib": {
+    "cols": 3,
+    "rows": 2,
+    "cw": 512,
+    "ch": 512,
+    "n": 6,
+    "mask": false
+  },
+  "drop": {
+    "cols": 3,
+    "rows": 2,
+    "cw": 512,
+    "ch": 512,
+    "n": 6,
+    "mask": false
+  },
+  "pool": {
+    "cols": 3,
+    "rows": 2,
+    "cw": 512,
+    "ch": 512,
+    "n": 6,
+    "mask": true
+  },
+  "wall": {
+    "cols": 3,
+    "rows": 2,
+    "cw": 512,
+    "ch": 512,
+    "n": 6,
+    "mask": true
+  },
+  "lens": {
+    "cols": 3,
+    "rows": 2,
+    "cw": 512,
+    "ch": 512,
+    "n": 6,
+    "mask": false
+  }
+}
